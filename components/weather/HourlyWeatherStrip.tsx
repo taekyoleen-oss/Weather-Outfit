@@ -6,6 +6,8 @@ import { weatherLabel } from '@/lib/utils/formatWeather'
 interface Props {
   hourly: HourlyForecast[]
   currentHour: number
+  selectedPeriodStart?: number
+  selectedPeriodEnd?: number
 }
 
 const WEATHER_EMOJI: Record<string, string> = {
@@ -18,7 +20,7 @@ const WEATHER_EMOJI: Record<string, string> = {
   '소나기': '⛈',
 }
 
-export function HourlyWeatherStrip({ hourly, currentHour }: Props) {
+export function HourlyWeatherStrip({ hourly, currentHour, selectedPeriodStart, selectedPeriodEnd }: Props) {
   if (!hourly.length) {
     return (
       <div className="glass-card p-4">
@@ -44,6 +46,11 @@ export function HourlyWeatherStrip({ hourly, currentHour }: Props) {
         {hourly.map((h, i) => {
           const hourNum = parseInt(h.time.split(':')[0], 10)
           const isCurrent = hourNum === currentHour
+          const isInPeriod =
+            selectedPeriodStart !== undefined &&
+            selectedPeriodEnd !== undefined &&
+            hourNum >= selectedPeriodStart &&
+            hourNum <= selectedPeriodEnd
           const label = weatherLabel(h.skyCode, h.ptyCode)
           const emoji = WEATHER_EMOJI[label] ?? '🌤'
 
@@ -52,8 +59,16 @@ export function HourlyWeatherStrip({ hourly, currentHour }: Props) {
               key={i}
               className="flex flex-col items-center gap-1 min-w-[42px] sm:min-w-[50px] py-1.5 px-0.5 rounded-xl transition-colors"
               style={{
-                background: isCurrent ? 'rgba(255,181,71,0.12)' : 'transparent',
-                border: isCurrent ? '1px solid rgba(255,181,71,0.3)' : '1px solid transparent',
+                background: isCurrent
+                  ? 'rgba(255,181,71,0.12)'
+                  : isInPeriod
+                  ? 'rgba(91,141,238,0.08)'
+                  : 'transparent',
+                border: isCurrent
+                  ? '1px solid rgba(255,181,71,0.3)'
+                  : isInPeriod
+                  ? '1px solid rgba(91,141,238,0.2)'
+                  : '1px solid transparent',
               }}
             >
               <span
