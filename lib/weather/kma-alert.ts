@@ -1,5 +1,9 @@
 import type { WeatherAlert } from '@/types/weather'
 
+/** 기상청 날씨누리 — 기상특보 발효현황 */
+export const KMA_WEATHER_WARN_PAGE =
+  'https://www.weather.go.kr/w/special-report/overall.do'
+
 const BASE = 'http://apis.data.go.kr/1360000/WthrWrnInfoService'
 
 function kmaKey(): string {

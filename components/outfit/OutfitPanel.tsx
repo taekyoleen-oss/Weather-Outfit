@@ -60,7 +60,7 @@ export function OutfitPanel({ weather, dust, terrain }: Props) {
   }, [weather, dust, activity, gender, hour, duration, terrain])
 
   return (
-    <div className="glass-card p-6 space-y-6">
+    <div className="glass-card p-4 sm:p-6 space-y-4 sm:space-y-5">
       <h2 className="text-base font-bold" style={{ color: 'var(--primary)' }}>
         복장 추천 설정
       </h2>

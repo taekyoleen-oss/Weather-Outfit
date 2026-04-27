@@ -36,7 +36,7 @@ export function OutfitResult({ result }: Props) {
   )
 
   return (
-    <div className="glass-card p-6 space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -67,6 +67,18 @@ export function OutfitResult({ result }: Props) {
         <OutfitHeroIllustration illustKey={result.heroIllust} size={120} />
       </div>
 
+      {/* Microclimate note */}
+      {result.microclimateNote && (
+        <div
+          className="flex gap-2 rounded-xl p-3"
+          style={{ background: 'rgba(14,165,233,0.08)', border: '1px solid rgba(14,165,233,0.25)' }}
+        >
+          <p className="text-xs leading-relaxed" style={{ color: '#0369A1' }}>
+            {result.microclimateNote}
+          </p>
+        </div>
+      )}
+
       {/* Alert badges */}
       {(result.uvAlert || result.dustAlert || result.rainAlert || result.windAlert) && (
         <div className="flex flex-wrap gap-2">
@@ -78,13 +90,13 @@ export function OutfitResult({ result }: Props) {
       )}
 
       {/* Items by category */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         {Object.entries(byCategory).map(([cat, items]) => (
           <div key={cat}>
-            <p className="text-xs font-semibold mb-2 uppercase tracking-wide" style={{ color: 'var(--muted)' }}>
+            <p className="text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--muted)' }}>
               {CATEGORY_LABELS[cat] ?? cat}
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-1.5">
               {items.map((item) => (
                 <OutfitItemCard key={item.id} item={item} />
               ))}
@@ -96,7 +108,7 @@ export function OutfitResult({ result }: Props) {
       {/* Tips */}
       {result.tips.length > 0 && (
         <div
-          className="rounded-2xl p-4 space-y-2"
+          className="rounded-xl p-3 space-y-1.5"
           style={{ background: 'rgba(91,141,238,0.06)', border: '1px solid rgba(91,141,238,0.15)' }}
         >
           <p className="text-xs font-semibold" style={{ color: 'var(--humidity)' }}>

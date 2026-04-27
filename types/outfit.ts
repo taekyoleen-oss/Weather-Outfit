@@ -20,6 +20,7 @@ export interface OutfitItem {
   required: boolean
   condition?: string     // 착용 조건 설명
   colorHint?: string     // 추천 색상 힌트
+  activityTag?: string   // 활동 전용 아이템 표시 (예: '달리기 특화')
 }
 
 export type OutfitCategory =
@@ -44,6 +45,7 @@ export interface OutfitResult {
   rainAlert: boolean
   windAlert: boolean
   tips: string[]              // 추가 착장 팁
+  microclimateNote?: string   // 장소별 미기후 설명
 }
 
 export type TempZone =

@@ -26,14 +26,14 @@ export function ActivitySelector({ value, onChange }: Props) {
       <p className="text-sm font-semibold mb-3" style={{ color: 'var(--text)' }}>
         활동 선택
       </p>
-      <div className="grid grid-cols-5 gap-2">
+      <div className="grid grid-cols-5 gap-1.5">
         {ACTIVITIES.map((a) => {
           const selected = value === a.id
           return (
             <button
               key={a.id}
               onClick={() => onChange(a.id)}
-              className="flex flex-col items-center gap-1.5 p-2.5 rounded-2xl text-center transition-all"
+              className="flex flex-col items-center gap-1 p-1.5 rounded-xl text-center transition-all"
               style={{
                 background: selected ? 'rgba(255,181,71,0.15)' : 'var(--surface)',
                 border: `2px solid ${selected ? 'var(--accent)' : 'var(--border)'}`,
@@ -41,7 +41,7 @@ export function ActivitySelector({ value, onChange }: Props) {
               aria-pressed={selected}
               aria-label={a.label}
             >
-              <span className="text-2xl">{a.icon}</span>
+              <span className="text-xl">{a.icon}</span>
               <span
                 className="text-xs font-medium leading-tight"
                 style={{ color: selected ? 'var(--accent)' : 'var(--muted)' }}

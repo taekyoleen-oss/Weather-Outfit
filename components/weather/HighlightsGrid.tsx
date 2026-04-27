@@ -3,6 +3,7 @@
 import { HighlightCard } from './HighlightCard'
 import type { CurrentWeather, DustData, SunriseSunset, WeatherAlert } from '@/types/weather'
 import { uvLabel, uvColor, dustGradeLabel, dustGradeColor, formatTime, windDirectionLabel } from '@/lib/utils/formatWeather'
+import { KMA_WEATHER_WARN_PAGE } from '@/lib/weather/kma-alert'
 
 interface Props {
   weather: CurrentWeather | null
@@ -104,6 +105,7 @@ export function HighlightsGrid({ weather, dust, sunriseSunset, alerts, loading, 
       value: alertCount > 0 ? `${alertCount}건` : '없음',
       sub: alertCount > 0 ? alerts![0].type : '안전',
       accent: alertCount > 0 ? 'var(--danger)' : 'var(--success)',
+      href: alertCount > 0 ? KMA_WEATHER_WARN_PAGE : undefined,
     },
   ]
 

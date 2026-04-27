@@ -13,7 +13,7 @@ export function OutfitItemCard({ item }: Props) {
   return (
     <button
       onClick={() => setChecked(!checked)}
-      className="flex items-center gap-3 p-3 rounded-2xl text-left transition-all w-full"
+      className="flex items-center gap-2 p-2 sm:p-2.5 rounded-xl text-left transition-all w-full"
       style={{
         background: checked ? 'rgba(34,197,94,0.08)' : 'var(--surface)',
         border: `1px solid ${checked ? 'rgba(34,197,94,0.3)' : 'var(--border)'}`,
@@ -24,7 +24,7 @@ export function OutfitItemCard({ item }: Props) {
     >
       {/* Checkbox */}
       <div
-        className="flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors"
+        className="flex-shrink-0 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors"
         style={{
           borderColor: checked ? '#22C55E' : 'var(--border)',
           background: checked ? '#22C55E' : 'transparent',
@@ -34,7 +34,7 @@ export function OutfitItemCard({ item }: Props) {
       </div>
 
       {/* Icon */}
-      <span className="text-2xl flex-shrink-0">{item.icon}</span>
+      <span className="text-lg flex-shrink-0">{item.icon}</span>
 
       {/* Text */}
       <div className="flex-1 min-w-0">
@@ -53,6 +53,16 @@ export function OutfitItemCard({ item }: Props) {
           </p>
         )}
       </div>
+
+      {/* Activity tag */}
+      {item.activityTag && (
+        <span
+          className="text-xs px-1.5 py-0.5 rounded-full flex-shrink-0"
+          style={{ background: 'rgba(91,141,238,0.12)', color: 'var(--humidity)', border: '1px solid rgba(91,141,238,0.25)' }}
+        >
+          {item.activityTag}
+        </span>
+      )}
 
       {/* Required badge */}
       <span

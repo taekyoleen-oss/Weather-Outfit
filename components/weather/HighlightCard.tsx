@@ -5,19 +5,19 @@ interface Props {
   sub?: string
   accent?: string
   compact?: boolean
+  /** 설정 시 외부 페이지(예: 기상특보)로 연결, 새 탭 */
+  href?: string
 }
 
-export function HighlightCard({ icon, label, value, sub, accent, compact }: Props) {
-  return (
-    <div
-      className={
-        compact
-          ? 'glass-card p-2 flex flex-col gap-0.5 min-h-0'
-          : 'glass-card p-4 flex flex-col gap-2 min-h-[100px]'
-      }
-      role="region"
-      aria-label={label}
-    >
+export function HighlightCard({ icon, label, value, sub, accent, compact, href }: Props) {
+  const shell =
+    compact
+      ? 'glass-card p-2 flex flex-col gap-0.5 min-h-0'
+      : 'glass-card p-4 flex flex-col gap-2 min-h-[100px]'
+  const linkShell = `${shell} no-underline outline-offset-2 transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-amber-500/50 rounded-2xl`
+
+  const content = (
+    <>
       <div className="flex items-center gap-1">
         <span className={compact ? 'text-sm leading-none' : 'text-xl'}>{icon}</span>
         <span
@@ -47,6 +47,30 @@ export function HighlightCard({ icon, label, value, sub, accent, compact }: Prop
           </p>
         )}
       </div>
+    </>
+  )
+
+  if (href) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={linkShell}
+        aria-label={`${label}: ${value}. 기상청 날씨누리에서 상세보기(새 창)`}
+      >
+        {content}
+      </a>
+    )
+  }
+
+  return (
+    <div
+      className={shell}
+      role="region"
+      aria-label={label}
+    >
+      {content}
     </div>
   )
 }

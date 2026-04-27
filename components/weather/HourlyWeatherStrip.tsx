@@ -36,11 +36,11 @@ export function HourlyWeatherStrip({ hourly, currentHour }: Props) {
   }
 
   return (
-    <div className="glass-card p-4">
-      <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--muted)' }}>
+    <div className="glass-card p-3 sm:p-4">
+      <h3 className="text-sm font-semibold mb-2.5" style={{ color: 'var(--muted)' }}>
         시간별 예보
       </h3>
-      <div className="scroll-strip flex gap-3 pb-2">
+      <div className="scroll-strip flex gap-1.5 sm:gap-2.5 pb-1">
         {hourly.map((h, i) => {
           const hourNum = parseInt(h.time.split(':')[0], 10)
           const isCurrent = hourNum === currentHour
@@ -50,7 +50,7 @@ export function HourlyWeatherStrip({ hourly, currentHour }: Props) {
           return (
             <div
               key={i}
-              className="flex flex-col items-center gap-1.5 min-w-[52px] py-2 px-1 rounded-xl transition-colors"
+              className="flex flex-col items-center gap-1 min-w-[42px] sm:min-w-[50px] py-1.5 px-0.5 rounded-xl transition-colors"
               style={{
                 background: isCurrent ? 'rgba(255,181,71,0.12)' : 'transparent',
                 border: isCurrent ? '1px solid rgba(255,181,71,0.3)' : '1px solid transparent',
@@ -62,9 +62,9 @@ export function HourlyWeatherStrip({ hourly, currentHour }: Props) {
               >
                 {isCurrent ? '지금' : h.time.slice(0, 2) + '시'}
               </span>
-              <span className="text-2xl">{emoji}</span>
+              <span className="text-xl">{emoji}</span>
               <span
-                className="text-sm font-bold"
+                className="text-xs font-bold"
                 style={{ color: 'var(--text)' }}
               >
                 {Math.round(h.temperature)}°

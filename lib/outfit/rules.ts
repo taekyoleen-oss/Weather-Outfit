@@ -1,5 +1,163 @@
 import type { TempZone, OutfitItem, ActivityType, GenderType, HeroIllustKey } from '@/types/outfit'
 
+// ─── Microclimate ────────────────────────────────────────────────────────────
+// 장소별 체감온도 보정값 (°C). 강바람·고도·해풍 등으로 실제 체감이 낮아지는 차이.
+const MICROCLIMATE_OFFSETS: Partial<Record<ActivityType, number>> = {
+  river: -2,   // 강바람·수면 증발 냉각
+  beach: -1,   // 해풍 (하지만 UV는 반대로 더 강함)
+  golf:  -2,   // 탁 트인 개방지, 이른 아침 라운딩
+  hiking: -2,  // 고도 상승에 따른 기온 저하
+}
+
+export function getMicroclimateOffset(activity: ActivityType): number {
+  return MICROCLIMATE_OFFSETS[activity] ?? 0
+}
+
+export function getMicroclimateNote(activity: ActivityType): string | undefined {
+  switch (activity) {
+    case 'river':
+      return '🌊 한강·강변은 강바람과 수면 증발로 체감온도가 도심보다 2~3°C 낮아요. 방풍 소재 겉옷을 꼭 챙기세요.'
+    case 'beach':
+      return '🏖️ 해변은 수면 반사로 자외선이 도심보다 30~50% 강합니다. 자외선 차단에 특히 신경 쓰고, 해풍으로 생각보다 시원할 수 있어요.'
+    case 'golf':
+      return '⛳ 골프장은 탁 트인 개방지라 바람이 세고 체감온도가 낮아요. 이른 아침 라운딩이라면 더욱 따뜻하게 레이어링을 준비하세요.'
+    case 'hiking':
+      return '🏔️ 산은 100m 오를수록 약 0.6°C씩 기온이 내려가요. 정상부는 3~5°C 낮고 바람도 강하니, 배낭에 여분 레이어를 반드시 챙기세요.'
+  }
+  return undefined
+}
+
+// 장소 특성상 추가로 필요한 아이템 (zone 조정 외 추가 레이어)
+export function getMicroclimateItems(
+  activity: ActivityType,
+  baseZone: TempZone,
+  gender: GenderType,
+): OutfitItem[] {
+  const items: OutfitItem[] = []
+
+  switch (activity) {
+    case 'river':
+      // warm·hot에서도 강바람 대비 방풍 필수
+      if (baseZone === 'hot' || baseZone === 'warm') {
+        items.push({
+          id: 'mc-river-windbreaker',
+          name: '얇은 바람막이 (강바람 대비)',
+          icon: '💨',
+          category: 'outer',
+          required: true,
+          condition: '강변 강풍·체감온도 저하 대비',
+          activityTag: '한강·강변',
+        })
+      }
+      // mild에서도 방풍 점퍼 권장
+      if (baseZone === 'mild') {
+        items.push({
+          id: 'mc-river-windbreaker-mild',
+          name: '방풍 점퍼 (강바람 대비)',
+          icon: '💨',
+          category: 'outer',
+          required: true,
+          condition: '강변 강풍 체감온도 대비',
+          activityTag: '한강·강변',
+        })
+      }
+      break
+
+    case 'golf':
+      if (baseZone === 'hot' || baseZone === 'warm') {
+        items.push({
+          id: 'mc-golf-armsleeve',
+          name: 'UV 차단 팔토시',
+          icon: '🧴',
+          category: 'acc',
+          required: false,
+          condition: '개방 잔디밭 직사광선·자외선 차단',
+          activityTag: '골프 전용',
+        })
+        items.push({
+          id: 'mc-golf-coolingneck',
+          name: '쿨링 넥 게이터',
+          icon: '🧣',
+          category: 'acc',
+          required: false,
+          condition: '목·얼굴 자외선·열 차단',
+          activityTag: '골프 전용',
+        })
+      }
+      if (baseZone === 'mild' || baseZone === 'cool') {
+        items.push({
+          id: 'mc-golf-windvest',
+          name: '골프 윈드 베스트',
+          icon: '🧥',
+          category: 'mid',
+          required: false,
+          condition: '이른 라운딩 아침 한기 대비',
+          activityTag: '골프 전용',
+        })
+      }
+      break
+
+    case 'beach':
+      // 해변 자외선은 항상 강하므로 API 수치 무관하게 필수 추가
+      items.push({
+        id: 'mc-beach-uvhat',
+        name: '챙 넓은 UV 차단 모자',
+        icon: '👒',
+        category: 'acc',
+        required: true,
+        condition: '수면 반사 자외선 차단 필수',
+        activityTag: '해변 전용',
+      })
+      items.push({
+        id: 'mc-beach-suncream',
+        name: 'SPF50+ PA++++ 선크림',
+        icon: '🧴',
+        category: 'acc',
+        required: true,
+        condition: '2시간마다 덧발라주세요',
+        activityTag: '해변 전용',
+      })
+      if (gender === 'female') {
+        items.push({
+          id: 'mc-beach-coverup',
+          name: '비치 커버업 / 파레오',
+          icon: '👗',
+          category: 'outer',
+          required: false,
+          condition: '이동 시 자외선·모래 차단',
+          activityTag: '해변 전용',
+        })
+      }
+      break
+
+    case 'hiking':
+      // warm·mild에서도 정상 대비 경량 바람막이 필수
+      if (baseZone === 'hot' || baseZone === 'warm' || baseZone === 'mild') {
+        items.push({
+          id: 'mc-hiking-windbreaker',
+          name: '경량 바람막이 (배낭에 보관)',
+          icon: '🏔️',
+          category: 'outer',
+          required: true,
+          condition: '정상부 기온 저하·강풍 대비',
+          activityTag: '등산 전용',
+        })
+        items.push({
+          id: 'mc-hiking-midlayer',
+          name: '얇은 플리스 / 경량 다운 (배낭에)',
+          icon: '🎒',
+          category: 'mid',
+          required: false,
+          condition: '정상 체온 유지·비상용',
+          activityTag: '등산 전용',
+        })
+      }
+      break
+  }
+
+  return items
+}
+
 export function getTempZone(feelsLike: number): TempZone {
   if (feelsLike >= 28) return 'hot'
   if (feelsLike >= 23) return 'warm'
@@ -166,43 +324,58 @@ function getShoes(activity: ActivityType, zone: TempZone, gender: GenderType = '
   return { id: 'foot-sneaker', name: '운동화 / 편한 신발', icon: '👟', category: 'foot', required: true }
 }
 
+const ACTIVITY_TAGS: Partial<Record<ActivityType, string>> = {
+  running: '달리기 전용',
+  cycling: '자전거 전용',
+  golf: '골프 전용',
+  hiking: '등산 전용',
+  beach: '해변 전용',
+  ski: '스키 전용',
+  tennis: '테니스 전용',
+}
+
+function tag(activity: ActivityType): string | undefined {
+  return ACTIVITY_TAGS[activity]
+}
+
 // Activity-specific additional items
 export function getActivityItems(activity: ActivityType, zone: TempZone, gender: GenderType): OutfitItem[] {
   const items: OutfitItem[] = []
+  const activityTag = tag(activity)
 
   switch (activity) {
     case 'golf':
-      items.push({ id: 'acc-golf-hat', name: '골프 모자', icon: '🧢', category: 'acc', required: true })
-      items.push({ id: 'acc-golf-glove', name: '골프 장갑', icon: '🧤', category: 'acc', required: true })
-      if (gender === 'female') items.push({ id: 'top-golf-skirt', name: '골프 스커트 / 팬츠', icon: '🩺', category: 'bottom', required: false })
+      items.push({ id: 'acc-golf-hat', name: '골프 모자', icon: '🧢', category: 'acc', required: true, activityTag })
+      items.push({ id: 'acc-golf-glove', name: '골프 장갑', icon: '🧤', category: 'acc', required: true, activityTag })
+      if (gender === 'female') items.push({ id: 'top-golf-skirt', name: '골프 스커트 / 팬츠', icon: '🩺', category: 'bottom', required: false, activityTag })
       break
     case 'hiking':
-      items.push({ id: 'acc-buff', name: '버프 / 등산 모자', icon: '🧢', category: 'acc', required: false })
-      items.push({ id: 'acc-stick', name: '등산 스틱 (권장)', icon: '🏔️', category: 'acc', required: false, condition: '무릎 보호' })
+      items.push({ id: 'acc-buff', name: '버프 / 등산 모자', icon: '🧢', category: 'acc', required: false, activityTag })
+      items.push({ id: 'acc-stick', name: '등산 스틱 (권장)', icon: '🏔️', category: 'acc', required: false, condition: '무릎 보호', activityTag })
       if (zone === 'cold' || zone === 'freezing') {
-        items.push({ id: 'acc-gloves', name: '장갑', icon: '🧤', category: 'acc', required: true })
+        items.push({ id: 'acc-gloves', name: '장갑', icon: '🧤', category: 'acc', required: true, activityTag })
       }
       break
     case 'running':
     case 'cycling':
-      items.push({ id: 'acc-headband', name: '헤드밴드 / 스포츠 모자', icon: '🎽', category: 'acc', required: false })
+      items.push({ id: 'acc-headband', name: '헤드밴드 / 스포츠 모자', icon: '🎽', category: 'acc', required: false, activityTag })
       if (zone === 'cold' || zone === 'freezing') {
-        items.push({ id: 'acc-gloves-sport', name: '얇은 장갑', icon: '🧤', category: 'acc', required: true })
-        items.push({ id: 'acc-neckwarmer', name: '넥워머', icon: '🧣', category: 'acc', required: false })
+        items.push({ id: 'acc-gloves-sport', name: '얇은 장갑', icon: '🧤', category: 'acc', required: true, activityTag })
+        items.push({ id: 'acc-neckwarmer', name: '넥워머', icon: '🧣', category: 'acc', required: false, activityTag })
       }
       break
     case 'beach':
-      items.push({ id: 'acc-sunglasses', name: '선글라스', icon: '🕶️', category: 'acc', required: true })
-      items.push({ id: 'top-swimsuit', name: '수영복', icon: '🩱', category: 'top', required: true })
-      items.push({ id: 'acc-rashguard', name: '래쉬가드', icon: '🩱', category: 'top', required: false })
+      items.push({ id: 'acc-sunglasses', name: '선글라스', icon: '🕶️', category: 'acc', required: true, activityTag })
+      items.push({ id: 'top-swimsuit', name: '수영복', icon: '🩱', category: 'top', required: true, activityTag })
+      items.push({ id: 'acc-rashguard', name: '래쉬가드', icon: '🩱', category: 'top', required: false, activityTag })
       break
     case 'ski':
-      items.push({ id: 'top-ski-inner', name: '기능성 내의 (상하)', icon: '🎿', category: 'base', required: true })
-      items.push({ id: 'outer-ski-jacket', name: '스키 재킷 (방수·방풍)', icon: '🎿', category: 'outer', required: true })
-      items.push({ id: 'bottom-ski-pants', name: '스키 팬츠', icon: '🎿', category: 'bottom', required: true })
-      items.push({ id: 'acc-helmet', name: '헬멧 (안전 필수)', icon: '⛷️', category: 'acc', required: true })
-      items.push({ id: 'acc-goggles', name: '스키 고글', icon: '🥽', category: 'acc', required: true })
-      items.push({ id: 'acc-ski-gloves', name: '스키 장갑 (방수)', icon: '🧤', category: 'acc', required: true })
+      items.push({ id: 'top-ski-inner', name: '기능성 내의 (상하)', icon: '🎿', category: 'base', required: true, activityTag })
+      items.push({ id: 'outer-ski-jacket', name: '스키 재킷 (방수·방풍)', icon: '🎿', category: 'outer', required: true, activityTag })
+      items.push({ id: 'bottom-ski-pants', name: '스키 팬츠', icon: '🎿', category: 'bottom', required: true, activityTag })
+      items.push({ id: 'acc-helmet', name: '헬멧 (안전 필수)', icon: '⛷️', category: 'acc', required: true, activityTag })
+      items.push({ id: 'acc-goggles', name: '스키 고글', icon: '🥽', category: 'acc', required: true, activityTag })
+      items.push({ id: 'acc-ski-gloves', name: '스키 장갑 (방수)', icon: '🧤', category: 'acc', required: true, activityTag })
       break
   }
 
@@ -290,13 +463,30 @@ export function generateTips(
     tips.push('⏱ 장시간 야외 활동 시 보온에 특히 신경 쓰세요.')
   }
 
-  // Activity-specific
-  if (activity === 'hiking' && zone === 'warm') {
-    tips.push('🏔 등산 시 올라가면 기온이 더 낮아집니다. 얇은 겉옷을 배낭에 챙기세요.')
+  // Activity-specific microclimate tips
+  if (activity === 'river') {
+    tips.push('🌊 강변은 도심보다 바람이 강합니다. 방풍 겉옷을 착용하고 체온 유지에 신경 쓰세요.')
+    if (zone === 'hot' || zone === 'warm') {
+      tips.push('☀️ 강변 자외선도 강합니다. 선크림과 모자를 챙기세요.')
+    }
+  }
+  if (activity === 'beach') {
+    tips.push('🏖️ 해변 자외선은 도심보다 30~50% 강합니다. SPF50+ 선크림을 2시간마다 덧발라주세요.')
+    tips.push('🌊 모래와 바닷물은 의류를 빠르게 손상시킵니다. 여벌 옷을 준비하세요.')
+  }
+  if (activity === 'hiking') {
+    tips.push('🏔 등산 시 정상부는 3~5°C 더 낮습니다. 배낭에 여분 레이어를 꼭 챙기세요.')
+    if (zone === 'mild' || zone === 'warm') {
+      tips.push('🥾 기온차 때문에 배낭에 경량 바람막이를 항상 넣고 오르세요.')
+    }
   }
   if (activity === 'golf') {
-    tips.push('⛳ 골프 라운딩 시 체온 변화를 고려해 레이어링을 준비하세요.')
+    if (zone === 'mild' || zone === 'cool') {
+      tips.push('⛳ 이른 아침 라운딩은 기온이 더 낮습니다. 윈드 베스트 등 보온 레이어를 준비하세요.')
+    } else {
+      tips.push('⛳ 골프장은 개방지 특성상 바람이 세고 자외선이 강합니다. 팔토시와 UV 차단 모자를 챙기세요.')
+    }
   }
 
-  return tips.slice(0, 4) // 최대 4개
+  return tips.slice(0, 5) // 최대 5개
 }

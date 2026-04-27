@@ -28,11 +28,12 @@ export function GenderToggle({ value, onChange }: Props) {
             <button
               key={g.id}
               onClick={() => onChange(g.id)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
               style={{
-                background: selected ? 'white' : 'transparent',
-                color: selected ? 'var(--primary)' : 'var(--muted)',
-                boxShadow: selected ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
+                background: selected ? '#0EA5E9' : 'transparent',
+                color: selected ? '#ffffff' : 'var(--muted)',
+                boxShadow: selected ? '0 2px 10px rgba(14,165,233,0.35)' : 'none',
+                fontWeight: selected ? 700 : 500,
               }}
               aria-pressed={selected}
             >
