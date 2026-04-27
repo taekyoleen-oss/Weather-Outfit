@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { DashboardShell } from '@/components/layout/DashboardShell'
+import { MobileLayout } from '@/components/layout/MobileLayout'
 import { LocationSearchBar } from '@/components/weather/LocationSearchBar'
 import { GpsButton } from '@/components/weather/GpsButton'
 import { RecentChips, saveRecentLocation } from '@/components/weather/RecentChips'
@@ -27,13 +28,8 @@ export default function HomePage() {
   const [alerts, setAlerts] = useState<WeatherAlert[]>([])
 
   const hour = currentHour()
-  const period = getTimeOfDay(
-    hour,
-    sunriseSunset?.sunrise,
-    sunriseSunset?.sunset
-  )
+  const period = getTimeOfDay(hour, sunriseSunset?.sunrise, sunriseSunset?.sunset)
 
-  // Fetch supplementary data
   useEffect(() => {
     if (!location) return
     const { nx, ny, lat, lon } = location
@@ -59,45 +55,80 @@ export default function HomePage() {
     saveRecentLocation(loc)
   }
 
-  const leftColumn = (
-    <>
-      <LocationSearchBar onSelect={handleSelectLocation} />
-      <GpsButton loading={gpsLoading} error={gpsError} onClick={requestGps} />
-      <RecentChips onSelect={handleSelectLocation} currentName={location.name} />
-      <WeatherCard
-        weather={weatherData?.current ?? null}
-        period={period}
-        loading={weatherLoading}
-      />
-      <HighlightsGrid
-        weather={weatherData?.current ?? null}
-        dust={dust}
-        sunriseSunset={sunriseSunset}
-        alerts={alerts}
-        loading={weatherLoading}
-        compact
-      />
-    </>
+  // ── Shared nodes ────────────────────────────────────
+  const locationSearch = <LocationSearchBar onSelect={handleSelectLocation} />
+  const recentChips = <RecentChips onSelect={handleSelectLocation} currentName={location.name} />
+
+  const weatherCard = (
+    <WeatherCard weather={weatherData?.current ?? null} period={period} loading={weatherLoading} />
+  )
+  const hourlyStrip = (
+    <HourlyWeatherStrip hourly={weatherData?.hourly ?? []} currentHour={hour} />
+  )
+  const highlightsGrid = (
+    <HighlightsGrid
+      weather={weatherData?.current ?? null}
+      dust={dust}
+      sunriseSunset={sunriseSunset}
+      alerts={alerts}
+      loading={weatherLoading}
+      compact
+    />
+  )
+  const weeklyForecast = (
+    <WeeklyForecastInline daily={weekly} hourly={weatherData?.hourly ?? []} loading={weeklyLoading} />
+  )
+  const outfitPanel = (
+    <OutfitPanel
+      weather={weatherData?.current ?? null}
+      dust={dust}
+      terrain={location.terrain ?? 'urban'}
+    />
   )
 
-  const rightColumn = (
+  return (
     <>
-      <HourlyWeatherStrip
-        hourly={weatherData?.hourly ?? []}
-        currentHour={hour}
-      />
-      <WeeklyForecastInline
-        daily={weekly}
-        hourly={weatherData?.hourly ?? []}
-        loading={weeklyLoading}
-      />
-      <OutfitPanel
-        weather={weatherData?.current ?? null}
-        dust={dust}
-        terrain={location.terrain ?? 'urban'}
-      />
+      {/* ── Mobile (< lg) ── */}
+      <div className="lg:hidden">
+        <MobileLayout
+          locationSearch={locationSearch}
+          gpsLoading={gpsLoading}
+          gpsError={gpsError}
+          onGps={requestGps}
+          recentChips={recentChips}
+          weatherContent={
+            <>
+              {weatherCard}
+              {hourlyStrip}
+              {highlightsGrid}
+              {weeklyForecast}
+            </>
+          }
+          outfitContent={outfitPanel}
+        />
+      </div>
+
+      {/* ── Desktop (≥ lg) ── */}
+      <div className="hidden lg:block">
+        <DashboardShell
+          left={
+            <>
+              {locationSearch}
+              <GpsButton loading={gpsLoading} error={gpsError} onClick={requestGps} />
+              {recentChips}
+              {weatherCard}
+              {highlightsGrid}
+            </>
+          }
+          right={
+            <>
+              {hourlyStrip}
+              {weeklyForecast}
+              {outfitPanel}
+            </>
+          }
+        />
+      </div>
     </>
   )
-
-  return <DashboardShell left={leftColumn} right={rightColumn} />
 }

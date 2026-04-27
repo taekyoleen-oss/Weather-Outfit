@@ -12,8 +12,8 @@ interface Props {
 export function HighlightCard({ icon, label, value, sub, accent, compact, href }: Props) {
   const shell =
     compact
-      ? 'glass-card p-2 flex flex-col gap-0.5 min-h-0'
-      : 'glass-card p-4 flex flex-col gap-2 min-h-[100px]'
+      ? 'glass-card p-2 sm:p-2.5 flex flex-col gap-0.5 min-h-0'
+      : 'glass-card p-3 sm:p-4 flex flex-col gap-2 min-h-[100px]'
   const linkShell = `${shell} no-underline outline-offset-2 transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-amber-500/50 rounded-2xl`
 
   const content = (

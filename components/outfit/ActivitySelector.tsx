@@ -43,8 +43,8 @@ export function ActivitySelector({ value, onChange }: Props) {
             >
               <span className="text-xl">{a.icon}</span>
               <span
-                className="text-xs font-medium leading-tight"
-                style={{ color: selected ? 'var(--accent)' : 'var(--muted)' }}
+                className="font-medium leading-tight text-center break-keep"
+                style={{ color: selected ? 'var(--accent)' : 'var(--muted)', fontSize: '10px' }}
               >
                 {a.label}
               </span>

@@ -28,7 +28,7 @@ export function WeatherCard({ weather, period, loading }: Props) {
   if (loading || !weather) {
     return (
       <div
-        className="glass-card px-6 py-3 min-h-[200px] flex items-center justify-center"
+        className="glass-card px-4 py-4 sm:px-6 sm:py-3 min-h-[160px] flex items-center justify-center"
         style={{ background: BG_MAP[period] }}
       >
         <div className="animate-pulse flex flex-col items-center gap-2 w-full">
@@ -44,7 +44,7 @@ export function WeatherCard({ weather, period, loading }: Props) {
 
   return (
     <div
-      className="glass-card px-6 py-3 overflow-hidden"
+      className="glass-card px-4 py-3 sm:px-6 overflow-hidden"
       style={{ background: BG_MAP[period] }}
     >
       <div className="flex items-start justify-between gap-2 mb-1">

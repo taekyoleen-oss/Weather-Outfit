@@ -41,9 +41,9 @@ export function WeeklyForecastInline({ daily, hourly, loading }: Props) {
   const [expandedDay, setExpandedDay] = useState<string | null>(null)
 
   return (
-    <div className="glass-card p-5">
+    <div className="glass-card p-3 sm:p-5">
       {/* Tabs */}
-      <div className="flex gap-1 mb-5 bg-white/40 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 mb-3 bg-white/40 rounded-xl p-1 w-fit">
         {(['today', 'week'] as const).map((t) => (
           <button
             key={t}

@@ -17,9 +17,9 @@ interface Props {
 
 export function HighlightsGrid({ weather, dust, sunriseSunset, alerts, loading, compact }: Props) {
   const gridClass = compact
-    ? 'grid grid-cols-3 gap-2'
+    ? 'grid grid-cols-4 gap-1.5'
     : 'grid grid-cols-2 md:grid-cols-4 gap-4'
-  const skeletonH = compact ? 'h-[72px]' : 'h-[100px]'
+  const skeletonH = compact ? 'h-[60px]' : 'h-[100px]'
 
   if (loading || !weather) {
     return (
@@ -112,10 +112,10 @@ export function HighlightsGrid({ weather, dust, sunriseSunset, alerts, loading, 
   return (
     <div>
       <h2
-        className={compact ? 'text-xs font-semibold mb-2' : 'text-sm font-semibold mb-3'}
+        className={compact ? 'text-xs font-semibold mb-1.5' : 'text-sm font-semibold mb-3'}
         style={{ color: 'var(--muted)' }}
       >
-        Today&apos;s Highlights
+        Highlights
       </h2>
       <div className={gridClass}>
         {cards.map((c) => (
