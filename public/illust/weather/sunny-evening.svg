@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <!-- Sunset glow -->
+  <circle cx="100" cy="140" r="70" fill="#F59E0B" opacity="0.1"/>
+  <circle cx="100" cy="140" r="50" fill="#F59E0B" opacity="0.15"/>
+  <!-- Sun half risen at horizon -->
+  <path d="M55 140 A45 45 0 0 1 145 140" fill="#F0A04B"/>
+  <path d="M60 140 A40 40 0 0 1 140 140" fill="#FFB547"/>
+  <!-- Horizon line -->
+  <line x1="20" y1="140" x2="180" y2="140" stroke="#F0A04B" stroke-width="2" opacity="0.4"/>
+  <!-- Rays -->
+  <g stroke="#F59E0B" stroke-width="2.5" stroke-linecap="round" opacity="0.6">
+    <line x1="100" y1="82" x2="100" y2="72"/>
+    <line x1="55" y1="95" x2="48" y2="90"/>
+    <line x1="145" y1="95" x2="152" y2="90"/>
+    <line x1="34" y1="120" x2="26" y2="117"/>
+    <line x1="166" y1="120" x2="174" y2="117"/>
+  </g>
+</svg>

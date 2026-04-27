@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <!-- Sun glow -->
+  <circle cx="100" cy="100" r="60" fill="#FFB547" opacity="0.15"/>
+  <circle cx="100" cy="100" r="45" fill="#FFB547" opacity="0.25"/>
+  <!-- Sun rays -->
+  <g stroke="#FFB547" stroke-width="4" stroke-linecap="round">
+    <line x1="100" y1="28" x2="100" y2="18"/>
+    <line x1="100" y1="182" x2="100" y2="172"/>
+    <line x1="28" y1="100" x2="18" y2="100"/>
+    <line x1="182" y1="100" x2="172" y2="100"/>
+    <line x1="151" y1="49" x2="158" y2="42"/>
+    <line x1="49" y1="151" x2="42" y2="158"/>
+    <line x1="49" y1="49" x2="42" y2="42"/>
+    <line x1="151" y1="151" x2="158" y2="158"/>
+  </g>
+  <!-- Sun core -->
+  <circle cx="100" cy="100" r="32" fill="#FFB547"/>
+  <circle cx="100" cy="100" r="28" fill="#FFCF7D"/>
+</svg>

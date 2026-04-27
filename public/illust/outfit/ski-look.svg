@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240" fill="none">
+  <!-- Mountain background hint -->
+  <path d="M0 180 L60 120 L100 150 L140 100 L200 160 L200 220 L0 220 Z" fill="#E2E8F0" opacity="0.3"/>
+  <!-- Helmet -->
+  <ellipse cx="100" cy="28" rx="20" ry="14" fill="#1E293B"/>
+  <rect x="80" y="35" width="40" height="6" rx="2" fill="#374151"/>
+  <!-- Goggles -->
+  <rect x="82" y="33" width="36" height="10" rx="5" fill="#F59E0B" opacity="0.8"/>
+  <rect x="84" y="35" width="32" height="6" rx="3" fill="#FBBF24" opacity="0.5"/>
+  <!-- Face -->
+  <circle cx="100" cy="48" r="13" fill="#FBBF24"/>
+  <!-- Neck buff -->
+  <rect x="87" y="57" width="26" height="8" rx="4" fill="#DC2626"/>
+  <!-- Ski jacket (orange-red) -->
+  <path d="M68 65 L62 95 L82 100 L82 132 L118 132 L118 100 L138 95 L132 65 L118 58 L100 68 L82 58 Z" fill="#DC2626"/>
+  <!-- Jacket details -->
+  <line x1="82" y1="78" x2="118" y2="78" stroke="#B91C1C" stroke-width="1.5" opacity="0.5"/>
+  <line x1="82" y1="90" x2="118" y2="90" stroke="#B91C1C" stroke-width="1.5" opacity="0.5"/>
+  <!-- Ski pants (black) -->
+  <rect x="80" y="132" width="14" height="38" rx="2" fill="#111827"/>
+  <rect x="106" y="132" width="14" height="38" rx="2" fill="#111827"/>
+  <!-- Ski boots -->
+  <rect x="77" y="168" width="20" height="14" rx="3" fill="#1E293B"/>
+  <rect x="103" y="168" width="20" height="14" rx="3" fill="#1E293B"/>
+  <!-- Skis -->
+  <rect x="68" y="180" width="38" height="4" rx="2" fill="#475569"/>
+  <rect x="94" y="180" width="38" height="4" rx="2" fill="#475569"/>
+  <!-- Gloves -->
+  <ellipse cx="60" cy="104" rx="9" ry="11" fill="#DC2626"/>
+  <ellipse cx="140" cy="104" rx="9" ry="11" fill="#DC2626"/>
+  <!-- Poles -->
+  <line x1="55" y1="95" x2="50" y2="185" stroke="#94A3B8" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="145" y1="95" x2="150" y2="185" stroke="#94A3B8" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

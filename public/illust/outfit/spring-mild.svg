@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240" fill="none">
+  <!-- Head -->
+  <circle cx="100" cy="35" r="18" fill="#FBBF24"/>
+  <!-- Light jacket (mint/teal) -->
+  <path d="M73 60 L67 80 L88 85 L88 118 L112 118 L112 85 L133 80 L127 60 L112 54 L100 64 L88 54 Z" fill="#7EC8C8"/>
+  <!-- Inner shirt visible at collar -->
+  <path d="M92 60 L100 68 L108 60 L104 57 L100 64 L96 57 Z" fill="white"/>
+  <!-- Pants (dark) -->
+  <rect x="87" y="118" width="11" height="45" rx="2" fill="#334155"/>
+  <rect x="102" y="118" width="11" height="45" rx="2" fill="#334155"/>
+  <!-- Legs -->
+  <rect x="87" y="162" width="11" height="28" rx="2" fill="#FBBF24"/>
+  <rect x="102" y="162" width="11" height="28" rx="2" fill="#FBBF24"/>
+  <!-- Sneakers -->
+  <rect x="84" y="188" width="17" height="8" rx="4" fill="#475569"/>
+  <rect x="99" y="188" width="17" height="8" rx="4" fill="#475569"/>
+  <!-- Flower accent -->
+  <circle cx="165" cy="45" r="6" fill="#FCA5A5"/>
+  <circle cx="155" cy="38" r="5" fill="#FCA5A5"/>
+  <circle cx="175" cy="38" r="5" fill="#FCA5A5"/>
+  <circle cx="165" cy="28" r="6" fill="#FCA5A5"/>
+  <circle cx="165" cy="36" r="4" fill="#FBBF24"/>
+</svg>

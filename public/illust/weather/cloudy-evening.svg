@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <!-- Evening tinted cloud -->
+  <ellipse cx="100" cy="110" rx="55" ry="30" fill="#B45309" opacity="0.3"/>
+  <ellipse cx="75" cy="102" rx="38" ry="28" fill="#C2824E" opacity="0.4"/>
+  <ellipse cx="130" cy="102" rx="30" ry="24" fill="#C2824E" opacity="0.4"/>
+  <!-- Main cloud -->
+  <ellipse cx="100" cy="108" rx="52" ry="28" fill="#E2CDB0"/>
+  <ellipse cx="75" cy="100" rx="36" ry="26" fill="#E2CDB0"/>
+  <ellipse cx="130" cy="100" rx="28" ry="22" fill="#E2CDB0"/>
+  <ellipse cx="100" cy="96" rx="42" ry="22" fill="#F5E6D4"/>
+</svg>

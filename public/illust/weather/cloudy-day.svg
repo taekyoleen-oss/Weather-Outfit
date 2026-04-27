@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <!-- Back cloud -->
+  <ellipse cx="110" cy="110" rx="55" ry="30" fill="#CBD5E1" opacity="0.6"/>
+  <ellipse cx="85" cy="100" rx="38" ry="28" fill="#CBD5E1" opacity="0.6"/>
+  <ellipse cx="140" cy="100" rx="30" ry="24" fill="#CBD5E1" opacity="0.6"/>
+  <!-- Front cloud -->
+  <ellipse cx="100" cy="120" rx="52" ry="28" fill="#E2E8F0"/>
+  <ellipse cx="75" cy="112" rx="36" ry="26" fill="#E2E8F0"/>
+  <ellipse cx="130" cy="112" rx="28" ry="22" fill="#E2E8F0"/>
+  <ellipse cx="100" cy="108" rx="42" ry="22" fill="white"/>
+</svg>

@@ -1,0 +1,20 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { fetchWeeklyForecast, getMidRegionCode } from '@/lib/weather/kma-weekly'
+import { kvSWR, TTL } from '@/lib/cache/kv'
+
+export async function GET(req: NextRequest) {
+  const { searchParams } = req.nextUrl
+  const nx = parseInt(searchParams.get('nx') ?? '60', 10)
+  const ny = parseInt(searchParams.get('ny') ?? '127', 10)
+
+  try {
+    const regId = getMidRegionCode(nx, ny)
+    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+    const key = `midfcst:${regId}:${today}`
+    const data = await kvSWR(key, TTL.midForecast, () => fetchWeeklyForecast(nx, ny))
+    return NextResponse.json(data)
+  } catch (err) {
+    console.error('Weekly forecast error:', err)
+    return NextResponse.json({ error: '주간 예보를 불러오지 못했습니다.' }, { status: 500 })
+  }
+}

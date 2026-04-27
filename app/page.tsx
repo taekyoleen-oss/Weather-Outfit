@@ -1,65 +1,103 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+import { useEffect, useState } from 'react'
+import { DashboardShell } from '@/components/layout/DashboardShell'
+import { LocationSearchBar } from '@/components/weather/LocationSearchBar'
+import { GpsButton } from '@/components/weather/GpsButton'
+import { RecentChips, saveRecentLocation } from '@/components/weather/RecentChips'
+import { WeatherCard } from '@/components/weather/WeatherCard'
+import { HourlyWeatherStrip } from '@/components/weather/HourlyWeatherStrip'
+import { WeeklyForecastInline } from '@/components/weather/WeeklyForecastInline'
+import { HighlightsGrid } from '@/components/weather/HighlightsGrid'
+import { OutfitPanel } from '@/components/outfit/OutfitPanel'
+import { useAutoLocation } from '@/lib/hooks/useAutoLocation'
+import { useWeather } from '@/lib/hooks/useWeather'
+import { useWeeklyForecast } from '@/lib/hooks/useWeeklyForecast'
+import { getTimeOfDay, currentHour } from '@/lib/utils/timeOfDay'
+import type { DustData, SunriseSunset, WeatherAlert } from '@/types/weather'
+import type { LocationInfo } from '@/types/location'
+
+export default function HomePage() {
+  const { location, gpsLoading, gpsError, requestGps, setManualLocation } = useAutoLocation()
+  const { data: weatherData, loading: weatherLoading } = useWeather(location)
+  const { data: weekly, loading: weeklyLoading } = useWeeklyForecast(location)
+
+  const [dust, setDust] = useState<DustData | null>(null)
+  const [sunriseSunset, setSunriseSunset] = useState<SunriseSunset | null>(null)
+  const [alerts, setAlerts] = useState<WeatherAlert[]>([])
+
+  const hour = currentHour()
+  const period = getTimeOfDay(
+    hour,
+    sunriseSunset?.sunrise,
+    sunriseSunset?.sunset
+  )
+
+  // Fetch supplementary data
+  useEffect(() => {
+    if (!location) return
+    const { nx, ny, lat, lon } = location
+
+    fetch(`/api/dust?nx=${nx}&ny=${ny}`)
+      .then((r) => r.json())
+      .then((d) => { if (!d.error) setDust(d) })
+      .catch(() => {})
+
+    fetch(`/api/sunrise?lat=${lat}&lon=${lon}`)
+      .then((r) => r.json())
+      .then((d) => { if (d.sunrise) setSunriseSunset(d) })
+      .catch(() => {})
+
+    fetch(`/api/alert?regCode=108`)
+      .then((r) => r.json())
+      .then((d) => { if (Array.isArray(d)) setAlerts(d) })
+      .catch(() => {})
+  }, [location])
+
+  function handleSelectLocation(loc: LocationInfo) {
+    setManualLocation(loc)
+    saveRecentLocation(loc)
+  }
+
+  const leftColumn = (
+    <>
+      <LocationSearchBar onSelect={handleSelectLocation} />
+      <GpsButton loading={gpsLoading} error={gpsError} onClick={requestGps} />
+      <RecentChips onSelect={handleSelectLocation} currentName={location.name} />
+      <WeatherCard
+        weather={weatherData?.current ?? null}
+        period={period}
+        loading={weatherLoading}
+      />
+      <HighlightsGrid
+        weather={weatherData?.current ?? null}
+        dust={dust}
+        sunriseSunset={sunriseSunset}
+        alerts={alerts}
+        loading={weatherLoading}
+        compact
+      />
+    </>
+  )
+
+  const rightColumn = (
+    <>
+      <HourlyWeatherStrip
+        hourly={weatherData?.hourly ?? []}
+        currentHour={hour}
+      />
+      <WeeklyForecastInline
+        daily={weekly}
+        hourly={weatherData?.hourly ?? []}
+        loading={weeklyLoading}
+      />
+      <OutfitPanel
+        weather={weatherData?.current ?? null}
+        dust={dust}
+        terrain={location.terrain ?? 'urban'}
+      />
+    </>
+  )
+
+  return <DashboardShell left={leftColumn} right={rightColumn} />
 }

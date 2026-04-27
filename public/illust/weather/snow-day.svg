@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <!-- Cloud -->
+  <ellipse cx="100" cy="90" rx="52" ry="28" fill="#CBD5E1"/>
+  <ellipse cx="75" cy="82" rx="36" ry="26" fill="#CBD5E1"/>
+  <ellipse cx="130" cy="82" rx="28" ry="22" fill="#CBD5E1"/>
+  <ellipse cx="100" cy="78" rx="42" ry="22" fill="#E2E8F0"/>
+  <!-- Snow flakes -->
+  <g fill="#5B8DEE" opacity="0.8">
+    <circle cx="75" cy="132" r="3"/>
+    <circle cx="95" cy="145" r="3"/>
+    <circle cx="115" cy="132" r="3"/>
+    <circle cx="135" cy="145" r="3"/>
+    <circle cx="85" cy="158" r="3"/>
+    <circle cx="105" cy="162" r="3"/>
+    <circle cx="125" cy="155" r="3"/>
+  </g>
+</svg>

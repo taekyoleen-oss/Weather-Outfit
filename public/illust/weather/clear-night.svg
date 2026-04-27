@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <!-- Stars -->
+  <circle cx="40" cy="40" r="2" fill="#E2E8F0" opacity="0.8"/>
+  <circle cx="160" cy="30" r="1.5" fill="#E2E8F0" opacity="0.7"/>
+  <circle cx="130" cy="60" r="2" fill="#E2E8F0" opacity="0.6"/>
+  <circle cx="50" cy="80" r="1.5" fill="#E2E8F0" opacity="0.8"/>
+  <circle cx="170" cy="70" r="2" fill="#E2E8F0" opacity="0.7"/>
+  <!-- Moon -->
+  <circle cx="105" cy="100" r="40" fill="#94A3B8"/>
+  <circle cx="122" cy="88" r="36" fill="#334155"/>
+  <circle cx="85" cy="115" r="8" fill="#475569" opacity="0.4"/>
+  <circle cx="108" cy="108" r="5" fill="#475569" opacity="0.3"/>
+</svg>
