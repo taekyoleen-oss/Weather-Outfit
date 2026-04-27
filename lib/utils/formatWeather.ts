@@ -69,6 +69,16 @@ export function dustGradeColor(grade: string): string {
   return MAP[grade] ?? '#5B8DEE'
 }
 
+export function o3GradeLabel(grade: string | undefined): string {
+  const MAP: Record<string, string> = { '1': '좋음', '2': '보통', '3': '나쁨', '4': '매우나쁨' }
+  return grade ? (MAP[grade] ?? '보통') : '--'
+}
+
+export function o3GradeColor(grade: string | undefined): string {
+  const MAP: Record<string, string> = { '1': '#22C55E', '2': '#5B8DEE', '3': '#F59E0B', '4': '#EF4444' }
+  return grade ? (MAP[grade] ?? '#5B8DEE') : 'var(--muted)'
+}
+
 export function feelsLike(temp: number, windSpeed: number, humidity: number): number {
   if (temp <= 10) {
     // Wind Chill

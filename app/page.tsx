@@ -175,6 +175,7 @@ export default function HomePage() {
       addressLine={location.address}
       sunriseSunset={sunriseSunset}
       uvDisplay={uvForCard}
+      dust={dust}
     />
   )
   const hourlyStrip = (

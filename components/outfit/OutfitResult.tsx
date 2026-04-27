@@ -1,6 +1,6 @@
 'use client'
 
-import type { OutfitResult as OutfitResultType } from '@/types/outfit'
+import type { OutfitResult as OutfitResultType, DangerLevel } from '@/types/outfit'
 import { OutfitItemCard } from './OutfitItemCard'
 import { OutfitHeroIllustration } from './OutfitHeroIllustration'
 
@@ -37,11 +37,20 @@ export function OutfitResult({ result }: Props) {
 
   return (
     <div className="space-y-4">
+      {/* Danger Banner — 참고: weather-outdoor-clothing-guide.md 라. 복장 추천 로직 §1 우선순위 */}
+      {result.dangerReasons.length > 0 && (
+        <DangerBanner
+          level={result.dangerLevel}
+          reasons={result.dangerReasons}
+          cancelActivity={result.cancelActivity}
+        />
+      )}
+
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-lg font-bold" style={{ color: 'var(--primary)' }}>
-            오늘의 복장 추천
+            {result.cancelActivity ? '⚠️ 활동 재검토 권고' : '오늘의 복장 추천'}
           </h2>
           <div className="flex items-center gap-2 mt-1">
             <span
@@ -133,5 +142,43 @@ function AlertBadge({ icon, label, color }: { icon: string; label: string; color
     >
       {icon} {label}
     </span>
+  )
+}
+
+const DANGER_STYLES: Record<DangerLevel, { bg: string; border: string; titleColor: string; title: string }> = {
+  none:    { bg: 'transparent', border: 'transparent', titleColor: '', title: '' },
+  caution: { bg: 'rgba(14,165,233,0.07)', border: 'rgba(14,165,233,0.3)', titleColor: '#0369A1', title: '💡 주의 사항' },
+  warning: { bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.35)', titleColor: '#92400E', title: '⚠️ 기상 경고' },
+  cancel:  { bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.35)', titleColor: '#B91C1C', title: '⛔ 활동 취소 권고' },
+}
+
+function DangerBanner({ level, reasons, cancelActivity }: {
+  level: DangerLevel
+  reasons: string[]
+  cancelActivity: boolean
+}) {
+  if (level === 'none') return null
+  const s = DANGER_STYLES[level]
+  return (
+    <div
+      className="rounded-xl p-3 space-y-1.5"
+      style={{ background: s.bg, border: `1.5px solid ${s.border}` }}
+    >
+      <p className="text-sm font-bold" style={{ color: s.titleColor }}>
+        {s.title}
+      </p>
+      {cancelActivity && (
+        <p className="text-xs font-semibold" style={{ color: s.titleColor }}>
+          현재 기상 조건에서 선택한 활동을 재검토하거나 취소를 권고합니다.
+        </p>
+      )}
+      <div className="space-y-1 mt-1">
+        {reasons.map((r, i) => (
+          <p key={i} className="text-xs leading-relaxed" style={{ color: 'var(--text)' }}>
+            {r}
+          </p>
+        ))}
+      </div>
+    </div>
   )
 }

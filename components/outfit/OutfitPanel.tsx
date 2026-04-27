@@ -47,7 +47,9 @@ export function OutfitPanel({ weather, dust, terrain, hour }: Props) {
       windSpeed: weather.windSpeed,
       uvIndex: weather.uvIndex,
       ptyCode: weather.ptyCode,
+      precipitation: weather.precipitation,
       dustGrade: dust?.pm10Grade ?? '2',
+      o3Grade: dust?.o3Grade,
       activity,
       gender,
       hour,
@@ -57,7 +59,7 @@ export function OutfitPanel({ weather, dust, terrain, hour }: Props) {
   }, [weather, dust, activity, gender, hour, terrain])
 
   return (
-    <div className="glass-card p-4 sm:p-6 space-y-4 sm:space-y-5">
+    <div className="glass-card p-4 sm:p-6 space-y-4 sm:space-y-5 min-w-0 max-w-full overflow-x-hidden">
       <h2 className="text-base font-bold" style={{ color: 'var(--primary)' }}>
         복장 추천 설정
       </h2>

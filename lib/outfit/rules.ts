@@ -428,7 +428,7 @@ export function pickHeroIllust(zone: TempZone, activity: ActivityType, ptyCode: 
   return 'winter-heavy'
 }
 
-// Tips generator
+// Tips generator — 참고: weather-outdoor-clothing-guide.md
 export function generateTips(
   zone: TempZone,
   uvIndex: number,
@@ -436,57 +436,101 @@ export function generateTips(
   windSpeed: number,
   activity: ActivityType,
   terrain: string,
-  duration: number
+  duration: number,
+  precipitation: number = 0,
+  feelsLike: number = 20,
 ): string[] {
   const tips: string[] = []
 
-  // UV tips
-  if (uvIndex >= 6) tips.push('🌡 자외선 지수가 높습니다. SPF 50+ 선크림을 바르세요.')
-  if (uvIndex >= 8) tips.push('☀️ 자외선 매우 강함. 챙 넓은 모자와 UV 차단 의류를 착용하세요.')
+  // UV tips (기상청 생활기상지수 기준)
+  if (uvIndex >= 11) {
+    tips.push('☀️ 자외선 위험 (UV ' + uvIndex + '): 가능한 실내에 머무르세요. 외출 시 긴팔·모자·선글라스·SPF50+ 선크림 필수.')
+  } else if (uvIndex >= 8) {
+    tips.push('☀️ 자외선 매우높음 (UV ' + uvIndex + '): 오전 10시~오후 3시 외출을 피하고, 긴팔·모자·선글라스·선크림을 갖추세요.')
+  } else if (uvIndex >= 6) {
+    tips.push('🌡️ 자외선 높음 (UV ' + uvIndex + '): 한낮 그늘에서 쉬고, 긴팔 또는 팔토시·모자·선글라스·선크림을 준비하세요.')
+  } else if (uvIndex >= 3) {
+    tips.push('💡 UV ' + uvIndex + ': 모자·선글라스·자외선 차단제를 챙겨 두세요.')
+  }
 
-  // Dust tips
-  if (dustGrade === '3') tips.push('😷 미세먼지 나쁨. 마스크(KF80) 착용을 권장합니다.')
-  if (dustGrade === '4') tips.push('😷 미세먼지 매우 나쁨. KF94 마스크 필수입니다.')
+  // Dust tips (에어코리아 미세먼지 행동요령 기준)
+  if (dustGrade === '4') {
+    tips.push('😷 미세먼지 매우나쁨: KF94 마스크 필수. 야외 운동(조깅·등산·자전거)을 중단하고 실내에 머무세요.')
+  } else if (dustGrade === '3') {
+    tips.push('😷 미세먼지 나쁨: KF80 이상 마스크를 착용하세요. 숨이 많이 차는 운동은 줄이는 것이 좋습니다.')
+  }
 
-  // Wind tips
-  if (windSpeed >= 10 && (terrain === 'coastal' || terrain === 'river' || terrain === 'golf')) {
-    tips.push('💨 강한 바람이 예상됩니다. 방풍 소재 아우터를 반드시 착용하세요.')
+  // Ozone-like caution (오전 10시~오후 4시 자외선·오존 피크 시간대 안내)
+  if ((zone === 'hot' || zone === 'warm') && ['running', 'cycling', 'tennis', 'hiking', 'golf'].includes(activity)) {
+    tips.push('⏰ 오존 피크 시간(오전 10시~오후 4시) 고강도 야외 운동을 피하고 이른 아침·저녁으로 조정하세요. (에어코리아 오존 행동요령)')
+  }
+
+  // Heat / humidity tips (기상청 폭염 기준 + CDC 권고)
+  if (feelsLike >= 38) {
+    tips.push('🥵 체감온도 ' + Math.round(feelsLike) + '°C: 한낮 야외활동을 즉시 중단하세요. CDC 권고: 밝은색 헐렁한 옷·그늘·수분 섭취.')
+  } else if (feelsLike >= 33) {
+    tips.push('☀️ 체감온도 ' + Math.round(feelsLike) + '°C: 수시로 물을 마시고 장시간 야외활동을 자제하세요. 통기성 밝은색 의류를 선택하세요.')
+  } else if (feelsLike >= 29) {
+    tips.push('🌡️ 체감온도 ' + Math.round(feelsLike) + '°C: 통기성이 좋은 옷과 충분한 수분 섭취, 그늘 휴식이 필요합니다.')
+  }
+
+  // Cold tips (기상청 한파 행동요령 + 미국 기상청 Wind Chill)
+  if (zone === 'freezing' && windSpeed >= 5) {
+    tips.push('🥶 강풍+혹한: 바람이 노출 피부 열손실을 키웁니다. 목도리·모자·장갑으로 노출부를 완전히 덮어야 합니다. (기상청 한파 행동요령)')
+  } else if (zone === 'cold' || zone === 'freezing') {
+    tips.push('❄️ 추운 날씨: 내복·목도리·모자·장갑·방한화를 갖추고 장시간 야외활동을 피하세요.')
+  }
+
+  // Wind tips (기상청 강풍 행동요령 기준)
+  if (windSpeed >= 14) {
+    tips.push('💨 강풍주의보 수준 (풍속 ' + windSpeed.toFixed(0) + 'm/s): 우산 대신 방수 재킷을 착용하고 낙하물 위험 구역을 피하세요.')
+  } else if (windSpeed >= 5) {
+    tips.push('💨 바람 ' + windSpeed.toFixed(0) + 'm/s: 얇은 방풍 외피를 챙기고, 모자는 턱끈 또는 깊은 형태가 좋습니다.')
   }
 
   // Temperature gap tips
   if (zone === 'mild' || zone === 'cool') {
-    tips.push('🌡 아침저녁으로 기온차가 있어요. 겉옷을 꼭 챙기세요.')
+    tips.push('🌡️ 아침·저녁 기온차가 있어요. 벗고 입기 쉬운 겉옷을 꼭 챙기세요.')
+  }
+
+  // Rain tips
+  if (precipitation >= 15) {
+    tips.push('🌧️ 호우 주의: 등산·강변·야영 활동은 중단하고 안전한 곳으로 이동하세요. (기상청 호우 행동요령)')
+  } else if (precipitation >= 1) {
+    tips.push('☂️ 비: 우산 또는 방수 재킷, 미끄럼 적은 신발을 준비하세요.')
   }
 
   // Activity duration tips
-  if (duration >= 4 && (zone === 'cold' || zone === 'freezing')) {
-    tips.push('⏱ 장시간 야외 활동 시 보온에 특히 신경 쓰세요.')
+  if (duration >= 4 && uvIndex >= 3) {
+    tips.push('⏱️ 장시간 야외 활동 시 자외선 차단제를 2시간마다 덧바르세요. (미국 피부과학회 AAD)')
   }
 
-  // Activity-specific microclimate tips
+  // Activity-specific tips
   if (activity === 'river') {
-    tips.push('🌊 강변은 도심보다 바람이 강합니다. 방풍 겉옷을 착용하고 체온 유지에 신경 쓰세요.')
-    if (zone === 'hot' || zone === 'warm') {
-      tips.push('☀️ 강변 자외선도 강합니다. 선크림과 모자를 챙기세요.')
-    }
+    tips.push('🌊 강변: 강바람·수면 증발로 체감온도가 도심보다 2~3°C 낮습니다. 방풍 겉옷을 반드시 챙기세요.')
+    if (uvIndex >= 3) tips.push('☀️ 수면 반사로 강변 자외선이 도심보다 강합니다. 선크림과 모자를 챙기세요. (US EPA)')
   }
   if (activity === 'beach') {
-    tips.push('🏖️ 해변 자외선은 도심보다 30~50% 강합니다. SPF50+ 선크림을 2시간마다 덧발라주세요.')
-    tips.push('🌊 모래와 바닷물은 의류를 빠르게 손상시킵니다. 여벌 옷을 준비하세요.')
+    tips.push('🏖️ 해변 자외선은 수면 반사로 도심보다 30~50% 강합니다. SPF50+ 선크림을 2시간마다 덧발라주세요. (US EPA)')
+    tips.push('👕 모래·바닷물로 의류 손상이 빠릅니다. 여벌 옷과 래시가드를 준비하세요.')
   }
   if (activity === 'hiking') {
-    tips.push('🏔 등산 시 정상부는 3~5°C 더 낮습니다. 배낭에 여분 레이어를 꼭 챙기세요.')
-    if (zone === 'mild' || zone === 'warm') {
-      tips.push('🥾 기온차 때문에 배낭에 경량 바람막이를 항상 넣고 오르세요.')
-    }
+    tips.push('🏔️ 등산: 100m 오를수록 약 0.6°C 기온 저하. 정상부는 3~5°C 낮고 바람이 강합니다. 배낭에 여분 레이어를 챙기세요.')
+    if (precipitation > 0) tips.push('⛈️ 비·번개 시 즉시 하산하고 계곡·능선·정상 접근을 금지합니다. (기상청 낙뢰 행동요령)')
   }
   if (activity === 'golf') {
     if (zone === 'mild' || zone === 'cool') {
-      tips.push('⛳ 이른 아침 라운딩은 기온이 더 낮습니다. 윈드 베스트 등 보온 레이어를 준비하세요.')
+      tips.push('⛳ 이른 아침 라운딩은 기온이 낮습니다. 윈드 베스트 등 보온 레이어를 준비하세요.')
     } else {
-      tips.push('⛳ 골프장은 개방지 특성상 바람이 세고 자외선이 강합니다. 팔토시와 UV 차단 모자를 챙기세요.')
+      tips.push('⛳ 골프장은 탁 트인 개방지라 자외선이 강합니다. UV 팔토시·챙 넓은 모자를 챙기세요.')
+    }
+    tips.push('⚡ 낙뢰 예상 시 골프채를 즉시 내려놓고 클럽하우스나 차량으로 대피하세요. (기상청 낙뢰 행동요령)')
+  }
+  if (activity === 'running' || activity === 'cycling') {
+    if (dustGrade === '3' || dustGrade === '4') {
+      tips.push('😷 미세먼지 높을 때 조깅·자전거는 호흡량을 크게 늘립니다. 실내 운동으로 전환하세요. (에어코리아)')
     }
   }
 
-  return tips.slice(0, 5) // 최대 5개
+  return tips.slice(0, 6) // 최대 6개
 }

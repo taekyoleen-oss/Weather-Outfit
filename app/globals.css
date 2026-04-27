@@ -42,6 +42,12 @@ html, body {
   overflow-x: hidden;
 }
 
+@media (min-width: 1024px) {
+  html {
+    overflow-x: clip;
+  }
+}
+
 body {
   background: var(--background);
   color: var(--text);

@@ -28,11 +28,17 @@ export async function fetchDust(stationName: string): Promise<DustData> {
   const pm25Value = parseFloat(item.pm25Value)
   if (isNaN(pm10Value) || isNaN(pm25Value)) throw new Error('Dust values not available (sensor under maintenance)')
 
+  const o3Raw = parseFloat(item.o3Value)
+  const o3Value = isNaN(o3Raw) ? undefined : o3Raw
+  const o3Grade = item.o3Grade ?? undefined
+
   return {
     pm10Value,
     pm25Value,
     pm10Grade: item.pm10Grade ?? '2',
     pm25Grade: item.pm25Grade ?? '2',
+    o3Value,
+    o3Grade,
     stationName,
     fetchedAt: Date.now(),
   }

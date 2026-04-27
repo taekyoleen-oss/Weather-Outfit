@@ -44,6 +44,8 @@ export interface DustData {
   pm25Value: number
   pm10Grade: string
   pm25Grade: string
+  o3Value?: number    // 오존 농도 (ppm) — 에어코리아 API
+  o3Grade?: string   // 오존 등급 '1'=좋음 '2'=보통 '3'=나쁨 '4'=매우나쁨
   stationName: string
   fetchedAt: number
 }

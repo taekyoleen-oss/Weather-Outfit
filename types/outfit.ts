@@ -34,6 +34,8 @@ export type OutfitCategory =
   | 'rain'       // 우산·우비
   | 'mask'       // 마스크
 
+export type DangerLevel = 'none' | 'caution' | 'warning' | 'cancel'
+
 export interface OutfitResult {
   items: OutfitItem[]
   heroIllust: HeroIllustKey
@@ -46,6 +48,9 @@ export interface OutfitResult {
   windAlert: boolean
   tips: string[]              // 추가 착장 팁
   microclimateNote?: string   // 장소별 미기후 설명
+  dangerLevel: DangerLevel    // 최우선 위험 등급
+  dangerReasons: string[]     // 위험 사유 목록
+  cancelActivity: boolean     // 활동 취소 권고 여부
 }
 
 export type TempZone =
@@ -76,6 +81,8 @@ export interface OutfitInput {
   uvIndex: number
   ptyCode: string    // '0'=없음 '1'=비 '2'=비눈 '3'=눈 '4'=소나기
   dustGrade: string  // '1'=좋음 '2'=보통 '3'=나쁨 '4'=매우나쁨
+  o3Grade?: string   // '1'=좋음 '2'=보통 '3'=나쁨 '4'=매우나쁨
+  precipitation: number  // mm (1시간 강수량)
   activity: ActivityType
   gender: GenderType
   hour: number       // 시작 시간 (24h)

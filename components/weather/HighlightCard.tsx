@@ -5,11 +5,11 @@ interface Props {
   sub?: string
   accent?: string
   compact?: boolean
-  /** 설정 시 외부 페이지(예: 기상특보)로 연결, 새 탭 */
   href?: string
+  onInfoClick?: () => void
 }
 
-export function HighlightCard({ icon, label, value, sub, accent, compact, href }: Props) {
+export function HighlightCard({ icon, label, value, sub, accent, compact, href, onInfoClick }: Props) {
   const shell =
     compact
       ? 'glass-card p-2 sm:p-2.5 flex flex-col gap-0.5 min-h-0'
@@ -18,14 +18,26 @@ export function HighlightCard({ icon, label, value, sub, accent, compact, href }
 
   const content = (
     <>
-      <div className="flex items-center gap-1">
-        <span className={compact ? 'text-sm leading-none' : 'text-xl'}>{icon}</span>
-        <span
-          className={compact ? 'text-[10px] font-medium leading-tight line-clamp-2' : 'text-xs font-medium'}
-          style={{ color: 'var(--muted)' }}
-        >
-          {label}
-        </span>
+      <div className="flex items-center justify-between gap-1">
+        <div className="flex items-center gap-1 min-w-0">
+          <span className={compact ? 'text-sm leading-none flex-shrink-0' : 'text-xl flex-shrink-0'}>{icon}</span>
+          <span
+            className={compact ? 'text-[10px] font-medium leading-tight line-clamp-2' : 'text-xs font-medium'}
+            style={{ color: 'var(--muted)' }}
+          >
+            {label}
+          </span>
+        </div>
+        {onInfoClick && (
+          <button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onInfoClick() }}
+            className="flex-shrink-0 w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-bold transition-opacity hover:opacity-80"
+            style={{ background: 'rgba(148, 163, 184, 0.6)', color: '#fff' }}
+            aria-label={`${label} 기준 보기`}
+          >
+            ℹ
+          </button>
+        )}
       </div>
       <div>
         <p

@@ -1,4 +1,5 @@
-import type { OutfitInput, OutfitResult, OutfitItem } from '@/types/outfit'
+import type { OutfitInput, OutfitResult, OutfitItem, DangerLevel } from '@/types/outfit'
+import type { ActivityType } from '@/types/outfit'
 import {
   getTempZone,
   TEMP_ZONE_LABELS,
@@ -12,7 +13,98 @@ import {
   getMicroclimateNote,
 } from './rules'
 
+// 활동별 낙뢰·강풍·호우 취소 여부 (기상청 낙뢰·강풍·호우 행동요령 기준)
+const LIGHTNING_CANCEL_ACTIVITIES: ActivityType[] = ['golf', 'hiking', 'river', 'beach', 'running', 'cycling', 'tennis', 'picnic']
+const STRONG_WIND_CANCEL_ACTIVITIES: ActivityType[] = ['golf', 'hiking', 'cycling', 'beach', 'tennis']
+const HEAVY_RAIN_CANCEL_ACTIVITIES: ActivityType[] = ['hiking', 'river', 'picnic', 'beach']
+
+interface DangerResult {
+  dangerLevel: DangerLevel
+  dangerReasons: string[]
+  cancelActivity: boolean
+}
+
+function assessDanger(input: OutfitInput): DangerResult {
+  const reasons: string[] = []
+  let dangerLevel: DangerLevel = 'none'
+  let cancelActivity = false
+
+  // 우선순위 1: 낙뢰 (번개·천둥 동반 강수 — ptyCode '4'=소나기 또는 precipitation 높음 시 경고)
+  const lightningRisk = input.ptyCode === '4' || (input.ptyCode === '1' && input.precipitation >= 5)
+  if (lightningRisk && LIGHTNING_CANCEL_ACTIVITIES.includes(input.activity)) {
+    reasons.push('⚡ 낙뢰 위험: 골프채·등산스틱·라켓 등 긴 물체를 즉시 내려놓고 안전한 건물이나 차량으로 대피하세요. (기상청 낙뢰 행동요령)')
+    dangerLevel = 'cancel'
+    cancelActivity = true
+  }
+
+  // 우선순위 1: 강풍경보 수준 (풍속 21m/s 이상)
+  if (input.windSpeed >= 21 && STRONG_WIND_CANCEL_ACTIVITIES.includes(input.activity)) {
+    reasons.push('🌪️ 강풍경보 수준 (21m/s 이상): 야외 스포츠 활동을 취소하세요. (기상청 강풍 행동요령)')
+    dangerLevel = 'cancel'
+    cancelActivity = true
+  }
+
+  // 우선순위 1: 호우경보 수준 (강수 + 특정 활동)
+  if (input.precipitation >= 15 && HEAVY_RAIN_CANCEL_ACTIVITIES.includes(input.activity)) {
+    reasons.push('🌧️ 호우 위험: 등산·강변·야영·해변 활동을 중단하고 안전한 곳으로 이동하세요. (기상청 호우 행동요령)')
+    dangerLevel = 'cancel'
+    cancelActivity = true
+  }
+
+  // 우선순위 2: 미세먼지·오존 매우나쁨
+  if (input.dustGrade === '4') {
+    if (dangerLevel === 'none') dangerLevel = 'warning'
+    reasons.push('😷 미세먼지 매우나쁨: 야외 운동·장시간 실외활동을 제한하고 실내로 대체하세요. (에어코리아 미세먼지 행동요령)')
+    if (['running', 'cycling', 'hiking', 'tennis'].includes(input.activity)) cancelActivity = true
+  }
+
+  // 우선순위 3: 강풍주의보 수준 (14m/s 이상) — 취소까지는 아님
+  if (input.windSpeed >= 14 && input.windSpeed < 21) {
+    if (dangerLevel === 'none') dangerLevel = 'warning'
+    reasons.push('💨 강풍주의보 수준 (14m/s 이상): 야외활동을 자제하고 낙하물 위험 구역을 피하세요. (기상청 강풍 행동요령)')
+  }
+
+  // 우선순위 3: 폭염 경고 (체감 38°C 이상)
+  if (input.feelsLike >= 38) {
+    if (dangerLevel === 'none') dangerLevel = 'warning'
+    reasons.push('🥵 폭염 경고: 체감온도 38°C 이상입니다. 한낮 야외활동을 멈추고 충분히 쉬세요. (기상청 폭염 특보 기준)')
+  } else if (input.feelsLike >= 33) {
+    if (dangerLevel === 'none') dangerLevel = 'caution'
+    reasons.push('☀️ 폭염 주의: 체감온도 33°C 이상입니다. 수시 수분 섭취와 장시간 야외활동 자제가 필요합니다. (기상청 생활기상지수)')
+  }
+
+  // 우선순위 4: 자외선 매우높음 이상 (UV 8 이상)
+  if (input.uvIndex >= 8) {
+    if (dangerLevel === 'none') dangerLevel = 'caution'
+    reasons.push('☀️ 자외선 매우높음 (UV ' + input.uvIndex + '): 오전 10시~오후 3시 외출을 피하고 긴팔·모자·선글라스·선크림이 필수입니다. (기상청 생활기상지수)')
+  } else if (input.uvIndex >= 6) {
+    if (dangerLevel === 'none') dangerLevel = 'caution'
+    reasons.push('🌡️ 자외선 높음 (UV ' + input.uvIndex + '): 한낮에는 그늘에 머물고 긴팔·모자·선글라스·선크림을 갖추세요. (기상청 생활기상지수)')
+  }
+
+  // 미세먼지 나쁨 (취소까지는 아님)
+  if (input.dustGrade === '3') {
+    if (dangerLevel === 'none') dangerLevel = 'caution'
+    reasons.push('😷 미세먼지 나쁨 (PM10 81~150 ㎍/㎥): 보건용 마스크(KF80 이상)를 착용하고 조깅·등산·자전거 등 호흡량 많은 운동을 줄이세요. (에어코리아 미세먼지 행동요령)')
+  }
+
+  // 오존 매우나쁨 (0.151ppm↑) — 에어코리아 오존 행동요령
+  if (input.o3Grade === '4') {
+    if (dangerLevel === 'none' || dangerLevel === 'caution') dangerLevel = 'warning'
+    reasons.push('⚗️ 오존 매우나쁨 (0.151ppm↑): 실외활동을 최소화하세요. 민감군·노약자·어린이는 가급적 실내에 머무세요. (에어코리아 오존 행동요령)')
+    if (['running', 'cycling', 'golf', 'hiking', 'tennis'].includes(input.activity)) cancelActivity = true
+  } else if (input.o3Grade === '3') {
+    if (dangerLevel === 'none') dangerLevel = 'caution'
+    reasons.push('⚗️ 오존 나쁨 (0.091~0.150ppm): 오전 10시~오후 4시 격한 운동을 피하고 이른 아침·저녁 시간대로 조정하세요. (에어코리아 오존 행동요령)')
+  }
+
+  return { dangerLevel, dangerReasons: reasons, cancelActivity }
+}
+
 export function recommendOutfit(input: OutfitInput): OutfitResult {
+  // 위험 우선순위 판단 (참고: weather-outdoor-clothing-guide.md 라. 복장 추천 로직 §1)
+  const danger = assessDanger(input)
+
   // 장소 미기후 보정: 강바람·고도·해풍 등을 반영해 체감온도 조정
   const baseZone = getTempZone(input.feelsLike)
   const microOffset = getMicroclimateOffset(input.activity)
@@ -23,7 +115,7 @@ export function recommendOutfit(input: OutfitInput): OutfitResult {
   const activityItems = getActivityItems(input.activity, zone, input.gender)
   const microclimateItems = getMicroclimateItems(input.activity, baseZone, input.gender)
 
-  // Deduplicate by id (microclimateItems last so base items take priority for same id)
+  // Deduplicate by id
   const seen = new Set<string>()
   const allItems: OutfitItem[] = []
   for (const item of [...baseItems, ...activityItems, ...microclimateItems]) {
@@ -33,37 +125,56 @@ export function recommendOutfit(input: OutfitInput): OutfitResult {
     }
   }
 
-  // Rain items
+  // Rain / snow items
   const rainAlert = input.ptyCode !== '0'
   if (rainAlert) {
     if (input.ptyCode === '1' || input.ptyCode === '4') {
-      allItems.push({ id: 'rain-umbrella', name: '우산', icon: '☂️', category: 'rain', required: true })
-      allItems.push({ id: 'rain-coat', name: '우의 / 레인자켓', icon: '🌂', category: 'rain', required: false })
+      // 낙뢰 위험 시 우산보다 비옷 권장 (기상청 낙뢰 행동요령)
+      const lightningRisk = input.ptyCode === '4' || input.precipitation >= 5
+      if (lightningRisk) {
+        allItems.push({ id: 'rain-coat', name: '비옷 / 레인자켓 (낙뢰 시 우산 대신)', icon: '🌂', category: 'rain', required: true, condition: '낙뢰 위험 시 우산 사용 자제' })
+      } else {
+        allItems.push({ id: 'rain-umbrella', name: '우산', icon: '☂️', category: 'rain', required: true })
+        allItems.push({ id: 'rain-coat', name: '우의 / 레인자켓', icon: '🌂', category: 'rain', required: false })
+      }
+      allItems.push({ id: 'rain-shoes', name: '미끄럼 적은 방수 신발', icon: '🥾', category: 'foot', required: false, condition: '젖은 노면 안전' })
     } else if (input.ptyCode === '3' || input.ptyCode === '2') {
       allItems.push({ id: 'rain-boots', name: '방수 신발', icon: '🥾', category: 'foot', required: true })
     }
   }
 
-  // Mask items
+  // Mask items — 자료 기준: PM10 81↑(나쁨)=KF80, 매우나쁨=KF94
   const dustAlert = input.dustGrade === '3' || input.dustGrade === '4'
   if (dustAlert) {
     const maskLevel = input.dustGrade === '4' ? 'KF94' : 'KF80'
     allItems.push({
       id: 'mask-dust',
-      name: `${maskLevel} 마스크`,
+      name: `${maskLevel} 보건용 마스크`,
       icon: '😷',
       category: 'mask',
       required: input.dustGrade === '4',
+      condition: input.dustGrade === '4'
+        ? '미세먼지 매우나쁨 — KF94 필수 (에어코리아)'
+        : '미세먼지 나쁨 — KF80 이상 권장 (에어코리아)',
     })
   }
 
-  // Sun cream (해변은 수면 반사로 UV 항상 높음)
+  // Sun cream — UV 6 이상 또는 해변
   const uvAlert = input.uvIndex >= 6 || input.activity === 'beach'
-  if (uvAlert && input.activity !== 'beach') { // beach는 microclimateItems에서 이미 추가
-    allItems.push({ id: 'acc-suncream', name: 'SPF50+ 선크림', icon: '🧴', category: 'acc', required: input.uvIndex >= 8 })
+  if (uvAlert && input.activity !== 'beach') {
+    allItems.push({
+      id: 'acc-suncream',
+      name: 'SPF50+ 자외선 차단제',
+      icon: '🧴',
+      category: 'acc',
+      required: input.uvIndex >= 8,
+      condition: input.uvIndex >= 8
+        ? 'UV 매우높음 — 외출 시 필수 (기상청 생활기상지수)'
+        : 'UV 높음 — 외출 30분 전 도포 권장',
+    })
   }
 
-  // Wind alert (강변·해변·골프·등산은 낮은 풍속에도 주의)
+  // Wind alert threshold by activity
   const windThreshold = ['river', 'beach', 'golf', 'hiking'].includes(input.activity) ? 7 : 10
   const windAlert = input.windSpeed >= windThreshold
 
@@ -76,7 +187,9 @@ export function recommendOutfit(input: OutfitInput): OutfitResult {
     input.windSpeed,
     input.activity,
     input.terrain,
-    input.duration
+    input.duration,
+    input.precipitation,
+    input.feelsLike,
   )
 
   const microclimateNote = getMicroclimateNote(input.activity)
@@ -93,5 +206,8 @@ export function recommendOutfit(input: OutfitInput): OutfitResult {
     windAlert,
     tips,
     microclimateNote,
+    dangerLevel: danger.dangerLevel,
+    dangerReasons: danger.dangerReasons,
+    cancelActivity: danger.cancelActivity,
   }
 }

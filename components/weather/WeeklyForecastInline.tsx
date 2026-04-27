@@ -41,7 +41,7 @@ export function WeeklyForecastInline({ daily, hourly, loading }: Props) {
   const [expandedDay, setExpandedDay] = useState<string | null>(null)
 
   return (
-    <div className="glass-card p-3 sm:p-5">
+    <div className="glass-card p-3 sm:p-5 min-w-0 max-w-full overflow-x-hidden">
       {/* Tabs */}
       <div className="flex gap-1 mb-3 bg-white/40 rounded-xl p-1 w-fit">
         {(['today', 'week'] as const).map((t) => (
@@ -90,7 +90,7 @@ function TodayView({ hourly, loading }: { hourly: HourlyForecast[]; loading?: bo
   }))
 
   return (
-    <div>
+    <div className="min-w-0 w-full max-w-full">
       <ResponsiveContainer width="100%" height={140}>
         <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
           <XAxis
