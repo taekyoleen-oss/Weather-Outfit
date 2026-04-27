@@ -44,9 +44,14 @@ export async function searchKakaoAddress(query: string, size = 5): Promise<Kakao
   })) as KakaoSearchResult[]
 }
 
-export async function reverseGeocode(lat: number, lon: number): Promise<string> {
+/** 역지오코딩: 짧은 지역명 + 상세 주소(도로명·지번) */
+export async function reverseGeocodeComponents(
+  lat: number,
+  lon: number
+): Promise<{ label: string; addressLine: string }> {
+  const fallback = `${lat.toFixed(4)}, ${lon.toFixed(4)}`
   const key = process.env.KAKAO_LOCAL_API_KEY
-  if (!key) return `${lat.toFixed(4)}, ${lon.toFixed(4)}`
+  if (!key) return { label: fallback, addressLine: fallback }
 
   const url = `${KAKAO_API_BASE}/geo/coord2address.json?x=${lon}&y=${lat}`
   const res = await fetch(url, {
@@ -54,10 +59,21 @@ export async function reverseGeocode(lat: number, lon: number): Promise<string> 
     next: { revalidate: 0 },
   })
 
-  if (!res.ok) return `${lat.toFixed(4)}, ${lon.toFixed(4)}`
+  if (!res.ok) return { label: fallback, addressLine: fallback }
   const data = await res.json()
   const doc = data.documents?.[0]
-  if (!doc) return `${lat.toFixed(4)}, ${lon.toFixed(4)}`
+  if (!doc) return { label: fallback, addressLine: fallback }
 
-  return doc.road_address?.address_name || doc.address?.address_name || `${lat.toFixed(4)}, ${lon.toFixed(4)}`
+  const addr = doc.address as { address_name?: string; region_1depth_name?: string; region_2depth_name?: string; region_3depth_name?: string } | undefined
+  const road = doc.road_address as { address_name?: string } | undefined
+  const addressLine = road?.address_name || addr?.address_name || fallback
+  const parts = [addr?.region_1depth_name, addr?.region_2depth_name, addr?.region_3depth_name].filter(Boolean)
+  const label = parts.length > 0 ? parts.join(' ') : addressLine
+
+  return { label, addressLine }
+}
+
+export async function reverseGeocode(lat: number, lon: number): Promise<string> {
+  const { addressLine } = await reverseGeocodeComponents(lat, lon)
+  return addressLine
 }

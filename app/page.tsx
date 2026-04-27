@@ -17,6 +17,7 @@ import { useAutoLocation } from '@/lib/hooks/useAutoLocation'
 import { useWeather } from '@/lib/hooks/useWeather'
 import { useWeeklyForecast } from '@/lib/hooks/useWeeklyForecast'
 import { getTimeOfDay, currentHour } from '@/lib/utils/timeOfDay'
+import { feelsLike } from '@/lib/utils/formatWeather'
 import { TIME_PERIODS, getPeriodIndex } from '@/lib/utils/timePeriods'
 import type { DustData, SunriseSunset, WeatherAlert, CurrentWeather, HourlyForecast } from '@/types/weather'
 import type { LocationInfo } from '@/types/location'
@@ -25,13 +26,13 @@ function hourlyToCurrentWeather(entry: HourlyForecast, base: CurrentWeather): Cu
   return {
     ...base,
     temperature: entry.temperature,
-    feelsLike: entry.temperature,
+    feelsLike: feelsLike(entry.temperature, entry.windSpeed, entry.humidity),
     humidity: entry.humidity,
     windSpeed: entry.windSpeed,
     skyCode: entry.skyCode,
     ptyCode: entry.ptyCode,
     precipitation: entry.precipitation,
-    uvIndex: 0,
+    uvIndex: base.uvIndex,
   }
 }
 
@@ -80,6 +81,46 @@ export default function HomePage() {
   // Highlight range for HourlyWeatherStrip
   const selectedPeriod = TIME_PERIODS.find((p) => p.repHour === selectedPeriodHour)
 
+  // Filter hourly data to show only entries from the selected period onwards
+  const displayedHourly = useMemo((): HourlyForecast[] => {
+    const hourly = weatherData?.hourly ?? []
+    if (!selectedPeriod || !hourly.length) return hourly
+
+    const selIdx = getPeriodIndex(selectedPeriodHour)
+    const curIdx = getPeriodIndex(hour)
+    const isTomorrow = selIdx < curIdx
+
+    const toHourNum = (t: string) => parseInt(t.split(':')[0], 10)
+
+    if (selIdx === curIdx) {
+      // Current period: start from now
+      const idx = hourly.findIndex(h => toHourNum(h.time) >= hour)
+      return idx >= 0 ? hourly.slice(idx) : hourly
+    }
+
+    if (!isTomorrow) {
+      // Same-day future period
+      const idx = hourly.findIndex(h => toHourNum(h.time) >= selectedPeriod.start)
+      return idx >= 0 ? hourly.slice(idx) : hourly
+    }
+
+    // Tomorrow's period: find midnight crossing, then period start after it
+    const midnightIdx = hourly.findIndex((h, i) =>
+      i > 0 && toHourNum(h.time) < toHourNum(hourly[i - 1].time)
+    )
+    if (midnightIdx < 0) return hourly
+    const afterMidnight = hourly.slice(midnightIdx)
+    const startIdx = afterMidnight.findIndex(h => toHourNum(h.time) >= selectedPeriod.start)
+    return startIdx >= 0 ? afterMidnight.slice(startIdx) : afterMidnight
+  }, [weatherData, selectedPeriod, selectedPeriodHour, hour])
+
+  const uvForCard = useMemo(() => {
+    const base = weatherData?.current
+    if (!base || !displayWeather) return undefined
+    if (displayWeather.uvIndex > 0) return displayWeather.uvIndex
+    return base.uvIndex
+  }, [weatherData, displayWeather])
+
   useEffect(() => {
     if (!location) return
     const { nx, ny, lat, lon } = location
@@ -127,11 +168,18 @@ export default function HomePage() {
   )
 
   const weatherCard = (
-    <WeatherCard weather={displayWeather} period={period} loading={weatherLoading} />
+    <WeatherCard
+      weather={displayWeather}
+      period={period}
+      loading={weatherLoading}
+      addressLine={location.address}
+      sunriseSunset={sunriseSunset}
+      uvDisplay={uvForCard}
+    />
   )
   const hourlyStrip = (
     <HourlyWeatherStrip
-      hourly={weatherData?.hourly ?? []}
+      hourly={displayedHourly}
       currentHour={hour}
       selectedPeriodStart={selectedPeriod?.start}
       selectedPeriodEnd={selectedPeriod?.end}
@@ -141,7 +189,6 @@ export default function HomePage() {
     <HighlightsGrid
       weather={displayWeather}
       dust={dust}
-      sunriseSunset={sunriseSunset}
       alerts={alerts}
       loading={weatherLoading}
       compact
@@ -169,9 +216,9 @@ export default function HomePage() {
           gpsError={gpsError}
           onGps={requestGps}
           recentChips={<>{recentChips}{nearbyChips}</>}
+          periodPicker={timePeriodPicker}
           weatherContent={
             <>
-              {timePeriodPicker}
               {weatherCard}
               {hourlyStrip}
               {highlightsGrid}

@@ -39,6 +39,7 @@ export interface KakaoSearchResult {
 
 export interface RecentLocation {
   name: string
+  address?: string
   lat: number
   lon: number
   nx: number

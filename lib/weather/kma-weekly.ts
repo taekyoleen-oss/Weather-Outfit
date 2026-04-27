@@ -8,8 +8,29 @@ function kmaKey(): string {
   return key
 }
 
+// KST = UTC+9; KMA API uses Korean Standard Time
+function kstNow(): Date {
+  return new Date(Date.now() + 9 * 60 * 60 * 1000)
+}
+
 function formatDate(d: Date): string {
   return d.toISOString().slice(0, 10).replace(/-/g, '')
+}
+
+// getMidTa uses temperature forecast region codes (기온예보구역코드), different from land forecast region codes
+function getMidTaCode(regId: string): string {
+  const MAP: Record<string, string> = {
+    '11B00000': '11B10001', // 서울
+    '11H20000': '11H20201', // 부산
+    '11H10000': '11H10701', // 대구
+    '11F20000': '11F20501', // 광주
+    '11F10000': '11F10201', // 전주
+    '11C20000': '11C20401', // 대전
+    '11C10000': '11C10301', // 청주
+    '11D10000': '11D10301', // 강릉
+    '11G00000': '11G00201', // 제주
+  }
+  return MAP[regId] ?? '11B10001'
 }
 
 // Map nx/ny approximate region to KMA mid-forecast region code
@@ -36,8 +57,9 @@ export function getMidRegionCode(nx: number, ny: number): string {
 }
 
 export async function fetchWeeklyForecast(nx: number, ny: number): Promise<DailyForecast[]> {
-  const now = new Date()
-  const tmFc = formatDate(now) + (now.getHours() >= 18 ? '1800' : '0600')
+  const now = kstNow()
+  const kstHour = now.getUTCHours()
+  const tmFc = formatDate(now) + (kstHour >= 18 ? '1800' : '0600')
   const regId = getMidRegionCode(nx, ny)
 
   const [landRes, tempRes] = await Promise.allSettled([
@@ -50,8 +72,7 @@ export async function fetchWeeklyForecast(nx: number, ny: number): Promise<Daily
 
   const forecasts: DailyForecast[] = []
   for (let i = 3; i <= 7; i++) {
-    const d = new Date(now)
-    d.setDate(d.getDate() + i)
+    const d = new Date(now.getTime() + i * 24 * 60 * 60 * 1000)
     const dateStr = formatDate(d)
 
     forecasts.push({
@@ -67,6 +88,16 @@ export async function fetchWeeklyForecast(nx: number, ny: number): Promise<Daily
   return forecasts
 }
 
+function parseItem<T>(json: unknown): T | null {
+  const raw = (json as Record<string, unknown>)?.response as Record<string, unknown>
+  const body = raw?.body as Record<string, unknown>
+  const items = body?.items as Record<string, unknown>
+  const item = items?.item
+  if (!item) return null
+  // KMA sometimes returns a single object instead of an array
+  return (Array.isArray(item) ? item[0] : item) as T
+}
+
 async function fetchMidLand(regId: string, tmFc: string): Promise<Record<string, string>> {
   const params = new URLSearchParams({
     serviceKey: decodeURIComponent(process.env.KMA_API_KEY ?? ''),
@@ -79,23 +110,33 @@ async function fetchMidLand(regId: string, tmFc: string): Promise<Record<string,
   const res = await fetch(`${KMA_BASE}/getMidLandFcst?${params}`, { next: { revalidate: 0 } })
   if (!res.ok) throw new Error(`KMA mid-land API: ${res.status}`)
   const json = await res.json()
-  return json?.response?.body?.items?.item?.[0] ?? {}
+  const resultCode = (json?.response?.header?.resultCode as string) ?? 'unknown'
+  if (resultCode !== '00') {
+    console.error(`[getMidLandFcst] resultCode=${resultCode} regId=${regId} tmFc=${tmFc}`)
+    return {}
+  }
+  return parseItem<Record<string, string>>(json) ?? {}
 }
 
 async function fetchMidTemp(regId: string, tmFc: string): Promise<Record<string, number>> {
-  const stnId = regId.slice(0, 5) === '11B00' ? '108' : '159'
+  const taRegId = getMidTaCode(regId)
   const params = new URLSearchParams({
     serviceKey: decodeURIComponent(process.env.KMA_API_KEY ?? ''),
     pageNo: '1',
     numOfRows: '10',
     dataType: 'JSON',
-    regId: stnId,
+    regId: taRegId,
     tmFc,
   })
   const res = await fetch(`${KMA_BASE}/getMidTa?${params}`, { next: { revalidate: 0 } })
   if (!res.ok) throw new Error(`KMA mid-temp API: ${res.status}`)
   const json = await res.json()
-  return json?.response?.body?.items?.item?.[0] ?? {}
+  const resultCode = (json?.response?.header?.resultCode as string) ?? 'unknown'
+  if (resultCode !== '00') {
+    console.error(`[getMidTa] resultCode=${resultCode} taRegId=${taRegId} tmFc=${tmFc}`)
+    return {}
+  }
+  return parseItem<Record<string, number>>(json) ?? {}
 }
 
 function skyFromLabel(label: string): SkyCode {

@@ -89,8 +89,8 @@ export function OutfitResult({ result }: Props) {
         </div>
       )}
 
-      {/* Items by category */}
-      <div className="space-y-3">
+      {/* Items by category — 모바일 1열, PC(lg+) 2열 */}
+      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-x-4 lg:gap-y-4">
         {Object.entries(byCategory).map(([cat, items]) => (
           <div key={cat}>
             <p className="text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--muted)' }}>

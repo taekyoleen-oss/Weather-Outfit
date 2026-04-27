@@ -9,6 +9,8 @@ interface Props {
   gpsError: string | null
   onGps: () => void
   recentChips: ReactNode
+  /** 탭과 무관하게 날씨·복장 패널 바로 위에 표시 */
+  periodPicker?: ReactNode
   weatherContent: ReactNode
   outfitContent: ReactNode
 }
@@ -19,6 +21,7 @@ export function MobileLayout({
   gpsError,
   onGps,
   recentChips,
+  periodPicker,
   weatherContent,
   outfitContent,
 }: Props) {
@@ -86,6 +89,9 @@ export function MobileLayout({
           )
         })}
       </div>
+
+      {/* ── 시간대 선택: 탭 공통, 날씨·복장 바로 위 ── */}
+      {periodPicker != null && <div className="px-3 pt-3">{periodPicker}</div>}
 
       {/* ── Tab content ── */}
       <div className="flex-1 px-3 pt-3 pb-10 space-y-3" role="tabpanel">

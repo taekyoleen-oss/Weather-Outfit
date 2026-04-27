@@ -1,21 +1,20 @@
 'use client'
 
 import { HighlightCard } from './HighlightCard'
-import type { CurrentWeather, DustData, SunriseSunset, WeatherAlert } from '@/types/weather'
-import { uvLabel, uvColor, dustGradeLabel, dustGradeColor, formatTime, windDirectionLabel } from '@/lib/utils/formatWeather'
+import type { CurrentWeather, DustData, WeatherAlert } from '@/types/weather'
+import { dustGradeLabel, dustGradeColor } from '@/lib/utils/formatWeather'
 import { KMA_WEATHER_WARN_PAGE } from '@/lib/weather/kma-alert'
 
 interface Props {
   weather: CurrentWeather | null
   dust?: DustData | null
-  sunriseSunset?: SunriseSunset | null
   alerts?: WeatherAlert[]
   loading?: boolean
   /** 왼쪽 사이드: 3열 2~3행 컴팩트 레이아웃 */
   compact?: boolean
 }
 
-export function HighlightsGrid({ weather, dust, sunriseSunset, alerts, loading, compact }: Props) {
+export function HighlightsGrid({ weather, dust, alerts, loading, compact }: Props) {
   const gridClass = compact
     ? 'grid grid-cols-4 gap-1.5'
     : 'grid grid-cols-2 md:grid-cols-4 gap-4'
@@ -33,7 +32,7 @@ export function HighlightsGrid({ weather, dust, sunriseSunset, alerts, loading, 
           </h2>
         )}
         <div className={gridClass}>
-          {Array.from({ length: 8 }).map((_, i) => (
+          {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className={`glass-card p-4 ${skeletonH} animate-pulse`}>
               <div className="h-2.5 w-12 bg-gray-200 rounded mb-2" />
               <div className="h-4 w-10 bg-gray-200 rounded" />
@@ -47,36 +46,6 @@ export function HighlightsGrid({ weather, dust, sunriseSunset, alerts, loading, 
   const alertCount = alerts?.length ?? 0
 
   const cards = [
-    {
-      icon: '🌡',
-      label: '자외선 지수',
-      value: `UV ${weather.uvIndex}`,
-      sub: uvLabel(weather.uvIndex),
-      accent: uvColor(weather.uvIndex),
-    },
-    {
-      icon: '💨',
-      label: '바람',
-      value: `${weather.windSpeed}m/s`,
-      sub: `${windDirectionLabel(weather.windDirection)}풍`,
-      accent: 'var(--cool)',
-    },
-    {
-      icon: '🌅',
-      label: '일출 / 일몰',
-      value: sunriseSunset
-        ? `${formatTime(sunriseSunset.sunrise)}`
-        : '--:--',
-      sub: sunriseSunset ? `일몰 ${formatTime(sunriseSunset.sunset)}` : '',
-      accent: 'var(--accent)',
-    },
-    {
-      icon: '💧',
-      label: '습도',
-      value: `${weather.humidity}%`,
-      sub: weather.humidity > 70 ? '습함' : weather.humidity < 30 ? '건조' : '보통',
-      accent: 'var(--humidity)',
-    },
     {
       icon: '👁',
       label: '가시거리',

@@ -11,7 +11,7 @@ export async function fetchDust(stationName: string): Promise<DustData> {
     returnType: 'json',
     numOfRows: '1',
     pageNo: '1',
-    stationName: encodeURIComponent(stationName),
+    stationName,
     dataTerm: 'DAILY',
     ver: '1.0',
   })
@@ -24,9 +24,13 @@ export async function fetchDust(stationName: string): Promise<DustData> {
   const item = json?.response?.body?.items?.[0]
   if (!item) throw new Error('No dust data')
 
+  const pm10Value = parseFloat(item.pm10Value)
+  const pm25Value = parseFloat(item.pm25Value)
+  if (isNaN(pm10Value) || isNaN(pm25Value)) throw new Error('Dust values not available (sensor under maintenance)')
+
   return {
-    pm10Value: parseFloat(item.pm10Value ?? '0') || 0,
-    pm25Value: parseFloat(item.pm25Value ?? '0') || 0,
+    pm10Value,
+    pm25Value,
     pm10Grade: item.pm10Grade ?? '2',
     pm25Grade: item.pm25Grade ?? '2',
     stationName,

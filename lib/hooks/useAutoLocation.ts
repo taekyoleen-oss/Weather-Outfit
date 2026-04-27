@@ -52,6 +52,7 @@ export function useAutoLocation() {
           const data = await res.json()
           const loc: LocationInfo = {
             name: data.name ?? '현재 위치',
+            address: typeof data.address === 'string' ? data.address : undefined,
             lat,
             lon,
             nx: data.nx,

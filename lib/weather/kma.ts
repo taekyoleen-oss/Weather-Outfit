@@ -10,12 +10,17 @@ function kmaKey(): string {
   return key
 }
 
+// KST = UTC+9; KMA API uses Korean Standard Time for all dates/times
+function kstNow(): Date {
+  return new Date(Date.now() + 9 * 60 * 60 * 1000)
+}
+
 function formatDate(d: Date): string {
   return d.toISOString().slice(0, 10).replace(/-/g, '')
 }
 
 function formatTime(d: Date): string {
-  const h = d.getHours()
+  const h = d.getUTCHours() // getUTCHours on a KST-adjusted Date gives KST hours
   const baseHours = [2, 5, 8, 11, 14, 17, 20, 23]
   const base = baseHours.reduce((prev, curr) => (Math.abs(curr - h) < Math.abs(prev - h) ? curr : prev))
   return String(base).padStart(2, '0') + '00'
@@ -34,7 +39,7 @@ export async function fetchVilageForecast(nx: number, ny: number): Promise<{
   current: CurrentWeather
   hourly: HourlyForecast[]
 }> {
-  const now = new Date()
+  const now = kstNow()
   const baseDate = formatDate(now)
   const baseTime = formatTime(now)
 
@@ -81,8 +86,8 @@ function parseVilageFcst(
   }
 
   const sortedKeys = Object.keys(map).sort()
-  const now = new Date()
-  const nowKey = formatDate(now) + String(now.getHours()).padStart(2, '0') + '00'
+  const now = kstNow()
+  const nowKey = formatDate(now) + String(now.getUTCHours()).padStart(2, '0') + '00'
 
   // Find closest key for current
   const closestKey = sortedKeys.reduce((prev, curr) =>
@@ -112,7 +117,7 @@ function parseVilageFcst(
     fetchedAt: Date.now(),
   }
 
-  const hourly: HourlyForecast[] = sortedKeys.slice(0, 24).map((k) => {
+  const hourly: HourlyForecast[] = sortedKeys.slice(0, 48).map((k) => {
     const h = map[k]
     const t = parseFloat(h.TMP ?? '0')
     const w = parseFloat(h.WSD ?? '0')

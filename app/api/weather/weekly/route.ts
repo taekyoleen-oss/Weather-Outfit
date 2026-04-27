@@ -10,8 +10,9 @@ export async function GET(req: NextRequest) {
   try {
     const regId = getMidRegionCode(nx, ny)
     const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-    const key = `midfcst:${regId}:${today}`
+    const key = `midfcst2:${regId}:${today}`
     const data = await kvSWR(key, TTL.midForecast, () => fetchWeeklyForecast(nx, ny))
+    console.log('[weekly] result sample:', JSON.stringify(data?.[0]))
     return NextResponse.json(data)
   } catch (err) {
     console.error('Weekly forecast error:', err)
