@@ -76,6 +76,27 @@ export function OutfitResult({ result }: Props) {
         <OutfitHeroIllustration illustKey={result.heroIllust} size={120} />
       </div>
 
+      {/* 오존 피크 시간대 경고 */}
+      {result.ozoneTimeWarning && (
+        <div
+          className="flex gap-2.5 rounded-xl p-3"
+          style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.30)' }}
+        >
+          <span className="text-base flex-shrink-0 mt-0.5">⚗️</span>
+          <div className="min-w-0">
+            {result.ozoneTimeWarning.split('\n').map((line, i) => (
+              <p
+                key={i}
+                className={i === 0 ? 'text-xs font-bold leading-snug' : 'text-xs leading-relaxed mt-1'}
+                style={{ color: i === 0 ? '#92400E' : 'var(--text)' }}
+              >
+                {i === 0 ? line.replace('⚗️ ', '') : line}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Microclimate note */}
       {result.microclimateNote && (
         <div
@@ -98,14 +119,17 @@ export function OutfitResult({ result }: Props) {
         </div>
       )}
 
-      {/* Items by category — 모바일 1열, PC(lg+) 2열 */}
+      {/* Items by category — 카테고리 라벨을 좌측으로 배치 */}
       <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-x-4 lg:gap-y-4">
         {Object.entries(byCategory).map(([cat, items]) => (
-          <div key={cat}>
-            <p className="text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--muted)' }}>
+          <div key={cat} className="flex items-start gap-2 sm:gap-2.5">
+            <p
+              className="text-xs font-semibold uppercase tracking-wide pt-2 w-12 sm:w-14 shrink-0"
+              style={{ color: 'var(--muted)' }}
+            >
               {CATEGORY_LABELS[cat] ?? cat}
             </p>
-            <div className="grid grid-cols-1 gap-1.5">
+            <div className="grid grid-cols-1 gap-1.5 flex-1 min-w-0">
               {items.map((item) => (
                 <OutfitItemCard key={item.id} item={item} />
               ))}

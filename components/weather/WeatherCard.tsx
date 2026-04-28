@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { WeatherHeroIllustration } from './WeatherHeroIllustration'
 import { FreshnessBadge } from './FreshnessBadge'
-import type { CurrentWeather, SunriseSunset, TimeOfDay, DustData, PreviousPeriodWeatherSummary } from '@/types/weather'
+import type { CurrentWeather, SunriseSunset, TimeOfDay, DustData, PreviousPeriodWeatherSummary, MorningSummary } from '@/types/weather'
 import type { OpenMeteoDailyCompare } from '@/lib/weather/openMeteoCompare'
 import {
   weatherLabel,
@@ -16,6 +16,9 @@ import {
   formatTime,
   o3GradeLabel,
   o3GradeColor,
+  computeHeatIndex,
+  heatIndexLabel,
+  heatIndexColor,
 } from '@/lib/utils/formatWeather'
 
 interface Props {
@@ -30,6 +33,8 @@ interface Props {
   previousPeriodWeather?: PreviousPeriodWeatherSummary | null
   /** 어제 동시간대·오늘 일 최저·최고 (Open-Meteo) */
   openMeteoCompare?: OpenMeteoDailyCompare | null
+  /** 오전(6–11시) 날씨 요약 — 오후에만 전달 */
+  morningSummary?: MorningSummary | null
 }
 
 const BG_MAP: Record<TimeOfDay, string> = {
@@ -154,6 +159,7 @@ export function WeatherCard({
   dust,
   previousPeriodWeather,
   openMeteoCompare,
+  morningSummary,
 }: Props) {
   const [modal, setModal] = useState<'uv' | 'heat' | null>(null)
 
@@ -193,6 +199,9 @@ export function WeatherCard({
   const o3Label = o3GradeLabel(dust?.o3Grade)
   const o3Color = o3GradeColor(dust?.o3Grade)
   const o3Value = dust?.o3Value != null ? `${dust.o3Value.toFixed(3)} ppm` : undefined
+
+  const heatIdx = computeHeatIndex(weather.temperature, weather.humidity)
+  const heatIdxDiff = heatIdx != null ? heatIdx - weather.temperature : null
 
   return (
     <div
@@ -268,6 +277,33 @@ export function WeatherCard({
         </div>
       )}
 
+      {morningSummary && (
+        <div
+          className="mt-2 rounded-xl px-2.5 py-2 text-left"
+          style={{
+            background: isNight ? 'rgba(148,163,184,0.10)' : 'rgba(251,191,36,0.08)',
+            border: `1px solid ${isNight ? 'rgba(148,163,184,0.18)' : 'rgba(251,191,36,0.25)'}`,
+          }}
+        >
+          <p className="text-[10px] font-medium leading-tight" style={{ color: mutedColor }}>
+            오전 현황 · 06–11시
+          </p>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-sm">{morningSummary.emoji}</span>
+            <p className="text-xs font-semibold tabular-nums leading-snug" style={{ color: textColor }}>
+              {morningSummary.weatherLabel}
+              <span className="mx-1 font-normal" style={{ color: mutedColor }}>·</span>
+              {formatTemp1(morningSummary.minTemp)}° – {formatTemp1(morningSummary.maxTemp)}°
+            </p>
+            {morningSummary.totalPrecip > 0 && (
+              <span className="text-[10px] font-medium ml-auto tabular-nums" style={{ color: '#3B82F6' }}>
+                ☂️ {morningSummary.totalPrecip.toFixed(1)}mm
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Stats grid: row1 = 체감/습도/바람, row2 = 가시거리/일출/일몰 */}
       <div className="mt-2.5 grid grid-cols-3 gap-x-2 gap-y-2 text-xs sm:text-sm">
         {/* 체감온도 with ℹ — 폭염/한파 기준 안내 */}
@@ -305,6 +341,45 @@ export function WeatherCard({
           muted={mutedColor}
         />
       </div>
+
+      {/* 열지수 (습도 기반) — 기온 27°C↑, 습도 40%↑ 조건에서만 표시 */}
+      {heatIdx != null && heatIdxDiff != null && heatIdxDiff >= 2 && (
+        <div
+          className="mt-2.5 rounded-xl px-2.5 py-2"
+          style={{
+            background: isNight
+              ? `${heatIndexColor(heatIdx)}18`
+              : `${heatIndexColor(heatIdx)}12`,
+            border: `1px solid ${heatIndexColor(heatIdx)}40`,
+          }}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm">🌡️</span>
+              <p className="text-[10px] font-medium" style={{ color: mutedColor }}>
+                열지수 (습도 기반)
+              </p>
+            </div>
+            <span
+              className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+              style={{
+                background: `${heatIndexColor(heatIdx)}20`,
+                color: heatIndexColor(heatIdx),
+              }}
+            >
+              {heatIndexLabel(heatIdx)}
+            </span>
+          </div>
+          <div className="flex items-baseline gap-1.5 mt-1">
+            <span className="text-lg font-bold tabular-nums" style={{ color: heatIndexColor(heatIdx) }}>
+              {formatTemp1(heatIdx)}°
+            </span>
+            <span className="text-[10px]" style={{ color: mutedColor }}>
+              체감보다 +{formatTemp1(heatIdxDiff)}° 높음 (습도 {weather.humidity}%)
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* UV + 오존 하단 전용 섹션 */}
       <div

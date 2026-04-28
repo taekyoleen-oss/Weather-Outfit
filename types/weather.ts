@@ -40,6 +40,15 @@ export interface PreviousPeriodWeatherSummary {
   feelsLike: number
 }
 
+/** 오전 시간대(6–11시) 날씨 요약 — 오후·저녁에 WeatherCard에 표시 */
+export interface MorningSummary {
+  minTemp: number
+  maxTemp: number
+  weatherLabel: string
+  emoji: string
+  totalPrecip: number
+}
+
 export interface DailyForecast {
   date: string
   minTemp: number

@@ -25,7 +25,7 @@ export function MobileLayout({
   weatherContent,
   outfitContent,
 }: Props) {
-  const [tab, setTab] = useState<'weather' | 'outfit'>('weather')
+  const [tab, setTab] = useState<'weather' | 'outfit'>('outfit')
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--background)' }}>

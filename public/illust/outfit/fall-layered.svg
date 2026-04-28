@@ -1,23 +1,53 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240" fill="none">
+  <!-- Autumn leaves -->
+  <ellipse cx="160" cy="38" rx="13" ry="7" fill="#F59E0B" transform="rotate(-30 160 38)"/>
+  <ellipse cx="170" cy="52" rx="11" ry="6" fill="#EF4444" transform="rotate(20 170 52)"/>
+  <ellipse cx="152" cy="55" rx="10" ry="5" fill="#D97706" transform="rotate(-15 152 55)"/>
+  <ellipse cx="30" cy="42" rx="9" ry="5" fill="#F59E0B" opacity="0.6" transform="rotate(25 30 42)"/>
+  <ellipse cx="24" cy="56" rx="8" ry="4" fill="#EF4444" opacity="0.5" transform="rotate(-20 24 56)"/>
+
+  <!-- Hair (mid-length) -->
+  <path d="M83 25 Q82 6 100 4 Q118 6 117 25 Q112 16 100 15 Q88 16 83 25Z" fill="#1C1917"/>
   <!-- Head -->
-  <circle cx="100" cy="35" r="18" fill="#FBBF24"/>
-  <!-- Coat/outer (warm brown) -->
-  <path d="M70 60 L63 85 L85 90 L85 125 L115 125 L115 90 L137 85 L130 60 L115 53 L100 65 L85 53 Z" fill="#92400E"/>
-  <!-- Mid layer visible -->
-  <rect x="90" y="62" width="20" height="5" fill="#F59E0B" opacity="0.6"/>
-  <!-- Pants (dark navy) -->
-  <rect x="84" y="125" width="12" height="43" rx="2" fill="#1E293B"/>
-  <rect x="104" y="125" width="12" height="43" rx="2" fill="#1E293B"/>
-  <!-- Legs -->
-  <rect x="84" y="167" width="12" height="24" rx="2" fill="#FBBF24"/>
-  <rect x="104" y="167" width="12" height="24" rx="2" fill="#FBBF24"/>
-  <!-- Boots -->
-  <rect x="81" y="188" width="18" height="10" rx="4" fill="#451A03"/>
-  <rect x="101" y="188" width="18" height="10" rx="4" fill="#451A03"/>
-  <!-- Scarf -->
-  <path d="M84 58 Q100 70 116 58" stroke="#EF4444" stroke-width="6" stroke-linecap="round" fill="none"/>
-  <!-- Leaf accent -->
-  <ellipse cx="162" cy="40" rx="12" ry="7" fill="#F59E0B" transform="rotate(-30 162 40)"/>
-  <ellipse cx="172" cy="55" rx="10" ry="6" fill="#EF4444" transform="rotate(20 172 55)"/>
-  <ellipse cx="155" cy="55" rx="9" ry="5" fill="#92400E" transform="rotate(-15 155 55)"/>
+  <circle cx="100" cy="29" r="17" fill="#FDBA74"/>
+  <!-- Neutral expression -->
+  <path d="M96 33 Q100 36 104 33" stroke="#C2410C" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+
+  <!-- Neck -->
+  <path d="M95 45 L105 45 L104 54 L96 54Z" fill="#FDBA74"/>
+
+  <!-- Red scarf around neck -->
+  <path d="M84 52 Q100 62 116 52" stroke="#EF4444" stroke-width="8" stroke-linecap="round" fill="none"/>
+  <path d="M92 56 L88 68" stroke="#EF4444" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- Camel trench coat -->
+  <path d="M66 54 L58 80 L79 86 L79 130 L121 130 L121 86 L142 80 L134 54 Q118 47 100 53 Q82 47 66 54Z" fill="#D97706"/>
+  <!-- Coat collar -->
+  <path d="M100 53 L91 54 L79 66 L79 78 L89 78 L100 66Z" fill="#B45309" opacity="0.6"/>
+  <path d="M100 53 L109 54 L121 66 L121 78 L111 78 L100 66Z" fill="#B45309" opacity="0.6"/>
+  <!-- Belt/waist cinch -->
+  <rect x="79" y="103" width="42" height="7" rx="2" fill="#92400E" opacity="0.7"/>
+  <rect x="97" y="103" width="6" height="7" rx="1" fill="#78350F"/>
+  <!-- Coat buttons -->
+  <circle cx="100" cy="82" r="2.5" fill="#B45309"/>
+  <circle cx="100" cy="93" r="2.5" fill="#B45309"/>
+  <!-- Side pockets -->
+  <path d="M79 113 L79 128 L91 128" stroke="#B45309" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <path d="M121 113 L121 128 L109 128" stroke="#B45309" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <!-- Sleeve cuffs -->
+  <rect x="58" y="76" width="21" height="6" rx="3" fill="#B45309" opacity="0.5"/>
+  <rect x="121" y="76" width="21" height="6" rx="3" fill="#B45309" opacity="0.5"/>
+
+  <!-- Dark slim pants -->
+  <path d="M79 130 L76 186 L96 186 L100 172 L104 186 L124 186 L121 130Z" fill="#1E293B"/>
+  <line x1="79" y1="137" x2="121" y2="137" stroke="#334155" stroke-width="1.5" opacity="0.5"/>
+
+  <!-- Ankle boots: warm brown -->
+  <path d="M73 183 L73 200 Q73 210 84 211 L98 211 Q103 210 103 205 L103 183Z" fill="#78350F"/>
+  <path d="M99 183 L99 200 Q99 210 110 211 L124 211 Q129 210 129 205 L129 183Z" fill="#78350F"/>
+  <rect x="73" y="183" width="30" height="6" rx="3" fill="#92400E"/>
+  <rect x="99" y="183" width="30" height="6" rx="3" fill="#92400E"/>
+  <!-- Boot zipper detail -->
+  <line x1="80" y1="190" x2="80" y2="208" stroke="#A16207" stroke-width="1" opacity="0.5"/>
+  <line x1="106" y1="190" x2="106" y2="208" stroke="#A16207" stroke-width="1" opacity="0.5"/>
 </svg>

@@ -51,6 +51,7 @@ export interface OutfitResult {
   dangerLevel: DangerLevel    // 최우선 위험 등급
   dangerReasons: string[]     // 위험 사유 목록
   cancelActivity: boolean     // 활동 취소 권고 여부
+  ozoneTimeWarning: string | null  // 오전 10시~오후 4시 오존 피크 시간대 경고
 }
 
 export type TempZone =

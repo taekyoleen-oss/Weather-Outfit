@@ -99,6 +99,37 @@ function roundTemp1(n: number): number {
   return Math.round(n * 10) / 10
 }
 
+/**
+ * NWS 열지수 (Steadman + Rothfusz 회귀식, °C 기반)
+ * 기온 27°C 이상 + 상대습도 40% 이상일 때만 의미 있는 값을 반환하고, 그 외는 null.
+ * 출처: 미국 NWS Heat Index equation, 에어코리아 체감온도 기준
+ */
+export function computeHeatIndex(tempC: number, humidity: number): number | null {
+  if (tempC < 27 || humidity < 40) return null
+  const T = tempC
+  const R = humidity
+  let hi = -8.78469475556 + 1.61139411 * T + 2.3385348 * R
+  hi -= 0.14611605 * T * R + 0.012308094 * T * T + 0.016424828 * R * R
+  hi += 0.002211732 * T * T * R + 0.00072546 * T * R * R - 0.000003582 * T * T * R * R
+  return roundTemp1(hi)
+}
+
+/** 열지수 단계 레이블 (기상청 폭염 특보 체감온도 기준) */
+export function heatIndexLabel(hi: number): string {
+  if (hi >= 54) return '매우 위험'
+  if (hi >= 41) return '위험'
+  if (hi >= 32) return '매우 주의'
+  return '주의'
+}
+
+/** 열지수 단계 색상 */
+export function heatIndexColor(hi: number): string {
+  if (hi >= 54) return '#7C3AED'
+  if (hi >= 41) return '#EF4444'
+  if (hi >= 32) return '#F97316'
+  return '#F59E0B'
+}
+
 /** 화면 표기용 ℃ 숫자 부분 (소수 첫째 자리) */
 export function formatTemp1(n: number): string {
   if (Number.isNaN(n)) return '--'

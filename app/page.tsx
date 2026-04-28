@@ -32,6 +32,7 @@ import type {
   CurrentWeather,
   HourlyForecast,
   PreviousPeriodWeatherSummary,
+  MorningSummary,
 } from '@/types/weather'
 import type { LocationInfo } from '@/types/location'
 import type { OpenMeteoDailyCompare } from '@/lib/weather/openMeteoCompare'
@@ -227,6 +228,25 @@ export default function HomePage() {
     return out
   }, [weatherData, selectedPeriod, selectedPeriodHour, selectedPeriodSelection.dayOffset, hour, curPeriodIdx])
 
+  /** 오전(6–11시) 날씨 요약 — 오후(12시 이후)에만 계산 */
+  const morningSummary = useMemo((): MorningSummary | null => {
+    if (hour < 12) return null
+    const hourly = weatherData?.hourly ?? []
+    const todayYmd = kstTodayYmd()
+    const morning = hourly.filter((h) => {
+      const t = parseInt(h.time.split(':')[0], 10)
+      return t >= 6 && t < 12 && (h.fcstDate === todayYmd || !h.fcstDate)
+    })
+    if (morning.length < 2) return null
+    const temps = morning.map((h) => h.temperature)
+    const minTemp = Math.min(...temps)
+    const maxTemp = Math.max(...temps)
+    const totalPrecip = morning.reduce((sum, h) => sum + h.precipitation, 0)
+    const midSlot = morning.find((h) => h.time === '09:00') ?? morning[Math.floor(morning.length / 2)]
+    const wl = weatherLabel(midSlot.skyCode, midSlot.ptyCode)
+    return { minTemp, maxTemp, weatherLabel: wl, emoji: weatherEmojiFromLabel(wl), totalPrecip }
+  }, [weatherData, hour])
+
   const uvForCard = useMemo(() => {
     const base = weatherData?.current
     if (!base || !displayWeather) return undefined
@@ -323,6 +343,7 @@ export default function HomePage() {
       dust={dust}
       previousPeriodWeather={previousPeriodSummary}
       openMeteoCompare={openMeteoCompare}
+      morningSummary={morningSummary}
     />
   )
   const hourlyStrip = (

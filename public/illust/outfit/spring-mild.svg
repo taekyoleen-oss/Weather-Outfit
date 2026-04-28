@@ -1,23 +1,55 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240" fill="none">
-  <!-- Head -->
-  <circle cx="100" cy="35" r="18" fill="#FBBF24"/>
-  <!-- Light jacket (mint/teal) -->
-  <path d="M73 60 L67 80 L88 85 L88 118 L112 118 L112 85 L133 80 L127 60 L112 54 L100 64 L88 54 Z" fill="#7EC8C8"/>
-  <!-- Inner shirt visible at collar -->
-  <path d="M92 60 L100 68 L108 60 L104 57 L100 64 L96 57 Z" fill="white"/>
-  <!-- Pants (dark) -->
-  <rect x="87" y="118" width="11" height="45" rx="2" fill="#334155"/>
-  <rect x="102" y="118" width="11" height="45" rx="2" fill="#334155"/>
-  <!-- Legs -->
-  <rect x="87" y="162" width="11" height="28" rx="2" fill="#FBBF24"/>
-  <rect x="102" y="162" width="11" height="28" rx="2" fill="#FBBF24"/>
-  <!-- Sneakers -->
-  <rect x="84" y="188" width="17" height="8" rx="4" fill="#475569"/>
-  <rect x="99" y="188" width="17" height="8" rx="4" fill="#475569"/>
   <!-- Flower accent -->
-  <circle cx="165" cy="45" r="6" fill="#FCA5A5"/>
-  <circle cx="155" cy="38" r="5" fill="#FCA5A5"/>
-  <circle cx="175" cy="38" r="5" fill="#FCA5A5"/>
-  <circle cx="165" cy="28" r="6" fill="#FCA5A5"/>
-  <circle cx="165" cy="36" r="4" fill="#FBBF24"/>
+  <circle cx="164" cy="32" r="6" fill="#FCA5A5"/>
+  <circle cx="158" cy="24" r="5" fill="#FCA5A5"/>
+  <circle cx="170" cy="24" r="5" fill="#FDBA74"/>
+  <circle cx="158" cy="40" r="5" fill="#FDBA74"/>
+  <circle cx="170" cy="40" r="5" fill="#FCA5A5"/>
+  <circle cx="164" cy="32" r="5" fill="#FBBF24"/>
+  <circle cx="35" cy="45" r="4" fill="#86EFAC" opacity="0.5"/>
+  <circle cx="28" cy="38" r="3" fill="#86EFAC" opacity="0.4"/>
+
+  <!-- Hair (medium) -->
+  <path d="M83 25 Q82 7 100 5 Q118 7 117 25 Q111 17 100 16 Q89 17 83 25Z" fill="#292524"/>
+  <!-- Head -->
+  <circle cx="100" cy="29" r="17" fill="#FDBA74"/>
+  <!-- Gentle expression -->
+  <path d="M96 33 Q100 37 104 33" stroke="#C2410C" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+
+  <!-- Neck -->
+  <path d="M95 45 L105 45 L104 54 L96 54Z" fill="#FDBA74"/>
+
+  <!-- White inner shirt visible at collar -->
+  <path d="M93 54 Q100 62 107 54" fill="white"/>
+
+  <!-- Mint/sage light jacket -->
+  <path d="M67 54 L60 75 L80 81 L80 124 L120 124 L120 81 L140 75 L133 54 Q117 47 100 53 Q83 47 67 54Z" fill="#6EE7B7"/>
+  <!-- Jacket lapels -->
+  <path d="M100 53 L93 54 L83 62 L83 74 L90 74 L100 65Z" fill="#34D399" opacity="0.5"/>
+  <path d="M100 53 L107 54 L117 62 L117 74 L110 74 L100 65Z" fill="#34D399" opacity="0.5"/>
+  <!-- Jacket button -->
+  <circle cx="100" cy="90" r="2.5" fill="#6EE7B7" stroke="#34D399" stroke-width="1"/>
+  <circle cx="100" cy="104" r="2.5" fill="#6EE7B7" stroke="#34D399" stroke-width="1"/>
+  <!-- Jacket pockets -->
+  <rect x="82" y="108" width="13" height="11" rx="2" fill="#34D399" opacity="0.3"/>
+  <rect x="105" y="108" width="13" height="11" rx="2" fill="#34D399" opacity="0.3"/>
+  <!-- Sleeve cuffs -->
+  <rect x="60" y="71" width="20" height="5" rx="2" fill="#34D399" opacity="0.4"/>
+  <rect x="120" y="71" width="20" height="5" rx="2" fill="#34D399" opacity="0.4"/>
+
+  <!-- Slim dark chinos -->
+  <path d="M80 124 L78 178 L96 178 L100 164 L104 178 L122 178 L120 124Z" fill="#334155"/>
+  <line x1="80" y1="130" x2="120" y2="130" stroke="#475569" stroke-width="1.5" opacity="0.5"/>
+
+  <!-- White socks hint -->
+  <rect x="79" y="178" width="16" height="7" rx="2" fill="white" opacity="0.7"/>
+  <rect x="105" y="178" width="16" height="7" rx="2" fill="white" opacity="0.7"/>
+
+  <!-- White sneakers -->
+  <path d="M76 182 L76 197 Q76 204 86 205 L100 205 Q104 204 104 199 L104 182Z" fill="white" stroke="#CBD5E1" stroke-width="1"/>
+  <path d="M100 182 L100 197 Q100 204 110 205 L124 205 Q128 204 128 199 L128 182Z" fill="white" stroke="#CBD5E1" stroke-width="1"/>
+  <rect x="76" y="197" width="28" height="6" rx="3" fill="#94A3B8"/>
+  <rect x="100" y="197" width="28" height="6" rx="3" fill="#94A3B8"/>
+  <line x1="80" y1="190" x2="100" y2="190" stroke="#CBD5E1" stroke-width="1.5"/>
+  <line x1="104" y1="190" x2="124" y2="190" stroke="#CBD5E1" stroke-width="1.5"/>
 </svg>

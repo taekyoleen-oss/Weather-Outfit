@@ -1,29 +1,71 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240" fill="none">
   <!-- Sun -->
-  <circle cx="165" cy="30" r="22" fill="#FFB547" opacity="0.3"/>
-  <circle cx="165" cy="30" r="16" fill="#FFB547" opacity="0.5"/>
-  <!-- Head -->
+  <circle cx="166" cy="28" r="26" fill="#FEF08A" opacity="0.5"/>
+  <circle cx="166" cy="28" r="16" fill="#FDE047" opacity="0.45"/>
+  <!-- Sparkle rays -->
+  <line x1="166" y1="5" x2="166" y2="11" stroke="#FDE047" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+  <line x1="182" y1="12" x2="178" y2="16" stroke="#FDE047" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+  <line x1="150" y1="12" x2="154" y2="16" stroke="#FDE047" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+
   <!-- Wide brim sun hat -->
-  <ellipse cx="100" cy="26" rx="32" ry="8" fill="#D97706"/>
-  <ellipse cx="100" cy="22" rx="18" ry="11" fill="#F59E0B"/>
-  <circle cx="100" cy="13" r="3" fill="#D97706"/>
-  <!-- Face -->
-  <circle cx="100" cy="40" r="16" fill="#FBBF24"/>
-  <!-- Sunglasses -->
-  <ellipse cx="93" cy="37" rx="7" ry="5" fill="#1E293B" opacity="0.7"/>
-  <ellipse cx="107" cy="37" rx="7" ry="5" fill="#1E293B" opacity="0.7"/>
-  <line x1="100" y1="37" x2="100" y2="37" stroke="#1E293B" stroke-width="2"/>
-  <!-- Rashguard (teal) -->
-  <path d="M78 60 L73 80 L88 84 L88 115 L112 115 L112 84 L127 80 L122 60 L112 55 L100 64 L88 55 Z" fill="#0D9488"/>
-  <!-- Beach shorts -->
-  <rect x="87" y="115" width="11" height="32" rx="2" fill="#F59E0B"/>
-  <rect x="102" y="115" width="11" height="32" rx="2" fill="#F59E0B"/>
-  <!-- Legs -->
-  <rect x="87" y="147" width="11" height="38" rx="2" fill="#FBBF24"/>
-  <rect x="102" y="147" width="11" height="38" rx="2" fill="#FBBF24"/>
-  <!-- Sandals -->
-  <rect x="84" y="183" width="17" height="6" rx="3" fill="#92400E"/>
-  <rect x="99" y="183" width="17" height="6" rx="3" fill="#92400E"/>
-  <!-- Beach wave accent -->
-  <path d="M20 210 Q50 200 80 210 Q110 220 140 210 Q170 200 190 210" stroke="#5B8DEE" stroke-width="2.5" fill="none" opacity="0.5"/>
+  <ellipse cx="100" cy="20" rx="34" ry="9" fill="#D97706" opacity="0.9"/>
+  <ellipse cx="100" cy="15" rx="20" ry="12" fill="#F59E0B"/>
+  <!-- Hat ribbon -->
+  <rect x="80" y="22" width="40" height="4" fill="#EF4444" opacity="0.7"/>
+  <!-- Hat crown top -->
+  <ellipse cx="100" cy="10" rx="18" ry="7" fill="#FBBF24" opacity="0.7"/>
+
+  <!-- Hair beneath hat -->
+  <path d="M84 24 Q84 32 80 42" stroke="#1C1917" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M116 24 Q116 32 120 42" stroke="#1C1917" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <!-- Head -->
+  <circle cx="100" cy="34" r="16" fill="#FDBA74"/>
+  <!-- Sunny expression -->
+  <circle cx="95" cy="32" r="1.8" fill="#1C1917"/>
+  <circle cx="105" cy="32" r="1.8" fill="#1C1917"/>
+  <path d="M95 38 Q100 43 105 38" stroke="#C2410C" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+
+  <!-- Sunglasses (cat-eye style) -->
+  <path d="M87 31 Q87 27 92 27 Q97 28 97 32 Q97 35 92 35 Q87 35 87 31Z" fill="#1E3A5F" opacity="0.85"/>
+  <path d="M101 31 Q101 27 106 27 Q111 27 111 31 Q111 35 106 35 Q101 35 101 31Z" fill="#1E3A5F" opacity="0.85"/>
+  <line x1="97" y1="30" x2="101" y2="30" stroke="#1E3A5F" stroke-width="1.5"/>
+
+  <!-- Neck -->
+  <path d="M95 49 L105 49 L104 56 L96 56Z" fill="#FDBA74"/>
+
+  <!-- Rashguard (teal/aqua) -->
+  <path d="M76 56 L70 74 L84 78 L84 115 L116 115 L116 78 L130 74 L124 56 Q112 50 100 55 Q88 50 76 56Z" fill="#0D9488"/>
+  <!-- Rashguard collar -->
+  <path d="M91 55 Q100 63 109 55" stroke="#0F766E" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- Rashguard stripe -->
+  <path d="M84 78 L84 115" stroke="#14B8A6" stroke-width="3" opacity="0.4"/>
+  <path d="M116 78 L116 115" stroke="#14B8A6" stroke-width="3" opacity="0.4"/>
+  <!-- UV protection badge -->
+  <rect x="90" y="90" width="20" height="9" rx="4" fill="#0F766E" opacity="0.5"/>
+  <text x="100" y="98" text-anchor="middle" fill="white" font-size="5" font-family="sans-serif">UPF 50+</text>
+
+  <!-- Board shorts (tropical orange/coral) -->
+  <path d="M84 115 L80 158 L98 158 L100 145 L102 158 L120 158 L116 115Z" fill="#FB923C"/>
+  <line x1="84" y1="122" x2="116" y2="122" stroke="#EA580C" stroke-width="1.5" opacity="0.5"/>
+  <!-- Shorts tropical print dots -->
+  <circle cx="90" cy="135" r="2" fill="#FED7AA" opacity="0.7"/>
+  <circle cx="100" cy="130" r="2" fill="#FED7AA" opacity="0.7"/>
+  <circle cx="110" cy="140" r="2" fill="#FED7AA" opacity="0.7"/>
+
+  <!-- Bare tanned legs -->
+  <rect x="81" y="158" width="16" height="40" rx="4" fill="#FDBA74"/>
+  <rect x="103" y="158" width="16" height="40" rx="4" fill="#FDBA74"/>
+
+  <!-- Sandals / flip-flops -->
+  <path d="M77 194 L77 202 Q77 208 86 209 L102 209 Q106 208 106 204 L106 194Z" fill="#D97706"/>
+  <path d="M98 194 L98 202 Q98 208 107 209 L123 209 Q127 208 127 204 L127 194Z" fill="#D97706"/>
+  <!-- Sandal straps -->
+  <line x1="83" y1="194" x2="100" y2="199" stroke="#92400E" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="88" y1="194" x2="100" y2="202" stroke="#92400E" stroke-width="2" stroke-linecap="round"/>
+  <line x1="104" y1="194" x2="117" y2="199" stroke="#92400E" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="109" y1="194" x2="117" y2="202" stroke="#92400E" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Wave accent at bottom -->
+  <path d="M10 228 Q40 218 70 228 Q100 238 130 228 Q160 218 190 228" stroke="#38BDF8" stroke-width="3" fill="none" opacity="0.5" stroke-linecap="round"/>
+  <path d="M5 235 Q35 225 65 235 Q95 245 125 235 Q155 225 195 235" stroke="#7DD3FC" stroke-width="2" fill="none" opacity="0.35" stroke-linecap="round"/>
 </svg>

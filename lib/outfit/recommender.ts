@@ -101,6 +101,23 @@ function assessDanger(input: OutfitInput): DangerResult {
   return { dangerLevel, dangerReasons: reasons, cancelActivity }
 }
 
+// 오존 피크 시간대(오전 10시~오후 4시)에 고강도 호흡 활동 시 표시하는 경고
+// grade '3'/'4'는 assessDanger()에서 이미 처리; 이 함수는 '1'/'2' 또는 미수신 시 시간대 안내
+const O3_HIGH_RESP_ACTIVITIES: ActivityType[] = ['running', 'cycling', 'hiking', 'golf', 'tennis']
+
+function getOzoneTimeWarning(hour: number, activity: ActivityType, o3Grade?: string): string | null {
+  if (hour < 10 || hour >= 16) return null
+  if (!O3_HIGH_RESP_ACTIVITIES.includes(activity)) return null
+  if (o3Grade === '3' || o3Grade === '4') return null  // assessDanger()에서 이미 경고 처리
+
+  if (o3Grade === '2') {
+    return '⚗️ 오존 피크 시간대 (오전 10시~오후 4시)\n현재 오존은 "보통"이지만, 이 시간대에는 지표 오존이 자연적으로 상승합니다. 달리기·등산 등 호흡량이 많은 활동은 오전 10시 이전이나 오후 4시 이후로 조정하면 더 안전합니다. (에어코리아 오존 행동요령)'
+  }
+
+  // o3Grade '1'(좋음) 또는 미수신
+  return '⚗️ 오존 피크 시간대 (오전 10시~오후 4시)\n현재 오존 수치는 양호합니다. 다만 이 시간대에는 햇빛·고온 조건에서 오존이 생성될 수 있어, 장시간 고강도 야외 운동 시 참고하세요. (에어코리아 오존 행동요령)'
+}
+
 export function recommendOutfit(input: OutfitInput): OutfitResult {
   // 위험 우선순위 판단 (참고: weather-outdoor-clothing-guide.md 라. 복장 추천 로직 §1)
   const danger = assessDanger(input)
@@ -209,5 +226,6 @@ export function recommendOutfit(input: OutfitInput): OutfitResult {
     dangerLevel: danger.dangerLevel,
     dangerReasons: danger.dangerReasons,
     cancelActivity: danger.cancelActivity,
+    ozoneTimeWarning: getOzoneTimeWarning(input.hour, input.activity, input.o3Grade),
   }
 }
