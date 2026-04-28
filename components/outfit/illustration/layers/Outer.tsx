@@ -1,6 +1,12 @@
 import type { OuterVariant } from '../itemLayerMap'
 
-export function Outer({ variant }: { variant: OuterVariant | null }) {
+export function Outer({
+  variant,
+  sleeveLength = 'short',
+}: {
+  variant: OuterVariant | null
+  sleeveLength?: 'short' | 'long'
+}) {
   if (!variant) return null
 
   switch (variant) {
@@ -25,6 +31,16 @@ export function Outer({ variant }: { variant: OuterVariant | null }) {
         <g>
           {/* Light jacket / bomber */}
           <path d="M66 52 L58 80 L79 86 L79 124 L121 124 L121 86 L142 80 L134 52 Q118 46 100 51 Q82 46 66 52Z" fill="#475569"/>
+          {sleeveLength === 'long' && (
+            <>
+              {/* Extend sleeves down (long-sleeve) */}
+              <path d="M58 80 L79 86 L79 112 L62 112 Q56 102 58 80Z" fill="#475569"/>
+              <path d="M142 80 L121 86 L121 112 L138 112 Q144 102 142 80Z" fill="#475569"/>
+              {/* Long cuffs */}
+              <rect x="60" y="108" width="20" height="5" rx="2.5" fill="#334155" opacity="0.55"/>
+              <rect x="120" y="108" width="20" height="5" rx="2.5" fill="#334155" opacity="0.55"/>
+            </>
+          )}
           {/* Seam lines */}
           <line x1="79" y1="70" x2="121" y2="70" stroke="#334155" strokeWidth="1.5" opacity="0.4"/>
           <line x1="79" y1="86" x2="121" y2="86" stroke="#334155" strokeWidth="1.5" opacity="0.4"/>
@@ -34,8 +50,12 @@ export function Outer({ variant }: { variant: OuterVariant | null }) {
           {/* Front zip */}
           <rect x="98" y="56" width="4" height="64" rx="2" fill="#334155" opacity="0.4"/>
           {/* Sleeve cuffs */}
-          <rect x="57" y="76" width="21" height="5" rx="2" fill="#334155" opacity="0.5"/>
-          <rect x="122" y="76" width="21" height="5" rx="2" fill="#334155" opacity="0.5"/>
+          {sleeveLength === 'short' && (
+            <>
+              <rect x="57" y="76" width="21" height="5" rx="2" fill="#334155" opacity="0.5"/>
+              <rect x="122" y="76" width="21" height="5" rx="2" fill="#334155" opacity="0.5"/>
+            </>
+          )}
           {/* Collar */}
           <path d="M86 52 Q100 60 114 52" stroke="#334155" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
         </g>

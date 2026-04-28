@@ -65,16 +65,13 @@ export function Foot({ variant }: { variant: FootVariant }) {
     case 'golf':
       return (
         <g>
-          {/* White golf shoes with dark sole */}
-          <path d="M79 174 L79 192 Q79 200 90 201 L100 201 Q106 200 106 196 L106 174Z" fill="white" stroke="#E2E8F0" strokeWidth="1"/>
-          <path d="M98 174 L98 192 Q98 200 109 201 L119 201 Q125 200 125 196 L125 174Z" fill="white" stroke="#E2E8F0" strokeWidth="1"/>
-          <rect x="79" y="194" width="27" height="5" rx="2.5" fill="#374151"/>
-          <rect x="98" y="194" width="27" height="5" rx="2.5" fill="#374151"/>
-          {/* Cleat dots */}
-          <circle cx="84" cy="198" r="1" fill="#1F2937" opacity="0.6"/>
-          <circle cx="92" cy="200" r="1" fill="#1F2937" opacity="0.6"/>
-          <circle cx="103" cy="198" r="1" fill="#1F2937" opacity="0.6"/>
-          <circle cx="111" cy="200" r="1" fill="#1F2937" opacity="0.6"/>
+          {/* Golf shoes: simple sneaker-like silhouette */}
+          <path d="M78 189 C82 184, 95 184, 101 188 L104 196 C103 200, 96 202, 88 202 L79 201 C76 200, 76 194, 78 189 Z" fill="#FFFFFF" stroke="#CBD5E1" strokeWidth="1.2"/>
+          <path d="M98 189 C102 184, 115 184, 121 188 L124 196 C123 200, 116 202, 108 202 L99 201 C96 200, 96 194, 98 189 Z" fill="#FFFFFF" stroke="#CBD5E1" strokeWidth="1.2"/>
+          <path d="M77 199 L104 199" stroke="#1F2937" strokeWidth="2.2" strokeLinecap="round"/>
+          <path d="M97 199 L124 199" stroke="#1F2937" strokeWidth="2.2" strokeLinecap="round"/>
+          <path d="M84 193 L99 193" stroke="#94A3B8" strokeWidth="1.4" strokeLinecap="round"/>
+          <path d="M104 193 L119 193" stroke="#94A3B8" strokeWidth="1.4" strokeLinecap="round"/>
         </g>
       )
     case 'ski':

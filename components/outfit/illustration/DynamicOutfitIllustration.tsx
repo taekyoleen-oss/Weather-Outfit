@@ -36,6 +36,10 @@ export function DynamicOutfitIllustration({ items, illustKey, gender, size = 300
   const umbrella      = hasUmbrella(items)
   const mask          = hasMask(items)
   const hasHelmet     = accSet.hat === 'helmet'
+  const longSleeve =
+    topVariant === 'longsleeve' ||
+    topVariant === 'knit' ||
+    topVariant === 'rashguard'
 
   return (
     <svg
@@ -58,7 +62,7 @@ export function DynamicOutfitIllustration({ items, illustKey, gender, size = 300
       <Mid variant={midVariant} />
 
       {/* 5. Outer layer (jacket/coat/padding) */}
-      <Outer variant={outerVariant} />
+      <Outer variant={outerVariant} sleeveLength={longSleeve ? 'long' : 'short'} />
 
       {/* 6. Shoes */}
       <Foot variant={footVariant} />

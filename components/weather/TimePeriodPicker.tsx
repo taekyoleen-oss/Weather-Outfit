@@ -66,6 +66,31 @@ export function TimePeriodPicker({ currentHour, hourly, selectedRepHour, selecte
   }
 
   const periodCount = TIME_PERIODS.length
+  const curHourStr = String(currentHour).padStart(2, '0') + ':00'
+
+  function fallbackTempForNow(): number | undefined {
+    // 1) 가장 안정적: "오늘 + 현재시각 슬롯" (예: 18:00)
+    const idx = hourly.findIndex((h, i) => h.time === curHourStr && slotYmds[i] === todayYmd)
+    if (idx >= 0) return hourly[idx].temperature
+
+    // 2) 오늘 슬롯 중, 현재시각 이하의 가장 최신값
+    const toHour = (t: string) => parseInt(t.split(':')[0], 10)
+    let best: number | undefined
+    let bestHour = -1
+    for (let i = 0; i < hourly.length; i++) {
+      if (slotYmds[i] !== todayYmd) continue
+      const h = toHour(hourly[i].time)
+      if (h <= currentHour && h > bestHour) {
+        bestHour = h
+        best = hourly[i].temperature
+      }
+    }
+    if (best !== undefined) return best
+
+    // 3) 그래도 없으면, 전체 중 첫 슬롯 (데이터 로딩 직후 최소 표시용)
+    return hourly[0]?.temperature
+  }
+
   const chips = Array.from({ length: periodCount }, (_, i) => {
     const rawIdx = currentIdx + i
     const idx = rawIdx % periodCount
@@ -85,7 +110,7 @@ export function TimePeriodPicker({ currentHour, hourly, selectedRepHour, selecte
       isTomorrow,
       dayOffset,
       isCurrent: i === 0,
-      temperature: entry?.temperature,
+      temperature: entry?.temperature ?? (i === 0 ? fallbackTempForNow() : undefined),
       weatherEmoji,
       isSelected: selectedRepHour === period.repHour && selectedDayOffset === dayOffset,
     }
