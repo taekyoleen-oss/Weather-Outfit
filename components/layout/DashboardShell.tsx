@@ -6,6 +6,8 @@ const ZOOM_STORAGE_KEY = 'wf:desktopZoom'
 const ZOOM_MIN = 0.65
 const ZOOM_MAX = 1.35
 const ZOOM_STEP = 0.05
+// PC 기본 가독성 스케일 (사용자 줌과 별개로 기본값 상향)
+const DESKTOP_BASE_SCALE = 1.16
 
 interface Props {
   left: ReactNode
@@ -48,7 +50,10 @@ export function DashboardShell({ left, right }: Props) {
     const el = rootRef.current
     if (!el) return
     if (!supportsCssZoom) return
-    const combined = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, baseFitRef.current * userZoomRef.current))
+    const combined = Math.min(
+      ZOOM_MAX,
+      Math.max(ZOOM_MIN, baseFitRef.current * userZoomRef.current * DESKTOP_BASE_SCALE)
+    )
     el.style.zoom = String(combined)
     setAppliedPct(Math.round(combined * 100))
   }, [])
@@ -163,7 +168,7 @@ export function DashboardShell({ left, right }: Props) {
       <div className="w-full min-w-0 max-w-full px-0 box-border py-2">
         <div
           ref={rootRef}
-          className="w-full min-w-0 max-w-full grid gap-3 lg:gap-4 [grid-template-columns:minmax(0,clamp(200px,24vw,340px))_minmax(0,1fr)]"
+          className="w-full min-w-0 max-w-full grid gap-5 lg:gap-6 [grid-template-columns:minmax(0,clamp(270px,32vw,460px))_minmax(0,1fr)]"
         >
           <aside className="min-w-0 lg:sticky lg:top-14 lg:self-start space-y-4">{left}</aside>
           <main className="min-w-0 w-full max-w-full space-y-4 overflow-x-hidden">{right}</main>

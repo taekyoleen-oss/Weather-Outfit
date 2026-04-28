@@ -1,4 +1,5 @@
 import type { DailyForecast, SkyCode, PtyCode } from '@/types/weather'
+import { addCalendarDaysFromKstYmd, kstTodayYmd } from '@/lib/utils/timeOfDay'
 
 const KMA_BASE = 'http://apis.data.go.kr/1360000/MidFcstInfoService'
 
@@ -17,10 +18,43 @@ function formatDate(d: Date): string {
   return d.toISOString().slice(0, 10).replace(/-/g, '')
 }
 
+/** getMidTa JSON: taMin3/taMax3 … 또는 taMin4부터만 제공되는 경우 모두 수집 */
+function midTaPairs(row: Record<string, unknown> | null | undefined): Map<number, { min: number; max: number }> {
+  const map = new Map<number, { min: number; max: number }>()
+  if (!row) return map
+  for (const [key, raw] of Object.entries(row)) {
+    const m = /^taMin(\d+)$/.exec(key)
+    if (!m) continue
+    const idx = parseInt(m[1], 10)
+    const maxRaw = row[`taMax${idx}`]
+    const min = typeof raw === 'number' ? raw : parseFloat(String(raw))
+    const max = typeof maxRaw === 'number' ? maxRaw : parseFloat(String(maxRaw))
+    if (Number.isFinite(min) && Number.isFinite(max)) map.set(idx, { min, max })
+  }
+  return map
+}
+
+/** 중기 5일: API 키 번호와 달력(오늘+3일~+7일) 정렬 */
+function buildMidRows(
+  taMap: Map<number, { min: number; max: number }>
+): { calendarPlus: number; taKey: number }[] {
+  if (!taMap.size) {
+    return [3, 4, 5, 6, 7].map((calendarPlus) => ({ calendarPlus, taKey: calendarPlus }))
+  }
+  if (taMap.has(3)) {
+    return [3, 4, 5, 6, 7].map((calendarPlus) => ({ calendarPlus, taKey: calendarPlus }))
+  }
+  if (taMap.has(4)) {
+    return [3, 4, 5, 6, 7].map((calendarPlus, j) => ({ calendarPlus, taKey: 4 + j }))
+  }
+  const keys = [...taMap.keys()].sort((a, b) => a - b).slice(0, 5)
+  return keys.map((taKey, j) => ({ calendarPlus: 3 + j, taKey }))
+}
+
 // getMidTa uses temperature forecast region codes (기온예보구역코드), different from land forecast region codes
 function getMidTaCode(regId: string): string {
   const MAP: Record<string, string> = {
-    '11B00000': '11B10001', // 서울
+    '11B00000': '11B10101', // 서울
     '11H20000': '11H20201', // 부산
     '11H10000': '11H10701', // 대구
     '11F20000': '11F20501', // 광주
@@ -69,19 +103,27 @@ export async function fetchWeeklyForecast(nx: number, ny: number): Promise<Daily
 
   const land = landRes.status === 'fulfilled' ? landRes.value : null
   const temp = tempRes.status === 'fulfilled' ? tempRes.value : null
+  const taMap = midTaPairs(temp as Record<string, unknown> | null | undefined)
+  const baseYmd = kstTodayYmd()
+  const rows = buildMidRows(taMap)
 
   const forecasts: DailyForecast[] = []
-  for (let i = 3; i <= 7; i++) {
-    const d = new Date(now.getTime() + i * 24 * 60 * 60 * 1000)
-    const dateStr = formatDate(d)
+  for (const { calendarPlus, taKey } of rows) {
+    const dateStr = addCalendarDaysFromKstYmd(baseYmd, calendarPlus)
+    const pair = taMap.get(taKey)
+    const minTemp = pair?.min ?? 10
+    const maxTemp = pair?.max ?? 20
+    const wf = land?.[`wf${taKey}Am`] ?? land?.[`wf${taKey}PM`]
+    const rn = land?.[`rnSt${taKey}Am`] ?? land?.[`rnSt${taKey}PM`]
+    const rnParsed = parseInt(String(rn ?? ''), 10)
 
     forecasts.push({
       date: dateStr,
-      minTemp: temp?.[`taMin${i}`] ?? 10,
-      maxTemp: temp?.[`taMax${i}`] ?? 20,
-      skyCode: (land?.[`wf${i}Am`] ? skyFromLabel(land[`wf${i}Am`]) : '3') as SkyCode,
+      minTemp,
+      maxTemp,
+      skyCode: (wf ? skyFromLabel(wf) : '3') as SkyCode,
       ptyCode: '0' as PtyCode,
-      pop: parseInt(land?.[`rnSt${i}Am`] ?? '20', 10),
+      pop: Number.isFinite(rnParsed) ? rnParsed : 20,
     })
   }
 

@@ -221,7 +221,7 @@ export function ActivitySelector({ value, onChange }: Props) {
 
   return (
     <div>
-      <p className="text-sm font-semibold mb-3" style={{ color: 'var(--text)' }}>
+      <p className="text-base font-semibold mb-3" style={{ color: 'var(--text)' }}>
         활동 선택
       </p>
       <div className="grid grid-cols-5 gap-1.5">
@@ -242,24 +242,25 @@ export function ActivitySelector({ value, onChange }: Props) {
                 <span className="text-xl">{a.icon}</span>
                 <span
                   className="font-medium leading-tight text-center break-keep"
-                  style={{ color: selected ? 'var(--accent)' : 'var(--muted)', fontSize: '10px' }}
+                  style={{ color: selected ? 'var(--accent)' : 'var(--muted)', fontSize: '11.5px' }}
                 >
                   {a.label}
                 </span>
               </button>
-              {/* Info button — 연한 회색 */}
+              {/* Info button — 더 은은한 톤으로 최소 노출 */}
               <button
                 onClick={(e) => { e.stopPropagation(); setGuideActivity(a.id) }}
-                className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold z-10 transition-colors"
+                className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-semibold z-10 transition-colors"
                 style={{
-                  background: 'rgba(148, 163, 184, 0.75)',
-                  color: '#fff',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                  background: 'rgba(148, 163, 184, 0.20)',
+                  color: 'rgba(100, 116, 139, 0.72)',
+                  border: '1px solid rgba(148, 163, 184, 0.22)',
+                  boxShadow: 'none',
                 }}
                 aria-label={`${a.label} 복장 가이드 보기`}
                 title={`${a.label} 복장 가이드`}
               >
-                ℹ
+                ?
               </button>
             </div>
           )

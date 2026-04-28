@@ -145,6 +145,7 @@ function parseVilageFcst(
     nx,
     ny,
     fetchedAt: Date.now(),
+    basisDateKst: currentKey.slice(0, 8),
   }
 
   const hourly: HourlyForecast[] = sortedKeys.slice(0, 48).map((k) => {

@@ -4,6 +4,8 @@ import type { HeroIllustKey } from '@/types/outfit'
 interface Props {
   illustKey: HeroIllustKey
   size?: number
+  /** 1–12, KST 달력. `fall-layered` 캡션만 봄/가을로 구분 */
+  calendarMonth?: number
 }
 
 const ILLUST_LABELS: Record<HeroIllustKey, string> = {
@@ -19,7 +21,17 @@ const ILLUST_LABELS: Record<HeroIllustKey, string> = {
   'golf-look': '골프 코디',
 }
 
-export function OutfitHeroIllustration({ illustKey, size = 180 }: Props) {
+function heroLabel(illustKey: HeroIllustKey, calendarMonth?: number): string {
+  if (illustKey !== 'fall-layered') return ILLUST_LABELS[illustKey]
+  const m = calendarMonth
+  if (m === 3 || m === 4 || m === 5) return '봄 레이어드 코디'
+  if (m === 9 || m === 10 || m === 11) return '가을 레이어드 코디'
+  if (m != null && m >= 1 && m <= 12) return '봄가을 레이어드 코디'
+  return ILLUST_LABELS['fall-layered']
+}
+
+export function OutfitHeroIllustration({ illustKey, size = 180, calendarMonth }: Props) {
+  const label = heroLabel(illustKey, calendarMonth)
   return (
     <div className="flex flex-col items-center gap-2">
       <div
@@ -33,14 +45,14 @@ export function OutfitHeroIllustration({ illustKey, size = 180 }: Props) {
       >
         <Image
           src={`/illust/outfit/${illustKey}.svg`}
-          alt={ILLUST_LABELS[illustKey]}
+          alt={label}
           width={size - 32}
           height={size - 32}
           priority
         />
       </div>
       <span className="text-xs font-medium" style={{ color: 'var(--muted)' }}>
-        {ILLUST_LABELS[illustKey]}
+        {label}
       </span>
     </div>
   )

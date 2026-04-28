@@ -48,7 +48,19 @@ function hourlyToCurrentWeather(entry: HourlyForecast, base: CurrentWeather): Cu
     ptyCode: entry.ptyCode,
     precipitation: entry.precipitation,
     uvIndex: base.uvIndex,
+    basisDateKst: entry.fcstDate ?? base.basisDateKst,
   }
+}
+
+function extractDongName(locationName?: string, address?: string): string | undefined {
+  const sources = [address ?? '', locationName ?? ''].filter(Boolean)
+  for (const src of sources) {
+    const tokens = src.split(/\s+/)
+    const unit = tokens.find((t) => /(?:동|읍|면|리|가)$/.test(t))
+    if (unit) return unit
+  }
+  // 동/읍/면/리/가 단위가 없으면 표기하지 않음 (예: "서울" 단독)
+  return undefined
 }
 
 export default function HomePage() {
@@ -346,6 +358,7 @@ export default function HomePage() {
       morningSummary={morningSummary}
     />
   )
+  const currentDongName = extractDongName(location.name, location.address)
   const hourlyStrip = (
     <HourlyWeatherStrip
       hourly={displayedHourly}
@@ -365,9 +378,11 @@ export default function HomePage() {
       previousPeriodWeather={previousPeriodSummary}
     />
   )
-  const weeklyForecast = (
-    <WeeklyForecastInline daily={weekly} hourly={weatherData?.hourly ?? []} loading={weeklyLoading} />
-  )
+  const weeklyProps = {
+    daily: weekly,
+    hourly: weatherData?.hourly ?? [],
+    loading: weeklyLoading,
+  } as const
   const outfitPanel = (
     <OutfitPanel
       weather={displayWeather}
@@ -386,6 +401,7 @@ export default function HomePage() {
           gpsLoading={gpsLoading}
           gpsError={gpsError}
           onGps={requestGps}
+          currentDongName={currentDongName}
           recentChips={<>{recentChips}{nearbyChips}</>}
           periodPicker={timePeriodPicker}
           weatherContent={
@@ -393,7 +409,7 @@ export default function HomePage() {
               {weatherCard}
               {hourlyStrip}
               {highlightsGrid}
-              {weeklyForecast}
+              <WeeklyForecastInline key="weekly-inline-mobile" {...weeklyProps} />
             </>
           }
           outfitContent={outfitPanel}
@@ -406,7 +422,22 @@ export default function HomePage() {
           left={
             <>
               {locationSearch}
-              <GpsButton loading={gpsLoading} error={gpsError} onClick={requestGps} />
+              <div className="flex items-center gap-2">
+                <GpsButton loading={gpsLoading} error={gpsError} onClick={requestGps} />
+                {currentDongName && (
+                  <span
+                    className="text-xs font-medium px-2 py-1 rounded-full"
+                    style={{
+                      color: 'var(--muted)',
+                      background: 'rgba(255,255,255,0.75)',
+                      border: '1px solid var(--border)',
+                    }}
+                    title={`현재 조회 위치: ${currentDongName}`}
+                  >
+                    {currentDongName}
+                  </span>
+                )}
+              </div>
               {recentChips}
               {nearbyChips}
               {timePeriodPicker}
@@ -417,7 +448,7 @@ export default function HomePage() {
           right={
             <>
               {hourlyStrip}
-              {weeklyForecast}
+              <WeeklyForecastInline key="weekly-inline-desktop" {...weeklyProps} />
               {outfitPanel}
             </>
           }

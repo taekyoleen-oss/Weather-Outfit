@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import type { DailyForecast, HourlyForecast } from '@/types/weather'
 import { weatherLabel, formatTemp1 } from '@/lib/utils/formatWeather'
-import { currentHourKst } from '@/lib/utils/timeOfDay'
+import { currentHourKst, kstTodayYmd } from '@/lib/utils/timeOfDay'
 
 interface Props {
   daily: DailyForecast[]
@@ -25,12 +25,11 @@ const WEATHER_EMOJI: Record<string, string> = {
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
 
 function dayLabel(dateStr: string): string {
-  const d = new Date(
-    parseInt(dateStr.slice(0, 4)),
-    parseInt(dateStr.slice(4, 6)) - 1,
-    parseInt(dateStr.slice(6, 8))
-  )
-  return DAY_LABELS[d.getDay()]
+  const y = parseInt(dateStr.slice(0, 4), 10)
+  const mo = parseInt(dateStr.slice(4, 6), 10) - 1
+  const d = parseInt(dateStr.slice(6, 8), 10)
+  const utc = new Date(Date.UTC(y, mo, d, 12, 0, 0))
+  return DAY_LABELS[utc.getUTCDay()]
 }
 
 function mmdd(dateStr: string): string {
@@ -62,14 +61,21 @@ export function WeeklyForecastInline({ daily, hourly, loading }: Props) {
         ))}
       </div>
 
-      {tab === 'today' && <TodayView hourly={hourly} loading={loading} />}
+      {/* key: 탭 전환 시 Recharts·ResponsiveContainer가 숨겨진 폭으로 측정된 채 남는 문제 방지 */}
+      {tab === 'today' && (
+        <div key="tab-today" className="min-w-0 w-full">
+          <TodayView hourly={hourly} loading={loading} />
+        </div>
+      )}
       {tab === 'week' && (
-        <WeekView
-          daily={daily}
-          loading={loading}
-          expandedDay={expandedDay}
-          onToggleDay={(d) => setExpandedDay(expandedDay === d ? null : d)}
-        />
+        <div key="tab-week" className="min-w-0 w-full">
+          <WeekView
+            daily={daily}
+            loading={loading}
+            expandedDay={expandedDay}
+            onToggleDay={(d) => setExpandedDay(expandedDay === d ? null : d)}
+          />
+        </div>
       )}
     </div>
   )
@@ -84,18 +90,36 @@ function TodayView({ hourly, loading }: { hourly: HourlyForecast[]; loading?: bo
     )
   }
 
+  const sortedHourly = [...hourly].sort((a, b) => {
+    const ak = `${a.fcstDate ?? ''}${a.time}`
+    const bk = `${b.fcstDate ?? ''}${b.time}`
+    return ak.localeCompare(bk)
+  })
   const nowKst = currentHourKst()
+  const todayYmd = kstTodayYmd()
   const toHourNum = (t: string) => parseInt(t.split(':')[0], 10)
-  let fromNow = hourly.filter((h) => toHourNum(h.time) >= nowKst)
-  if (!fromNow.length) {
-    const relaxed = hourly.findIndex((h) => toHourNum(h.time) >= Math.max(0, nowKst - 3))
-    fromNow = relaxed >= 0 ? hourly.slice(relaxed) : hourly
+
+  let startIdx = sortedHourly.findIndex(
+    (h) => h.fcstDate === todayYmd && toHourNum(h.time) >= nowKst
+  )
+  if (startIdx < 0) {
+    startIdx = sortedHourly.findIndex((h) => (h.fcstDate ?? '') > todayYmd)
   }
-  const chartData = fromNow.slice(0, 12).map((h) => ({
-    time: h.time.slice(0, 5),
-    temp: Math.round(h.temperature * 10) / 10,
-    pop: h.pop,
-  }))
+  if (startIdx < 0) {
+    startIdx = 0
+  }
+
+  const windowed = sortedHourly.slice(startIdx, startIdx + 12)
+  const chartData = windowed.map((h, i) => {
+    const hourNum = toHourNum(h.time)
+    const prevHourNum = i > 0 ? toHourNum(windowed[i - 1].time) : null
+    const timeLabel = prevHourNum === 23 && hourNum === 0 ? '24:00' : h.time.slice(0, 5)
+    return {
+      time: timeLabel,
+      temp: Math.round(h.temperature * 10) / 10,
+      pop: h.pop,
+    }
+  })
 
   return (
     <div className="min-w-0 w-full max-w-full">

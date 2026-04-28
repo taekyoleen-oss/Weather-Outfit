@@ -8,6 +8,15 @@ import { recommendOutfit } from '@/lib/outfit/recommender'
 import type { ActivityType, GenderType } from '@/types/outfit'
 import type { CurrentWeather, DustData } from '@/types/weather'
 import type { TerrainType } from '@/types/location'
+import { kstTodayYmd } from '@/lib/utils/timeOfDay'
+
+function calendarMonthKstFromWeather(w: CurrentWeather | null): number | undefined {
+  if (!w) return undefined
+  const ymd = w.basisDateKst ?? kstTodayYmd()
+  if (ymd.length < 6) return undefined
+  const m = parseInt(ymd.slice(4, 6), 10)
+  return m >= 1 && m <= 12 ? m : undefined
+}
 
 interface Props {
   weather: CurrentWeather | null
@@ -124,7 +133,7 @@ export function OutfitPanel({ weather, dust, terrain, hour }: Props) {
       {result && (
         <>
           <div className="border-t" style={{ borderColor: 'var(--border)' }} />
-          <OutfitResult result={result} />
+          <OutfitResult result={result} calendarMonth={calendarMonthKstFromWeather(weather)} />
         </>
       )}
     </div>

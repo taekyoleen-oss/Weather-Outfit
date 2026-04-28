@@ -46,6 +46,16 @@ const BG_MAP: Record<TimeOfDay, string> = {
 
 const TEXT_NIGHT = 'rgba(226,232,240,0.9)'
 
+function extractDongUnit(locationName?: string, addressLine?: string | null): string | undefined {
+  const sources = [addressLine ?? '', locationName ?? ''].filter(Boolean)
+  for (const src of sources) {
+    const tokens = src.split(/\s+/)
+    const unit = tokens.find((t) => /(?:동|읍|면|리|가)$/.test(t))
+    if (unit) return unit
+  }
+  return undefined
+}
+
 // ─── 기상 지수 안내 데이터 ─────────────────────────────────────────────────────
 // 근거: weather-outdoor-clothing-guide.md 다. 공식 위험 기준
 
@@ -190,6 +200,8 @@ export function WeatherCard({
     addressLine &&
     addressLine.trim() !== '' &&
     addressLine.trim() !== weather.location.trim()
+  const dongUnit = extractDongUnit(weather.location, addressLine)
+  const locationTitle = dongUnit && dongUnit !== weather.location ? `${weather.location} · ${dongUnit}` : weather.location
 
   const visLabel = weather.visibility >= 10000
     ? '10km 이상'
@@ -212,7 +224,7 @@ export function WeatherCard({
       <div className="flex items-start justify-between gap-2 mb-1">
         <div className="min-w-0 flex-1 pr-1">
           <p className="text-sm font-semibold leading-tight" style={{ color: textColor }}>
-            {weather.location}
+            {locationTitle}
           </p>
           {showAddress && (
             <p

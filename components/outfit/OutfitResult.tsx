@@ -6,6 +6,8 @@ import { OutfitHeroIllustration } from './OutfitHeroIllustration'
 
 interface Props {
   result: OutfitResultType
+  /** KST 달력 월 1–12. 히어로 `fall-layered` 문구용 */
+  calendarMonth?: number
 }
 
 const CATEGORY_ORDER = ['base', 'top', 'mid', 'outer', 'bottom', 'foot', 'acc', 'rain', 'mask'] as const
@@ -24,7 +26,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 const LAYER_BAR_COLORS = ['#22C55E', '#FFB547', '#EF4444']
 
-export function OutfitResult({ result }: Props) {
+export function OutfitResult({ result, calendarMonth }: Props) {
   // Group by category
   const byCategory = CATEGORY_ORDER.reduce(
     (acc, cat) => {
@@ -73,7 +75,7 @@ export function OutfitResult({ result }: Props) {
             </div>
           </div>
         </div>
-        <OutfitHeroIllustration illustKey={result.heroIllust} size={120} />
+        <OutfitHeroIllustration illustKey={result.heroIllust} size={120} calendarMonth={calendarMonth} />
       </div>
 
       {/* 오존 피크 시간대 경고 */}

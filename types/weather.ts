@@ -16,6 +16,8 @@ export interface CurrentWeather {
   nx: number
   ny: number
   fetchedAt: number
+  /** 이 슬롯이 기준으로 하는 KST 날짜 yyyymmdd (복장 히어로 문구 등) */
+  basisDateKst?: string
 }
 
 export interface HourlyForecast {

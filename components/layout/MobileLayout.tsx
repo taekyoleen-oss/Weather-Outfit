@@ -8,6 +8,7 @@ interface Props {
   gpsLoading: boolean
   gpsError: string | null
   onGps: () => void
+  currentDongName?: string
   recentChips: ReactNode
   /** 탭과 무관하게 날씨·복장 패널 바로 위에 표시 */
   periodPicker?: ReactNode
@@ -20,6 +21,7 @@ export function MobileLayout({
   gpsLoading,
   gpsError,
   onGps,
+  currentDongName,
   recentChips,
   periodPicker,
   weatherContent,
@@ -38,18 +40,34 @@ export function MobileLayout({
           boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
         }}
       >
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-end">
           <div className="flex-1 min-w-0">{locationSearch}</div>
-          <button
-            onClick={onGps}
-            disabled={gpsLoading}
-            className="glass-card flex items-center justify-center flex-shrink-0 transition-all active:scale-95"
-            style={{ width: 44, height: 44, borderRadius: 12, fontSize: 20,
-              color: gpsLoading ? 'var(--muted)' : 'var(--humidity)' }}
-            aria-label="내 위치로 설정"
-          >
-            {gpsLoading ? '⟳' : '📍'}
-          </button>
+          <div className="flex flex-col items-center justify-end gap-1 pb-0.5 flex-shrink-0">
+            {currentDongName && (
+              <p
+                className="text-[10px] leading-none max-w-[70px] truncate"
+                style={{ color: 'var(--muted)' }}
+                title={`현재 조회 위치: ${currentDongName}`}
+              >
+                {currentDongName}
+              </p>
+            )}
+            <button
+              onClick={onGps}
+              disabled={gpsLoading}
+              className="glass-card flex items-center justify-center transition-all active:scale-95"
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 12,
+                fontSize: 20,
+                color: gpsLoading ? 'var(--muted)' : 'var(--humidity)',
+              }}
+              aria-label="내 위치로 설정"
+            >
+              {gpsLoading ? '⟳' : '📍'}
+            </button>
+          </div>
         </div>
         {gpsError && (
           <p className="text-xs mt-1 px-1" style={{ color: 'var(--danger)' }}>{gpsError}</p>

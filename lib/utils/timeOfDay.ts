@@ -44,3 +44,13 @@ export function kstTodayYmd(): string {
     .format(new Date())
     .replace(/-/g, '')
 }
+
+/** KST 달력 yyyymmdd에 일수를 더해 yyyymmdd로 반환 (중기·주간 표시용, UTC 달력 연산) */
+export function addCalendarDaysFromKstYmd(ymd: string, deltaDays: number): string {
+  const y = parseInt(ymd.slice(0, 4), 10)
+  const m = parseInt(ymd.slice(4, 6), 10) - 1
+  const d = parseInt(ymd.slice(6, 8), 10)
+  const u = Date.UTC(y, m, d + deltaDays)
+  const nd = new Date(u)
+  return `${nd.getUTCFullYear()}${String(nd.getUTCMonth() + 1).padStart(2, '0')}${String(nd.getUTCDate()).padStart(2, '0')}`
+}
