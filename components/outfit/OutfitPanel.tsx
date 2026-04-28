@@ -33,6 +33,12 @@ const SENSITIVITY_OPTIONS: { value: SensitivityLevel; label: string; emoji: stri
   { value: 2,  label: '더위 탐', emoji: '🥵', desc: '더위를 많이 타요' },
 ]
 
+const SENSITIVITY_LABEL_MAP: Record<SensitivityLevel, string> = {
+  [-2]: '🥶 추위 탐',
+  [0]: '😊 보통',
+  [2]: '🥵 더위 탐',
+}
+
 function loadPref<T>(key: string, fallback: T): T {
   if (typeof window === 'undefined') return fallback
   try {
@@ -89,40 +95,36 @@ export function OutfitPanel({ weather, dust, terrain, hour }: Props) {
 
       <div className="border-t" style={{ borderColor: 'var(--border)' }} />
 
-      <GenderToggle value={gender} onChange={handleGender} />
-
-      <div className="border-t" style={{ borderColor: 'var(--border)' }} />
-
-      {/* 추위/더위 민감도 설정 */}
-      <div className="space-y-2">
-        <p className="text-xs font-semibold" style={{ color: 'var(--muted)' }}>체감 민감도</p>
-        <div className="flex gap-2">
-          {SENSITIVITY_OPTIONS.map((opt) => {
-            const active = sensitivity === opt.value
-            return (
-              <button
-                key={opt.value}
-                onClick={() => handleSensitivity(opt.value)}
-                className="flex-1 flex flex-col items-center gap-0.5 py-2 px-1 rounded-xl text-center transition-all"
-                style={{
-                  background: active ? 'var(--primary)' : 'var(--surface)',
-                  border: `1.5px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
-                  color: active ? '#fff' : 'var(--text)',
-                }}
-                title={opt.desc}
-              >
-                <span className="text-base leading-none">{opt.emoji}</span>
-                <span className="text-[10px] font-semibold mt-0.5 leading-tight">{opt.label}</span>
-              </button>
-            )
-          })}
+      <div className="flex items-end gap-3">
+        <div className="flex-1 min-w-0">
+          <GenderToggle value={gender} onChange={handleGender} />
         </div>
-        {sensitivity !== 0 && (
-          <p className="text-[10px]" style={{ color: 'var(--muted)' }}>
-            체감온도를 {Math.abs(sensitivity)}°C {sensitivity < 0 ? '낮게' : '높게'} 적용해 복장을 추천합니다.
-          </p>
-        )}
+        <div className="w-[130px] sm:w-[150px] space-y-1.5 flex-shrink-0">
+          <p className="text-xs font-semibold" style={{ color: 'var(--muted)' }}>체감 민감도</p>
+          <select
+            value={String(sensitivity)}
+            onChange={(e) => handleSensitivity(Number(e.target.value) as SensitivityLevel)}
+            className="w-full text-xs sm:text-sm rounded-xl px-2.5 py-2 outline-none"
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              color: 'var(--text)',
+            }}
+            aria-label="체감 민감도 선택"
+          >
+            {SENSITIVITY_OPTIONS.map((opt) => (
+              <option key={opt.value} value={String(opt.value)}>
+                {SENSITIVITY_LABEL_MAP[opt.value]}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
+      {sensitivity !== 0 && (
+        <p className="text-[10px]" style={{ color: 'var(--muted)' }}>
+          체감온도를 {Math.abs(sensitivity)}°C {sensitivity < 0 ? '낮게' : '높게'} 적용해 복장을 추천합니다.
+        </p>
+      )}
 
       {!weather && (
         <p className="text-sm text-center py-4" style={{ color: 'var(--muted)' }}>
@@ -133,7 +135,7 @@ export function OutfitPanel({ weather, dust, terrain, hour }: Props) {
       {result && (
         <>
           <div className="border-t" style={{ borderColor: 'var(--border)' }} />
-          <OutfitResult result={result} calendarMonth={calendarMonthKstFromWeather(weather)} />
+          <OutfitResult result={result} gender={gender} calendarMonth={calendarMonthKstFromWeather(weather)} />
         </>
       )}
     </div>

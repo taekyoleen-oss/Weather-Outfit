@@ -1,32 +1,32 @@
 @import "tailwindcss";
 
 :root {
-  /* Light Glassmorphism Tokens */
-  --background: #F1F5F9;
-  --surface: rgba(255, 255, 255, 0.80);
+  /* Modern vivid-blue theme tokens (image-inspired) */
+  --background: #DCE9FF;
+  --surface: rgba(255, 255, 255, 0.86);
   --surface-blur: 20px;
-  --surface-border: rgba(255, 255, 255, 0.60);
-  --surface-shadow: 0 20px 40px rgba(15, 23, 42, 0.06);
+  --surface-border: rgba(255, 255, 255, 0.72);
+  --surface-shadow: 0 18px 38px rgba(26, 71, 168, 0.14);
 
-  --primary: #1E293B;
-  --accent: #FFB547;
-  --humidity: #5B8DEE;
-  --warm: #F0A04B;
-  --cool: #7EC8C8;
+  --primary: #1745B3;
+  --accent: #2D7BFF;
+  --humidity: #0F6BFF;
+  --warm: #FF9E4A;
+  --cool: #38C8F5;
 
-  --text: #1E293B;
-  --muted: #64748B;
-  --border: #E2E8F0;
+  --text: #12306E;
+  --muted: #5D79B5;
+  --border: #C8D9FF;
 
-  --success: #22C55E;
-  --warning: #F59E0B;
-  --danger: #EF4444;
+  --success: #16C47F;
+  --warning: #FFAE2B;
+  --danger: #FF5D6C;
 
   /* Time-of-day background gradients */
-  --bg-morning: linear-gradient(180deg, #FFE9C7, #FFF7E8);
-  --bg-day: #F1F5F9;
-  --bg-evening: linear-gradient(180deg, #F4D9C7, #E8C5A0);
-  --bg-night: linear-gradient(180deg, #2C334A, #1A1F2E);
+  --bg-morning: linear-gradient(180deg, #5F9CFF 0%, #DDE9FF 100%);
+  --bg-day: linear-gradient(180deg, #4C86F7 0%, #D9E7FF 100%);
+  --bg-evening: linear-gradient(180deg, #3E6ED8 0%, #BFD5FF 100%);
+  --bg-night: linear-gradient(180deg, #183E9E 0%, #0D235F 100%);
 }
 
 @theme inline {

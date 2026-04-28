@@ -1,11 +1,13 @@
 'use client'
 
-import type { OutfitResult as OutfitResultType, DangerLevel } from '@/types/outfit'
+import { useState } from 'react'
+import type { OutfitResult as OutfitResultType, DangerLevel, GenderType } from '@/types/outfit'
 import { OutfitItemCard } from './OutfitItemCard'
-import { OutfitHeroIllustration } from './OutfitHeroIllustration'
+import { OutfitIllustPanel } from './OutfitIllustPanel'
 
 interface Props {
   result: OutfitResultType
+  gender?: GenderType
   /** KST 달력 월 1–12. 히어로 `fall-layered` 문구용 */
   calendarMonth?: number
 }
@@ -13,21 +15,24 @@ interface Props {
 const CATEGORY_ORDER = ['base', 'top', 'mid', 'outer', 'bottom', 'foot', 'acc', 'rain', 'mask'] as const
 
 const CATEGORY_LABELS: Record<string, string> = {
-  base: '이너',
-  top: '상의',
-  mid: '미들레이어',
+  base:  '이너',
+  top:   '상의',
+  mid:   '미들레이어',
   outer: '아우터',
-  bottom: '하의',
-  foot: '신발',
-  acc: '액세서리',
-  rain: '우천 준비',
-  mask: '마스크',
+  bottom:'하의',
+  foot:  '신발',
+  acc:   '액세서리',
+  rain:  '우천 준비',
+  mask:  '마스크',
 }
 
 const LAYER_BAR_COLORS = ['#22C55E', '#FFB547', '#EF4444']
 
-export function OutfitResult({ result, calendarMonth }: Props) {
-  // Group by category
+type TabId = 'illust' | 'list'
+
+export function OutfitResult({ result, gender = 'male', calendarMonth }: Props) {
+  const [tab, setTab] = useState<TabId>('illust')
+
   const byCategory = CATEGORY_ORDER.reduce(
     (acc, cat) => {
       const items = result.items.filter((i) => i.category === cat)
@@ -39,7 +44,7 @@ export function OutfitResult({ result, calendarMonth }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* Danger Banner — 참고: weather-outdoor-clothing-guide.md 라. 복장 추천 로직 §1 우선순위 */}
+      {/* Danger Banner */}
       {result.dangerReasons.length > 0 && (
         <DangerBanner
           level={result.dangerLevel}
@@ -48,34 +53,31 @@ export function OutfitResult({ result, calendarMonth }: Props) {
         />
       )}
 
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-bold" style={{ color: 'var(--primary)' }}>
-            {result.cancelActivity ? '⚠️ 활동 재검토 권고' : '오늘의 복장 추천'}
-          </h2>
-          <div className="flex items-center gap-2 mt-1">
-            <span
-              className="text-sm font-medium px-3 py-1 rounded-full"
-              style={{ background: 'rgba(255,181,71,0.15)', color: 'var(--accent)' }}
-            >
-              {result.layerLabel}
-            </span>
-            {/* Layer level bar */}
-            <div className="flex gap-1">
-              {[1, 2, 3].map((l) => (
-                <div
-                  key={l}
-                  className="w-3 h-3 rounded-full"
-                  style={{
-                    background: l <= result.layerLevel ? LAYER_BAR_COLORS[result.layerLevel - 1] : 'var(--border)',
-                  }}
-                />
-              ))}
-            </div>
+      {/* Header: title + layer info (no illustration here) */}
+      <div>
+        <h2 className="text-lg font-bold" style={{ color: 'var(--primary)' }}>
+          {result.cancelActivity ? '⚠️ 활동 재검토 권고' : '오늘의 복장 추천'}
+        </h2>
+        <div className="flex items-center gap-2 mt-1">
+          <span
+            className="text-sm font-medium px-3 py-1 rounded-full"
+            style={{ background: 'rgba(255,181,71,0.15)', color: 'var(--accent)' }}
+          >
+            {result.layerLabel}
+          </span>
+          {/* Layer level bar */}
+          <div className="flex gap-1">
+            {[1, 2, 3].map((l) => (
+              <div
+                key={l}
+                className="w-3 h-3 rounded-full"
+                style={{
+                  background: l <= result.layerLevel ? LAYER_BAR_COLORS[result.layerLevel - 1] : 'var(--border)',
+                }}
+              />
+            ))}
           </div>
         </div>
-        <OutfitHeroIllustration illustKey={result.heroIllust} size={120} calendarMonth={calendarMonth} />
       </div>
 
       {/* 오존 피크 시간대 경고 */}
@@ -121,39 +123,78 @@ export function OutfitResult({ result, calendarMonth }: Props) {
         </div>
       )}
 
-      {/* Items by category — 카테고리 라벨을 좌측으로 배치 */}
-      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-x-4 lg:gap-y-4">
-        {Object.entries(byCategory).map(([cat, items]) => (
-          <div key={cat} className="flex items-start gap-2 sm:gap-2.5">
-            <p
-              className="text-xs font-semibold uppercase tracking-wide pt-2 w-12 sm:w-14 shrink-0"
-              style={{ color: 'var(--muted)' }}
-            >
-              {CATEGORY_LABELS[cat] ?? cat}
-            </p>
-            <div className="grid grid-cols-1 gap-1.5 flex-1 min-w-0">
-              {items.map((item) => (
-                <OutfitItemCard key={item.id} item={item} />
-              ))}
-            </div>
-          </div>
+      {/* Tabs */}
+      <div
+        className="flex rounded-xl overflow-hidden"
+        role="tablist"
+        style={{ border: '1px solid var(--border)' }}
+      >
+        {([['illust', '🧍 일러스트'], ['list', '📋 아이템 목록']] as [TabId, string][]).map(([id, label]) => (
+          <button
+            key={id}
+            role="tab"
+            aria-selected={tab === id}
+            onClick={() => setTab(id)}
+            className="flex-1 py-2 text-sm font-medium transition-colors"
+            style={{
+              background: tab === id ? 'var(--primary)' : 'var(--surface)',
+              color: tab === id ? 'white' : 'var(--muted)',
+              borderRight: id === 'illust' ? '1px solid var(--border)' : undefined,
+            }}
+          >
+            {label}
+          </button>
         ))}
       </div>
 
-      {/* Tips */}
-      {result.tips.length > 0 && (
-        <div
-          className="rounded-xl p-3 space-y-1.5"
-          style={{ background: 'rgba(91,141,238,0.06)', border: '1px solid rgba(91,141,238,0.15)' }}
-        >
-          <p className="text-xs font-semibold" style={{ color: 'var(--humidity)' }}>
-            착장 팁
-          </p>
-          {result.tips.map((tip, i) => (
-            <p key={i} className="text-sm" style={{ color: 'var(--text)' }}>
-              {tip}
-            </p>
-          ))}
+      {/* Tab panel: 일러스트 */}
+      {tab === 'illust' && (
+        <div role="tabpanel">
+          <OutfitIllustPanel
+            result={result}
+            gender={gender}
+            calendarMonth={calendarMonth}
+          />
+        </div>
+      )}
+
+      {/* Tab panel: 아이템 목록 */}
+      {tab === 'list' && (
+        <div role="tabpanel" className="space-y-4">
+          <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-x-4 lg:gap-y-4">
+            {Object.entries(byCategory).map(([cat, items]) => (
+              <div key={cat} className="flex items-start gap-2 sm:gap-2.5">
+                <p
+                  className="text-xs font-semibold uppercase tracking-wide pt-2 w-12 sm:w-14 shrink-0"
+                  style={{ color: 'var(--muted)' }}
+                >
+                  {CATEGORY_LABELS[cat] ?? cat}
+                </p>
+                <div className="grid grid-cols-1 gap-1.5 flex-1 min-w-0">
+                  {items.map((item) => (
+                    <OutfitItemCard key={item.id} item={item} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Tips */}
+          {result.tips.length > 0 && (
+            <div
+              className="rounded-xl p-3 space-y-1.5"
+              style={{ background: 'rgba(91,141,238,0.06)', border: '1px solid rgba(91,141,238,0.15)' }}
+            >
+              <p className="text-xs font-semibold" style={{ color: 'var(--humidity)' }}>
+                착장 팁
+              </p>
+              {result.tips.map((tip, i) => (
+                <p key={i} className="text-sm" style={{ color: 'var(--text)' }}>
+                  {tip}
+                </p>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
