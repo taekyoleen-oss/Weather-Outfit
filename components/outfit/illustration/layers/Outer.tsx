@@ -158,9 +158,6 @@ export function Outer({
         <g>
           {/* Yellow raincoat */}
           <path d="M72 50 L64 78 L82 84 L82 128 L118 128 L118 84 L136 78 L128 50 Q116 44 100 50 Q84 44 72 50Z" fill="#FCD34D"/>
-          {/* Hood drawn here but behind head */}
-          <path d="M78 22 Q80 5 100 4 Q120 5 122 22 Q120 14 100 13 Q80 14 78 22Z" fill="#FCD34D"/>
-          <ellipse cx="100" cy="22" rx="26" ry="7" fill="#FBBF24" opacity="0.7"/>
           {/* Rain jacket seams */}
           <line x1="82" y1="70" x2="118" y2="70" stroke="#F59E0B" strokeWidth="1.5" opacity="0.5"/>
           <line x1="82" y1="86" x2="118" y2="86" stroke="#F59E0B" strokeWidth="1.5" opacity="0.5"/>

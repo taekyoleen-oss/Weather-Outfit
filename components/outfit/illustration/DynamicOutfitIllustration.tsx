@@ -35,7 +35,8 @@ export function DynamicOutfitIllustration({ items, illustKey, gender, size = 300
   const accSet        = getAccSet(items)
   const umbrella      = hasUmbrella(items)
   const mask          = hasMask(items)
-  const hasHelmet     = accSet.hat === 'helmet'
+  const effectiveHat  = accSet.hat ?? (outerVariant === 'raincoat' ? 'hood' : null)
+  const hasHelmet     = effectiveHat === 'helmet'
   const longSleeve =
     topVariant === 'longsleeve' ||
     topVariant === 'knit' ||
@@ -68,7 +69,7 @@ export function DynamicOutfitIllustration({ items, illustKey, gender, size = 300
       <Foot variant={footVariant} />
 
       {/* 7. Hat/helmet — drawn BEFORE head so head circle overlaps lower edge */}
-      <AccHat hat={accSet.hat} />
+      <AccHat hat={effectiveHat} />
 
       {/* 8. Body: neck + hair + head + face */}
       <Body gender={gender} hasHelmet={hasHelmet} />

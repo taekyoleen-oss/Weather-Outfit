@@ -7,7 +7,7 @@ export type BottomVariant = 'shorts' | 'pants' | 'slacks' | 'warm-pants' | 'ski-
 export type FootVariant = 'sneaker' | 'loafer' | 'boots' | 'ankle-boots' | 'hiking' | 'sandal' | 'golf' | 'ski' | 'rain-boots'
 
 export interface AccSet {
-  hat: 'cap' | 'beanie' | 'sun-hat' | 'helmet' | 'headband' | null
+  hat: 'cap' | 'beanie' | 'sun-hat' | 'helmet' | 'headband' | 'hood' | null
   scarf: boolean
   gloves: boolean
   sunglasses: boolean

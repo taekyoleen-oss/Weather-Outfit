@@ -52,7 +52,7 @@ export function OutfitHeroIllustration({ illustKey, size = 180, calendarMonth, i
           padding: large ? 8 : 16,
         }}
       >
-        {items && items.length > 0 ? (
+        {items != null ? (
           <DynamicOutfitIllustration
             items={items}
             illustKey={illustKey}

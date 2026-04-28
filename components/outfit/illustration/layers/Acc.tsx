@@ -61,6 +61,14 @@ export function AccHat({ hat }: AccHatProps) {
           <path d="M84 20 Q84 14 100 13 Q116 14 116 20" fill="none" stroke="#22C55E" strokeWidth="5" strokeLinecap="round"/>
         </g>
       )
+    case 'hood':
+      return (
+        <g>
+          {/* Raincoat hood — yellow, drawn behind head */}
+          <path d="M78 22 Q80 5 100 4 Q120 5 122 22 Q120 14 100 13 Q80 14 78 22Z" fill="#FCD34D"/>
+          <ellipse cx="100" cy="22" rx="26" ry="7" fill="#FBBF24" opacity="0.7"/>
+        </g>
+      )
     default:
       return null
   }

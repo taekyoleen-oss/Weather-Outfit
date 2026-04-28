@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { OutfitResult as OutfitResultType, DangerLevel, GenderType } from '@/types/outfit'
+import { CATEGORY_ORDER, CATEGORY_LABELS } from '@/lib/outfit/categories'
 import { OutfitItemCard } from './OutfitItemCard'
 import { OutfitIllustPanel } from './OutfitIllustPanel'
 
@@ -10,20 +11,6 @@ interface Props {
   gender?: GenderType
   /** KST 달력 월 1–12. 히어로 `fall-layered` 문구용 */
   calendarMonth?: number
-}
-
-const CATEGORY_ORDER = ['base', 'top', 'mid', 'outer', 'bottom', 'foot', 'acc', 'rain', 'mask'] as const
-
-const CATEGORY_LABELS: Record<string, string> = {
-  base:  '이너',
-  top:   '상의',
-  mid:   '미들레이어',
-  outer: '아우터',
-  bottom:'하의',
-  foot:  '신발',
-  acc:   '액세서리',
-  rain:  '우천 준비',
-  mask:  '마스크',
 }
 
 const LAYER_BAR_COLORS = ['#22C55E', '#FFB547', '#EF4444']
@@ -168,7 +155,7 @@ export function OutfitResult({ result, gender = 'male', calendarMonth }: Props) 
                   className="text-xs font-semibold uppercase tracking-wide pt-2 w-12 sm:w-14 shrink-0"
                   style={{ color: 'var(--muted)' }}
                 >
-                  {CATEGORY_LABELS[cat] ?? cat}
+                  {CATEGORY_LABELS[cat as keyof typeof CATEGORY_LABELS] ?? cat}
                 </p>
                 <div className="grid grid-cols-1 gap-1.5 flex-1 min-w-0">
                   {items.map((item) => (
