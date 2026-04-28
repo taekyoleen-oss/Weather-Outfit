@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import type { DailyForecast, HourlyForecast } from '@/types/weather'
-import { weatherLabel } from '@/lib/utils/formatWeather'
+import { weatherLabel, formatTemp1 } from '@/lib/utils/formatWeather'
+import { currentHourKst } from '@/lib/utils/timeOfDay'
 
 interface Props {
   daily: DailyForecast[]
@@ -83,9 +84,16 @@ function TodayView({ hourly, loading }: { hourly: HourlyForecast[]; loading?: bo
     )
   }
 
-  const chartData = hourly.slice(0, 12).map((h) => ({
+  const nowKst = currentHourKst()
+  const toHourNum = (t: string) => parseInt(t.split(':')[0], 10)
+  let fromNow = hourly.filter((h) => toHourNum(h.time) >= nowKst)
+  if (!fromNow.length) {
+    const relaxed = hourly.findIndex((h) => toHourNum(h.time) >= Math.max(0, nowKst - 3))
+    fromNow = relaxed >= 0 ? hourly.slice(relaxed) : hourly
+  }
+  const chartData = fromNow.slice(0, 12).map((h) => ({
     time: h.time.slice(0, 5),
-    temp: Math.round(h.temperature),
+    temp: Math.round(h.temperature * 10) / 10,
     pop: h.pop,
   }))
 
@@ -112,7 +120,7 @@ function TodayView({ hourly, loading }: { hourly: HourlyForecast[]; loading?: bo
               borderRadius: '12px',
               fontSize: 12,
             }}
-            formatter={(v) => [`${v}°`, '기온']}
+            formatter={(v) => [`${typeof v === 'number' ? v.toFixed(1) : v}°`, '기온']}
           />
           <Line
             type="monotone"
@@ -193,9 +201,9 @@ function WeekView({
                   <span className="text-xs" style={{ color: 'var(--humidity)' }}>{d.pop}%</span>
                 )}
                 <div className="flex items-center gap-2 text-sm font-semibold">
-                  <span style={{ color: '#5B8DEE' }}>{d.minTemp}°</span>
+                  <span style={{ color: '#5B8DEE' }}>{formatTemp1(d.minTemp)}°</span>
                   <span style={{ color: 'var(--muted)' }}>/</span>
-                  <span style={{ color: '#F0A04B' }}>{d.maxTemp}°</span>
+                  <span style={{ color: '#F0A04B' }}>{formatTemp1(d.maxTemp)}°</span>
                 </div>
                 <span
                   className="text-xs transition-transform"
@@ -211,7 +219,7 @@ function WeekView({
                     {d.hourly.map((h, i) => (
                       <div key={i} className="flex flex-col items-center gap-1 min-w-[44px] text-center">
                         <span className="text-xs" style={{ color: 'var(--muted)' }}>{h.time.slice(0, 2)}시</span>
-                        <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{Math.round(h.temperature)}°</span>
+                        <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{formatTemp1(h.temperature)}°</span>
                         {h.pop > 0 && (
                           <span className="text-xs" style={{ color: 'var(--humidity)' }}>{h.pop}%</span>
                         )}

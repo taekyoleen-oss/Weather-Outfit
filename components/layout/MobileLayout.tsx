@@ -57,6 +57,9 @@ export function MobileLayout({
         <div className="mt-2">{recentChips}</div>
       </div>
 
+      {/* ── 시간대 선택: 탭 위 ── */}
+      {periodPicker != null && <div className="px-3 pt-3">{periodPicker}</div>}
+
       {/* ── Tab selector ── */}
       <div
         className="flex mx-3 mt-3 rounded-2xl p-1 gap-1"
@@ -65,8 +68,8 @@ export function MobileLayout({
       >
         {(
           [
-            { key: 'weather', emoji: '🌤', label: '날씨' },
             { key: 'outfit', emoji: '👔', label: '복장 추천' },
+            { key: 'weather', emoji: '🌤', label: '날씨' },
           ] as const
         ).map((t) => {
           const active = tab === t.key
@@ -89,9 +92,6 @@ export function MobileLayout({
           )
         })}
       </div>
-
-      {/* ── 시간대 선택: 탭 공통, 날씨·복장 바로 위 ── */}
-      {periodPicker != null && <div className="px-3 pt-3">{periodPicker}</div>}
 
       {/* ── Tab content ── */}
       <div className="flex-1 px-3 pt-3 pb-10 space-y-3" role="tabpanel">

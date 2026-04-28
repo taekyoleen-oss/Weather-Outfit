@@ -16,11 +16,25 @@ import { NearbyWeatherChips } from '@/components/weather/NearbyWeatherChips'
 import { useAutoLocation } from '@/lib/hooks/useAutoLocation'
 import { useWeather } from '@/lib/hooks/useWeather'
 import { useWeeklyForecast } from '@/lib/hooks/useWeeklyForecast'
-import { getTimeOfDay, currentHour } from '@/lib/utils/timeOfDay'
-import { feelsLike } from '@/lib/utils/formatWeather'
-import { TIME_PERIODS, getPeriodIndex } from '@/lib/utils/timePeriods'
-import type { DustData, SunriseSunset, WeatherAlert, CurrentWeather, HourlyForecast } from '@/types/weather'
+import { getTimeOfDay, currentHourKst, kstTodayYmd } from '@/lib/utils/timeOfDay'
+import { feelsLike, weatherLabel, weatherEmojiFromLabel } from '@/lib/utils/formatWeather'
+import {
+  TIME_PERIODS,
+  getPeriodIndex,
+  getPreviousCompletedPeriod,
+  samePeriodHourlySliceFloor,
+  orderHourlyStripBeforeNoon,
+} from '@/lib/utils/timePeriods'
+import type {
+  DustData,
+  SunriseSunset,
+  WeatherAlert,
+  CurrentWeather,
+  HourlyForecast,
+  PreviousPeriodWeatherSummary,
+} from '@/types/weather'
 import type { LocationInfo } from '@/types/location'
+import type { OpenMeteoDailyCompare } from '@/lib/weather/openMeteoCompare'
 
 function hourlyToCurrentWeather(entry: HourlyForecast, base: CurrentWeather): CurrentWeather {
   return {
@@ -44,23 +58,25 @@ export default function HomePage() {
   const [dust, setDust] = useState<DustData | null>(null)
   const [sunriseSunset, setSunriseSunset] = useState<SunriseSunset | null>(null)
   const [alerts, setAlerts] = useState<WeatherAlert[]>([])
+  const [openMeteoCompare, setOpenMeteoCompare] = useState<OpenMeteoDailyCompare | null>(null)
 
-  const hour = currentHour()
+  const hour = currentHourKst()
 
-  // Selected time period (repHour of the chosen period)
-  const [selectedPeriodHour, setSelectedPeriodHour] = useState<number>(
-    () => TIME_PERIODS[getPeriodIndex(new Date().getHours())].repHour
+  // Selected time period (repHour + dayOffset of the chosen period)
+  const [selectedPeriodSelection, setSelectedPeriodSelection] = useState<{ repHour: number; dayOffset: number }>(
+    () => ({ repHour: TIME_PERIODS[getPeriodIndex(currentHourKst())].repHour, dayOffset: 0 })
   )
+  const selectedPeriodHour = selectedPeriodSelection.repHour
 
   // Reset selected period to current when location changes
   useEffect(() => {
-    setSelectedPeriodHour(TIME_PERIODS[getPeriodIndex(new Date().getHours())].repHour)
+    setSelectedPeriodSelection({ repHour: TIME_PERIODS[getPeriodIndex(currentHourKst())].repHour, dayOffset: 0 })
   }, [location])
 
   // When new weather arrives, keep selected period in sync with current time
   useEffect(() => {
     if (weatherData) {
-      setSelectedPeriodHour(TIME_PERIODS[getPeriodIndex(new Date().getHours())].repHour)
+      setSelectedPeriodSelection({ repHour: TIME_PERIODS[getPeriodIndex(currentHourKst())].repHour, dayOffset: 0 })
     }
   }, [weatherData])
 
@@ -72,47 +88,144 @@ export default function HomePage() {
     if (!base) return null
     const currentPeriodIdx = getPeriodIndex(hour)
     const selectedPeriodIdx = getPeriodIndex(selectedPeriodHour)
-    if (selectedPeriodIdx === currentPeriodIdx) return base
+    // 지금 시간대: 카드 기온·체감 등을 현재 KST '시' 정각 슬롯(예 11:02 → 11시)과 맞춤
+    if (selectedPeriodSelection.dayOffset === 0 && selectedPeriodIdx === currentPeriodIdx) {
+      const hourStr = String(hour).padStart(2, '0') + ':00'
+      const entry = weatherData?.hourly.find((h) => h.time === hourStr) ?? null
+      return entry ? hourlyToCurrentWeather(entry, base) : base
+    }
     const repHourStr = String(selectedPeriodHour).padStart(2, '0') + ':00'
-    const entry = weatherData?.hourly.find((h) => h.time === repHourStr) ?? null
+    const today = kstTodayYmd()
+    const targetMs =
+      Date.UTC(
+        parseInt(today.slice(0, 4), 10),
+        parseInt(today.slice(4, 6), 10) - 1,
+        parseInt(today.slice(6, 8), 10)
+      ) +
+      selectedPeriodSelection.dayOffset * 86400000
+    const d = new Date(targetMs)
+    const targetYmd = `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`
+    const entry =
+      weatherData?.hourly.find((h) => h.time === repHourStr && h.fcstDate === targetYmd) ??
+      (selectedPeriodSelection.dayOffset === 0
+        ? weatherData?.hourly.find((h) => h.time === repHourStr) ?? null
+        : null)
     return entry ? hourlyToCurrentWeather(entry, base) : base
-  }, [weatherData, selectedPeriodHour, hour])
+  }, [weatherData, selectedPeriodHour, selectedPeriodSelection.dayOffset, hour])
 
   // Highlight range for HourlyWeatherStrip
   const selectedPeriod = TIME_PERIODS.find((p) => p.repHour === selectedPeriodHour)
 
-  // Filter hourly data to show only entries from the selected period onwards
+  const curPeriodIdx = getPeriodIndex(hour)
+
+  /** 가장 최근에 끝난 시간대의 대표 기온·체감(시간별 예보 슬롯 기준) */
+  const previousPeriodSummary = useMemo((): PreviousPeriodWeatherSummary | null => {
+    const hourly = weatherData?.hourly ?? []
+    if (!hourly.length) return null
+    const prev = getPreviousCompletedPeriod(hour)
+    if (!prev) return null
+    const toHourNum = (t: string) => parseInt(t.split(':')[0], 10)
+    const repStr = String(prev.repHour).padStart(2, '0') + ':00'
+    let entry = hourly.find((h) => h.time === repStr) ?? null
+    if (!entry) {
+      const candidates = hourly.filter((h) => {
+        const t = toHourNum(h.time)
+        return t >= prev.start && t <= prev.end && t < hour
+      })
+      entry = candidates.length ? candidates[candidates.length - 1] : null
+    }
+    if (!entry) return null
+    const wl = weatherLabel(entry.skyCode, entry.ptyCode)
+    return {
+      periodLabel: prev.label,
+      weatherLabel: wl,
+      emoji: weatherEmojiFromLabel(wl),
+      temperature: entry.temperature,
+      feelsLike: feelsLike(entry.temperature, entry.windSpeed, entry.humidity),
+    }
+  }, [weatherData, hour])
+
+  // Filter hourly data: KST; 오후 전엔 오전(6~13시) 전체가 먼저 보이도록 정렬
   const displayedHourly = useMemo((): HourlyForecast[] => {
     const hourly = weatherData?.hourly ?? []
-    if (!selectedPeriod || !hourly.length) return hourly
-
-    const selIdx = getPeriodIndex(selectedPeriodHour)
-    const curIdx = getPeriodIndex(hour)
-    const isTomorrow = selIdx < curIdx
+    if (!hourly.length) return hourly
 
     const toHourNum = (t: string) => parseInt(t.split(':')[0], 10)
+    const todayYmd = kstTodayYmd()
 
-    if (selIdx === curIdx) {
-      // Current period: start from now
-      const idx = hourly.findIndex(h => toHourNum(h.time) >= hour)
-      return idx >= 0 ? hourly.slice(idx) : hourly
+    /**
+     * 오전(hour < 13)일 때: 오늘 날짜 데이터 중 minHour 이상인 첫 슬롯부터 반환.
+     * fcstDate 필드가 없는 레거시 슬롯은 오늘 것으로 간주.
+     * 오늘 데이터에서 찾지 못하면 전체 리스트 기반으로 폴백.
+     */
+    function sliceFromHourOnSameDay(list: HourlyForecast[], minHour: number): HourlyForecast[] {
+      if (hour < 12) {
+        // 오늘 날짜 슬롯만 먼저 탐색 → 오전 데이터가 반드시 오늘 것임을 보장
+        const todayIdx = list.findIndex(
+          (h) => (h.fcstDate === todayYmd || !h.fcstDate) && toHourNum(h.time) >= minHour
+        )
+        if (todayIdx >= 0) return list.slice(todayIdx)
+      }
+      const idx = list.findIndex((h) => toHourNum(h.time) >= minHour)
+      if (idx >= 0) return list.slice(idx)
+      const relaxed = list.findIndex((h) => toHourNum(h.time) >= Math.max(0, minHour - 3))
+      return relaxed >= 0 ? list.slice(relaxed) : []
     }
 
-    if (!isTomorrow) {
-      // Same-day future period
-      const idx = hourly.findIndex(h => toHourNum(h.time) >= selectedPeriod.start)
-      return idx >= 0 ? hourly.slice(idx) : hourly
+    let usedTomorrowPath = false
+    let out: HourlyForecast[]
+
+    if (!selectedPeriod) {
+      out = sliceFromHourOnSameDay(hourly, samePeriodHourlySliceFloor(hour, curPeriodIdx))
+    } else {
+      const selIdx = getPeriodIndex(selectedPeriodHour)
+      const curIdx = getPeriodIndex(hour)
+      const isTomorrow = selectedPeriodSelection.dayOffset > 0 || selIdx < curIdx
+
+      if (selIdx === curIdx && selectedPeriodSelection.dayOffset === 0) {
+        // 오전이고 오전 시간대가 선택된 경우: 오전 시작(6시)부터 표시
+        out = sliceFromHourOnSameDay(hourly, samePeriodHourlySliceFloor(hour, curIdx))
+      } else if (!isTomorrow) {
+        const preNoonFloor = hour < 12 ? TIME_PERIODS[1].start : -1
+        const startFloor = Math.max(selectedPeriod.start, hour, preNoonFloor)
+        out = sliceFromHourOnSameDay(hourly, startFloor)
+      } else {
+        usedTomorrowPath = true
+        const today = kstTodayYmd()
+        const targetMs =
+          Date.UTC(
+            parseInt(today.slice(0, 4), 10),
+            parseInt(today.slice(4, 6), 10) - 1,
+            parseInt(today.slice(6, 8), 10)
+          ) +
+          selectedPeriodSelection.dayOffset * 86400000
+        const d = new Date(targetMs)
+        const targetYmd = `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`
+        const dateAwareIdx = hourly.findIndex(
+          (h) => h.fcstDate === targetYmd && toHourNum(h.time) >= selectedPeriod.start
+        )
+        if (dateAwareIdx >= 0) {
+          out = hourly.slice(dateAwareIdx)
+        } else {
+          const midnightIdx = hourly.findIndex((h, i) =>
+            i > 0 && toHourNum(h.time) < toHourNum(hourly[i - 1].time)
+          )
+          if (midnightIdx < 0) {
+            out = sliceFromHourOnSameDay(hourly, hour)
+          } else {
+            const afterMidnight = hourly.slice(midnightIdx)
+            const startIdx = afterMidnight.findIndex((h) => toHourNum(h.time) >= selectedPeriod.start)
+            out = startIdx >= 0 ? afterMidnight.slice(startIdx) : afterMidnight
+          }
+        }
+      }
     }
 
-    // Tomorrow's period: find midnight crossing, then period start after it
-    const midnightIdx = hourly.findIndex((h, i) =>
-      i > 0 && toHourNum(h.time) < toHourNum(hourly[i - 1].time)
-    )
-    if (midnightIdx < 0) return hourly
-    const afterMidnight = hourly.slice(midnightIdx)
-    const startIdx = afterMidnight.findIndex(h => toHourNum(h.time) >= selectedPeriod.start)
-    return startIdx >= 0 ? afterMidnight.slice(startIdx) : afterMidnight
-  }, [weatherData, selectedPeriod, selectedPeriodHour, hour])
+    if (hour < 12 && !usedTomorrowPath) {
+      out = orderHourlyStripBeforeNoon(out, hour)
+    }
+    return out
+  }, [weatherData, selectedPeriod, selectedPeriodHour, selectedPeriodSelection.dayOffset, hour, curPeriodIdx])
 
   const uvForCard = useMemo(() => {
     const base = weatherData?.current
@@ -120,6 +233,37 @@ export default function HomePage() {
     if (displayWeather.uvIndex > 0) return displayWeather.uvIndex
     return base.uvIndex
   }, [weatherData, displayWeather])
+
+  useEffect(() => {
+    if (!location) return
+    let cancelled = false
+    setOpenMeteoCompare(null)
+    fetch(`/api/weather/compare?lat=${location.lat}&lon=${location.lon}`)
+      .then((r) => r.json())
+      .then((d: OpenMeteoDailyCompare & { error?: string }) => {
+        if (cancelled || d?.error) return
+        if (
+          d &&
+          typeof d.todayMin === 'number' &&
+          typeof d.todayMax === 'number' &&
+          !Number.isNaN(d.todayMin) &&
+          !Number.isNaN(d.todayMax)
+        ) {
+          setOpenMeteoCompare({
+            yesterdaySameHourTemp:
+              typeof d.yesterdaySameHourTemp === 'number' && !Number.isNaN(d.yesterdaySameHourTemp)
+                ? d.yesterdaySameHourTemp
+                : null,
+            todayMin: d.todayMin,
+            todayMax: d.todayMax,
+          })
+        }
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [location])
 
   useEffect(() => {
     if (!location) return
@@ -163,7 +307,8 @@ export default function HomePage() {
       currentHour={hour}
       hourly={weatherData?.hourly ?? []}
       selectedRepHour={selectedPeriodHour}
-      onSelect={setSelectedPeriodHour}
+      selectedDayOffset={selectedPeriodSelection.dayOffset}
+      onSelect={(repHour, dayOffset) => setSelectedPeriodSelection({ repHour, dayOffset })}
     />
   )
 
@@ -176,6 +321,8 @@ export default function HomePage() {
       sunriseSunset={sunriseSunset}
       uvDisplay={uvForCard}
       dust={dust}
+      previousPeriodWeather={previousPeriodSummary}
+      openMeteoCompare={openMeteoCompare}
     />
   )
   const hourlyStrip = (
@@ -184,6 +331,7 @@ export default function HomePage() {
       currentHour={hour}
       selectedPeriodStart={selectedPeriod?.start}
       selectedPeriodEnd={selectedPeriod?.end}
+      selectedDayOffset={selectedPeriodSelection.dayOffset}
     />
   )
   const highlightsGrid = (
@@ -193,6 +341,7 @@ export default function HomePage() {
       alerts={alerts}
       loading={weatherLoading}
       compact
+      previousPeriodWeather={previousPeriodSummary}
     />
   )
   const weeklyForecast = (

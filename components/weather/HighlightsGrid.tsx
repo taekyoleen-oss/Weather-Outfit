@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { HighlightCard } from './HighlightCard'
-import type { CurrentWeather, DustData, WeatherAlert } from '@/types/weather'
+import type { CurrentWeather, DustData, WeatherAlert, PreviousPeriodWeatherSummary } from '@/types/weather'
+import { formatTemp1 } from '@/lib/utils/formatWeather'
 import { dustGradeLabel, dustGradeColor } from '@/lib/utils/formatWeather'
 import { KMA_WEATHER_WARN_PAGE } from '@/lib/weather/kma-alert'
 
@@ -12,6 +13,7 @@ interface Props {
   alerts?: WeatherAlert[]
   loading?: boolean
   compact?: boolean
+  previousPeriodWeather?: PreviousPeriodWeatherSummary | null
 }
 
 // ─── 기상 지수 안내 데이터 ─────────────────────────────────────────────────────
@@ -94,7 +96,7 @@ function IndexModal({ title, rows, source, onClose }: {
   )
 }
 
-export function HighlightsGrid({ weather, dust, alerts, loading, compact }: Props) {
+export function HighlightsGrid({ weather, dust, alerts, loading, compact, previousPeriodWeather }: Props) {
   const [modal, setModal] = useState<'pm10' | 'pm25' | null>(null)
 
   // 가시거리는 WeatherCard로 이동 → 여기서는 대기질·초미세먼지·기상특보 3항목
@@ -167,6 +169,28 @@ export function HighlightsGrid({ weather, dust, alerts, loading, compact }: Prop
           href={alertCount > 0 ? KMA_WEATHER_WARN_PAGE : undefined}
         />
       </div>
+
+      {previousPeriodWeather && (
+        <div
+          className={`mt-2 glass-card ${compact ? 'px-2.5 py-2' : 'px-3 py-2.5'}`}
+          style={{ borderColor: 'var(--border)' }}
+        >
+          <p className={compact ? 'text-[10px] font-medium' : 'text-xs font-medium'} style={{ color: 'var(--muted)' }}>
+            직전 시간대 · {previousPeriodWeather.periodLabel}
+          </p>
+          <p
+            className={`mt-1 font-semibold tabular-nums leading-snug ${compact ? 'text-xs' : 'text-sm'}`}
+            style={{ color: 'var(--text)' }}
+          >
+            <span className="mr-0.5">{previousPeriodWeather.emoji}</span>
+            {previousPeriodWeather.weatherLabel}
+            <span className="mx-1 font-normal" style={{ color: 'var(--muted)' }}>·</span>
+            {formatTemp1(previousPeriodWeather.temperature)}°
+            <span className="font-normal mx-1" style={{ color: 'var(--muted)' }}>/</span>
+            체감 {formatTemp1(previousPeriodWeather.feelsLike)}°
+          </p>
+        </div>
+      )}
 
       {/* PM10 안내 모달 */}
       {modal === 'pm10' && (

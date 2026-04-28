@@ -19,6 +19,8 @@ export interface CurrentWeather {
 }
 
 export interface HourlyForecast {
+  /** 예보 기준일 KST yyyymmdd (시간별 스트립에서 내일/모레 구분) */
+  fcstDate?: string
   time: string
   temperature: number
   skyCode: SkyCode
@@ -27,6 +29,15 @@ export interface HourlyForecast {
   humidity: number
   windSpeed: number
   pop: number
+}
+
+/** 직전에 끝난 시간대(예: 새벽) 대표 슬롯의 날씨 — WeatherCard·Highlights 표시용 */
+export interface PreviousPeriodWeatherSummary {
+  periodLabel: string
+  weatherLabel: string
+  emoji: string
+  temperature: number
+  feelsLike: number
 }
 
 export interface DailyForecast {

@@ -1,4 +1,5 @@
 import type { SkyCode, PtyCode, DustGrade, IllustKey, TimeOfDay } from '@/types/weather'
+import type { OpenMeteoDailyCompare } from '@/lib/weather/openMeteoCompare'
 
 export function skyLabel(sky: SkyCode): string {
   const MAP: Record<SkyCode, string> = {
@@ -23,6 +24,20 @@ export function ptyLabel(pty: PtyCode): string {
 export function weatherLabel(sky: SkyCode, pty: PtyCode): string {
   if (pty !== '0') return ptyLabel(pty)
   return skyLabel(sky)
+}
+
+const WEATHER_LABEL_EMOJI: Record<string, string> = {
+  맑음: '☀️',
+  '구름 많음': '🌤',
+  흐림: '☁️',
+  비: '🌧',
+  '비/눈': '🌨',
+  눈: '❄️',
+  소나기: '⛈',
+}
+
+export function weatherEmojiFromLabel(label: string): string {
+  return WEATHER_LABEL_EMOJI[label] ?? '🌤'
 }
 
 export function uvLabel(uvi: number): string {
@@ -79,12 +94,57 @@ export function o3GradeColor(grade: string | undefined): string {
   return grade ? (MAP[grade] ?? '#5B8DEE') : 'var(--muted)'
 }
 
+/** 체감·기온과 동일하게 소수 첫째 자리까지 (반올림) */
+function roundTemp1(n: number): number {
+  return Math.round(n * 10) / 10
+}
+
+/** 화면 표기용 ℃ 숫자 부분 (소수 첫째 자리) */
+export function formatTemp1(n: number): string {
+  if (Number.isNaN(n)) return '--'
+  return roundTemp1(n).toFixed(1)
+}
+
+function formatDegDiffForCompare(n: number): string {
+  const r = Math.round(n * 10) / 10
+  if (Number.isInteger(r)) return String(r)
+  return r.toFixed(1)
+}
+
+/**
+ * WeatherCard 한 줄 부가 문구: "어제보다 N도 낮음 최저 …도 최고 …도"
+ * Open-Meteo 기준(재분석·단기예보 혼합); 어제 슬롯이 없으면 최저·최고만 표시.
+ */
+export function formatOpenMeteoCompareLine(
+  currentTemp: number,
+  c: OpenMeteoDailyCompare | null
+): string | null {
+  if (!c) return null
+  const { yesterdaySameHourTemp, todayMin, todayMax } = c
+  if (todayMin == null || todayMax == null || Number.isNaN(todayMin) || Number.isNaN(todayMax)) {
+    return null
+  }
+  const parts: string[] = []
+  if (yesterdaySameHourTemp != null && Number.isFinite(yesterdaySameHourTemp)) {
+    const diff = Math.round((currentTemp - yesterdaySameHourTemp) * 10) / 10
+    if (diff > 0.05) {
+      parts.push(`어제보다 ${formatDegDiffForCompare(Math.abs(diff))}도 높음`)
+    } else if (diff < -0.05) {
+      parts.push(`어제보다 ${formatDegDiffForCompare(Math.abs(diff))}도 낮음`)
+    } else {
+      parts.push('어제와 비슷함')
+    }
+  }
+  parts.push(`최저 ${formatTemp1(todayMin)}도 최고 ${formatTemp1(todayMax)}도`)
+  return parts.join(' ')
+}
+
 export function feelsLike(temp: number, windSpeed: number, humidity: number): number {
   if (temp <= 10) {
     // Wind Chill
-    if (windSpeed < 1.3) return temp
+    if (windSpeed < 1.3) return roundTemp1(temp)
     const v = Math.pow(windSpeed * 3.6, 0.16)
-    return Math.round(13.12 + 0.6215 * temp - 11.37 * v + 0.3965 * temp * v)
+    return roundTemp1(13.12 + 0.6215 * temp - 11.37 * v + 0.3965 * temp * v)
   }
   if (temp >= 27) {
     // Heat Index
@@ -93,9 +153,9 @@ export function feelsLike(temp: number, windSpeed: number, humidity: number): nu
     let hi = -8.78469475556 + 1.61139411 * T + 2.3385348 * R - 0.14611605 * T * R
     hi -= 0.012308094 * T * T - 0.016424828 * R * R + 0.002211732 * T * T * R
     hi += 0.00072546 * T * R * R - 0.000003582 * T * T * R * R
-    return Math.round(hi)
+    return roundTemp1(hi)
   }
-  return temp
+  return roundTemp1(temp)
 }
 
 const SKY_ILLUST: Record<SkyCode, IllustKey> = {

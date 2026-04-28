@@ -21,3 +21,26 @@ export function getTimeOfDay(hour: number, sunriseHHMM?: string, sunsetHHMM?: st
 export function currentHour(): number {
   return new Date().getHours()
 }
+
+/** KMA 단기예보와 동일한 기준(한국 표준시) 시각 0–23 */
+export function currentHourKst(): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Seoul',
+    hour: 'numeric',
+    hour12: false,
+  }).formatToParts(new Date())
+  const hourPart = parts.find((p) => p.type === 'hour')?.value ?? '0'
+  return parseInt(hourPart, 10)
+}
+
+/** KST 기준 달력 날짜 yyyymmdd */
+export function kstTodayYmd(): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+    .format(new Date())
+    .replace(/-/g, '')
+}

@@ -3,11 +3,14 @@
 import { useState } from 'react'
 import { WeatherHeroIllustration } from './WeatherHeroIllustration'
 import { FreshnessBadge } from './FreshnessBadge'
-import type { CurrentWeather, SunriseSunset, TimeOfDay, DustData } from '@/types/weather'
+import type { CurrentWeather, SunriseSunset, TimeOfDay, DustData, PreviousPeriodWeatherSummary } from '@/types/weather'
+import type { OpenMeteoDailyCompare } from '@/lib/weather/openMeteoCompare'
 import {
   weatherLabel,
   windDirectionLabel,
   feelsLike,
+  formatTemp1,
+  formatOpenMeteoCompareLine,
   uvLabel,
   uvColor,
   formatTime,
@@ -23,6 +26,10 @@ interface Props {
   sunriseSunset?: SunriseSunset | null
   uvDisplay?: number
   dust?: DustData | null
+  /** 직전에 끝난 시간대(예: 새벽) 대표 날씨 */
+  previousPeriodWeather?: PreviousPeriodWeatherSummary | null
+  /** 어제 동시간대·오늘 일 최저·최고 (Open-Meteo) */
+  openMeteoCompare?: OpenMeteoDailyCompare | null
 }
 
 const BG_MAP: Record<TimeOfDay, string> = {
@@ -145,6 +152,8 @@ export function WeatherCard({
   sunriseSunset,
   uvDisplay,
   dust,
+  previousPeriodWeather,
+  openMeteoCompare,
 }: Props) {
   const [modal, setModal] = useState<'uv' | 'heat' | null>(null)
 
@@ -169,6 +178,7 @@ export function WeatherCard({
   }
 
   const feels = feelsLike(weather.temperature, weather.windSpeed, weather.humidity)
+  const compareLine = formatOpenMeteoCompareLine(weather.temperature, openMeteoCompare ?? null)
   const uv = uvDisplay ?? weather.uvIndex
   const showAddress =
     addressLine &&
@@ -219,21 +229,51 @@ export function WeatherCard({
       <div className="mt-1">
         <div className="flex items-end gap-1.5">
           <span className="text-5xl font-bold leading-none tabular-nums" style={{ color: textColor }}>
-            {Math.round(weather.temperature)}°
+            {formatTemp1(weather.temperature)}°
           </span>
           <span className="text-lg mb-0.5" style={{ color: mutedColor }}>C</span>
         </div>
         <p className="text-sm mt-0.5 leading-snug" style={{ color: textColor }}>
-          {weatherLabel(weather.skyCode, weather.ptyCode)}
+          <span className="font-medium">{weatherLabel(weather.skyCode, weather.ptyCode)}</span>
+          {compareLine ? (
+            <>
+              {' '}
+              <span className="font-normal text-xs sm:text-sm" style={{ color: mutedColor }}>
+                {compareLine}
+              </span>
+            </>
+          ) : null}
         </p>
       </div>
+
+      {previousPeriodWeather && (
+        <div
+          className="mt-2 rounded-xl px-2.5 py-2 text-left"
+          style={{
+            background: isNight ? 'rgba(148,163,184,0.12)' : 'rgba(91,141,238,0.08)',
+            border: `1px solid ${isNight ? 'rgba(148,163,184,0.2)' : 'rgba(91,141,238,0.15)'}`,
+          }}
+        >
+          <p className="text-[10px] font-medium leading-tight" style={{ color: mutedColor }}>
+            직전 시간대 · {previousPeriodWeather.periodLabel}
+          </p>
+          <p className="text-xs font-semibold mt-1 tabular-nums leading-snug" style={{ color: textColor }}>
+            <span className="mr-1">{previousPeriodWeather.emoji}</span>
+            {previousPeriodWeather.weatherLabel}
+            <span className="mx-1 font-normal" style={{ color: mutedColor }}>·</span>
+            {formatTemp1(previousPeriodWeather.temperature)}°
+            <span className="font-normal mx-1" style={{ color: mutedColor }}>/</span>
+            체감 {formatTemp1(previousPeriodWeather.feelsLike)}°
+          </p>
+        </div>
+      )}
 
       {/* Stats grid: row1 = 체감/습도/바람, row2 = 가시거리/일출/일몰 */}
       <div className="mt-2.5 grid grid-cols-3 gap-x-2 gap-y-2 text-xs sm:text-sm">
         {/* 체감온도 with ℹ — 폭염/한파 기준 안내 */}
         <div className="text-center min-w-0 relative">
           <p className="text-xs" style={{ color: mutedColor }}>체감</p>
-          <p className="font-semibold mt-0.5 tabular-nums" style={{ color: textColor }}>{feels}°</p>
+          <p className="font-semibold mt-0.5 tabular-nums" style={{ color: textColor }}>{formatTemp1(feels)}°</p>
           <button
             onClick={() => setModal('heat')}
             className="absolute -top-1 -right-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-bold"

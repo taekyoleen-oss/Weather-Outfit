@@ -11,7 +11,13 @@ export async function GET(req: NextRequest) {
   const lon = parseFloat(searchParams.get('lon') ?? '126.9780')
 
   try {
-    const key = `vfcst:${nx}:${ny}:${Math.floor(Date.now() / (TTL.shortForecast * 1000))}`
+    // 캐시 키에 KMA 발표 시각(baseTime)을 포함해, 발표 시각이 바뀌면 즉시 새 데이터를 가져온다.
+    // kma.ts 의 getBaseDateTime 과 동일한 규칙: base < h (base+1시부터 데이터 시작)
+    const kstHour = new Date(Date.now() + 9 * 60 * 60 * 1000).getUTCHours()
+    const KMA_BASE_HOURS = [2, 5, 8, 11, 14, 17, 20, 23]
+    const validBases = KMA_BASE_HOURS.filter((b) => b < kstHour)
+    const baseTime = validBases.length ? validBases[validBases.length - 1] : 23
+    const key = `vfcst2:${nx}:${ny}:${baseTime}`
     const data = await kvSWR(key, TTL.shortForecast, () => fetchVilageForecast(nx, ny))
 
     // resolve location name
