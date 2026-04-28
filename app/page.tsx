@@ -375,7 +375,6 @@ export default function HomePage() {
       alerts={alerts}
       loading={weatherLoading}
       compact
-      previousPeriodWeather={previousPeriodSummary}
     />
   )
   const weeklyProps = {
