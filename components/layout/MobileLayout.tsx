@@ -45,7 +45,7 @@ export function MobileLayout({
           <div className="flex flex-col items-center justify-end gap-1 pb-0.5 flex-shrink-0">
             {currentDongName && (
               <p
-                className="text-[10px] leading-none max-w-[70px] truncate"
+                className="text-[10px] max-lg:text-[11px] leading-none max-w-[70px] truncate max-lg:tracking-wide"
                 style={{ color: 'var(--muted)' }}
                 title={`현재 조회 위치: ${currentDongName}`}
               >
@@ -97,7 +97,7 @@ export function MobileLayout({
               role="tab"
               aria-selected={active}
               onClick={() => setTab(t.key)}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl transition-all text-sm font-semibold"
+              className="flex-1 flex items-center justify-center gap-1.5 max-lg:gap-2 py-2.5 rounded-xl transition-all text-sm max-lg:text-[15px] font-semibold max-lg:tracking-tight"
               style={{
                 background: active ? 'white' : 'transparent',
                 color: active ? 'var(--primary)' : 'var(--muted)',

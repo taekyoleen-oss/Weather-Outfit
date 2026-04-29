@@ -67,4 +67,26 @@ export const TTL = {
   alert: 5 * 60,
   dust: 60 * 60,
   aiComment: 60 * 60,
+  /** WeatherManager 초단기 실패 시 마지막 성공 스냅샷 */
+  weatherManagerFallback: 24 * 60 * 60,
 } as const
+
+export async function kvOptionalGet<T>(key: string): Promise<T | null> {
+  const kv = getKv()
+  if (!kv) return null
+  try {
+    return await kv.get<T>(key)
+  } catch {
+    return null
+  }
+}
+
+export async function kvOptionalSet<T>(key: string, value: T, exSeconds: number): Promise<void> {
+  const kv = getKv()
+  if (!kv) return
+  try {
+    await kv.set(key, value, { ex: exSeconds })
+  } catch {
+    // non-fatal
+  }
+}

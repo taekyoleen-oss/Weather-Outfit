@@ -337,6 +337,15 @@ export default function HomePage() {
   const timePeriodPicker = (
     <TimePeriodPicker
       currentHour={hour}
+      currentConditions={
+        weatherData?.current
+          ? {
+              temperature: weatherData.current.temperature,
+              skyCode: weatherData.current.skyCode,
+              ptyCode: weatherData.current.ptyCode,
+            }
+          : null
+      }
       hourly={weatherData?.hourly ?? []}
       selectedRepHour={selectedPeriodHour}
       selectedDayOffset={selectedPeriodSelection.dayOffset}
