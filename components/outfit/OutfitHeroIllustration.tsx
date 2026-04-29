@@ -55,38 +55,71 @@ export function OutfitHeroIllustration({
   const pad = large ? 8 : 16
   const innerW = displaySize - 2 * pad
   const innerH = Math.round(innerW * illustDisplayHeightOverWidth())
+  const frameClass = 'rounded-3xl flex items-center justify-center overflow-hidden'
+  /** 모바일: 좌우 패딩 축소로 SVG 가로 여백 최소화, sm+ 에서 기존 16px 느낌 복원 */
+  const framePadClass = large ? 'p-2' : 'px-1.5 py-2.5 sm:px-4 sm:py-4'
+  const frameBaseStyle = {
+    background: 'rgba(255,255,255,0.6)',
+    border: '1px solid var(--surface-border)',
+    width: displaySize,
+  } as const
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <div
-        className="rounded-3xl flex items-center justify-center overflow-hidden"
-        style={{
-          background: 'rgba(255,255,255,0.6)',
-          border: '1px solid var(--surface-border)',
-          width: displaySize,
-          height: innerH + 2 * pad,
-          padding: pad,
-        }}
-      >
-        {items != null ? (
-          <DynamicOutfitIllustration
-            items={items}
-            illustKey={illustKey}
-            gender={gender}
-            size={innerW}
-            showSunshine={showSunshine}
-            weatherSky={weatherSky}
-          />
-        ) : (
-          <Image
-            src={`/illust/outfit/${illustKey}.svg`}
-            alt={label}
-            width={displaySize - 32}
-            height={displaySize - 32}
-            priority
-          />
-        )}
-      </div>
+      {large ? (
+        <div
+          className={`${frameClass} ${framePadClass}`}
+          style={{
+            ...frameBaseStyle,
+            height: innerH + 2 * pad,
+          }}
+        >
+          {items != null ? (
+            <DynamicOutfitIllustration
+              items={items}
+              illustKey={illustKey}
+              gender={gender}
+              size={innerW}
+              calendarMonth={calendarMonth}
+              showSunshine={showSunshine}
+              weatherSky={weatherSky}
+            />
+          ) : (
+            <Image
+              src={`/illust/outfit/${illustKey}.svg`}
+              alt={label}
+              width={innerW}
+              height={innerH}
+              className="h-auto w-full max-w-full"
+              priority
+            />
+          )}
+        </div>
+      ) : (
+        <div className={`${frameClass} ${framePadClass}`} style={{ ...frameBaseStyle }}>
+          {items != null ? (
+            <DynamicOutfitIllustration
+              items={items}
+              illustKey={illustKey}
+              gender={gender}
+              layout="fluid"
+              size={displaySize}
+              calendarMonth={calendarMonth}
+              showSunshine={showSunshine}
+              weatherSky={weatherSky}
+            />
+          ) : (
+            <Image
+              src={`/illust/outfit/${illustKey}.svg`}
+              alt={label}
+              width={200}
+              height={296}
+              className="h-auto w-full max-w-full"
+              priority
+            />
+          )}
+        </div>
+      )}
       <span className="text-xs font-medium" style={{ color: 'var(--muted)' }}>
         {label}
       </span>

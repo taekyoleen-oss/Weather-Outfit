@@ -21,7 +21,13 @@ import {
   hasUmbrella,
   hasMask,
 } from './itemLayerMap'
-import { ILLUST_SKY_TOP, ILLUST_VB_W, illustDisplayHeightOverWidth, illustViewBoxString } from './illustViewBox'
+import {
+  ILLUST_SKY_TOP,
+  ILLUST_VB_W,
+  ILLUST_VIEWBOX_HEIGHT,
+  illustDisplayHeightOverWidth,
+  illustViewBoxString,
+} from './illustViewBox'
 import { WeatherSkyDecor } from './WeatherSkyDecor'
 
 interface Props {
@@ -29,6 +35,10 @@ interface Props {
   illustKey: HeroIllustKey
   gender: GenderType
   size?: number
+  /** `fluid`: 부모 너비에 맞춤(모바일 등에서 좌우 패딩 최소화 시 사용) */
+  layout?: 'fixed' | 'fluid'
+  /** 1–12, KST 달력. SVG 계절 팔레트·상의 소매 톤에 사용 */
+  calendarMonth?: number
   /** 맑음일 때 Scene에 햇빛·광선 표시 */
   showSunshine?: boolean
   /** 상단 첨부 스타일 라인 날씨 아이콘 */
@@ -40,6 +50,8 @@ export function DynamicOutfitIllustration({
   illustKey,
   gender,
   size = 300,
+  layout = 'fixed',
+  calendarMonth,
   showSunshine,
   weatherSky,
 }: Props) {
@@ -58,16 +70,25 @@ export function DynamicOutfitIllustration({
     topVariant === 'longsleeve' ||
     topVariant === 'knit' ||
     topVariant === 'rashguard'
+  /** 후드·스웨터·가디건은 실제로 긴팔이므로 상의가 반팔이어도 미드는 긴팔 실루엣 */
+  const midSleeveLength: 'long' | 'short' =
+    midVariant != null && midVariant !== 'vest' ? 'long' : 'short'
 
   const vb = illustViewBoxString()
   const pxH = size * illustDisplayHeightOverWidth()
+  const fluid = layout === 'fluid'
 
   return (
     <svg
       viewBox={vb}
-      width={size}
-      height={pxH}
-      style={{ display: 'block' }}
+      width={fluid ? '100%' : size}
+      height={fluid ? undefined : pxH}
+      style={
+        fluid
+          ? { display: 'block', aspectRatio: `${ILLUST_VB_W} / ${ILLUST_VIEWBOX_HEIGHT}` }
+          : { display: 'block' }
+      }
+      preserveAspectRatio={fluid ? 'xMidYMid meet' : undefined}
       aria-hidden="true"
     >
       {/* 상단 하늘 여백(태양·날씨 데코용) — 아주 옅은 그라데이션만 */}
@@ -100,19 +121,19 @@ export function DynamicOutfitIllustration({
       {weatherSky ? <WeatherSkyDecor skyCode={weatherSky.skyCode} ptyCode={weatherSky.ptyCode} /> : null}
 
       {/* 2. Bottom clothes (pants/skirt + bare legs) */}
-      <Bottom variant={bottomVariant} />
+      <Bottom variant={bottomVariant} calendarMonth={calendarMonth} />
 
       {/* 3. Top shirt */}
-      <Top variant={topVariant} />
+      <Top variant={topVariant} calendarMonth={calendarMonth} />
 
       {/* 4. Mid layer (cardigan/hoodie/sweater) */}
-      <Mid variant={midVariant} />
+      <Mid variant={midVariant} calendarMonth={calendarMonth} sleeveLength={midSleeveLength} />
 
       {/* 5. Outer layer (jacket/coat/padding) */}
-      <Outer variant={outerVariant} sleeveLength={longSleeve ? 'long' : 'short'} />
+      <Outer variant={outerVariant} sleeveLength={longSleeve ? 'long' : 'short'} calendarMonth={calendarMonth} />
 
       {/* 6. Shoes */}
-      <Foot variant={footVariant} />
+      <Foot variant={footVariant} calendarMonth={calendarMonth} />
 
       {/* 7. Hat/helmet — drawn BEFORE head so head circle overlaps lower edge */}
       <AccHat hat={effectiveHat} />

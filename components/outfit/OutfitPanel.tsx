@@ -65,8 +65,10 @@ export function OutfitPanel({ weather, dust, terrain, hour }: Props) {
 
   const result = useMemo(() => {
     if (!weather) return null
-    // 민감도 보정: 추위 탐(-2) → 체감을 낮게 계산해 따뜻한 복장 추천
-    const adjustedFeelsLike = weather.feelsLike - sensitivity
+    // 민감도 보정:
+    // - 추위 탐(-2) => 체감 온도를 낮춰(더 춥게) 따뜻한 복장 추천
+    // - 더위 탐(+2) => 체감 온도를 높여(더 덥게) 시원한 복장 추천
+    const adjustedFeelsLike = weather.feelsLike + sensitivity
     return recommendOutfit({
       temperature: weather.temperature,
       feelsLike: adjustedFeelsLike,
