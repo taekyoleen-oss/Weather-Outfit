@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { ActivitySelector } from './ActivitySelector'
 import { GenderToggle } from './GenderToggle'
 import { OutfitResult } from './OutfitResult'
@@ -39,6 +39,28 @@ const SENSITIVITY_LABEL_MAP: Record<SensitivityLevel, string> = {
   [2]: '🥵 추위에 강함',
 }
 
+const ACTIVITY_DEFAULT_DURATION_HOURS: Record<ActivityType, number> = {
+  urban_walk: 2,
+  running: 2,
+  river: 2,
+  beach: 2,
+  cycling: 4,
+  tennis: 4,
+  ski: 4,
+  golf: 7,
+  hiking: 7,
+  picnic: 2,
+}
+
+function addHoursWrap24(baseHour: number, deltaHour: number): number {
+  return (baseHour + deltaHour) % 24
+}
+
+function durationFromStartEnd(startHour: number, endHour: number): number {
+  const raw = (endHour - startHour + 24) % 24
+  return raw === 0 ? 1 : raw
+}
+
 function loadPref<T>(key: string, fallback: T): T {
   if (typeof window === 'undefined') return fallback
   try {
@@ -58,10 +80,30 @@ export function OutfitPanel({ weather, dust, terrain, hour }: Props) {
   const [activity, setActivity] = useState<ActivityType>('urban_walk')
   const [gender, setGender] = useState<GenderType>(() => loadPref('wf:gender', 'male'))
   const [sensitivity, setSensitivity] = useState<SensitivityLevel>(() => loadPref('wf:sensitivity', 0) as SensitivityLevel)
+  const [startHour, setStartHour] = useState<number>(() => hour)
+  const [endHour, setEndHour] = useState<number>(() => addHoursWrap24(hour, ACTIVITY_DEFAULT_DURATION_HOURS.urban_walk))
 
-  function handleActivity(a: ActivityType) { setActivity(a); savePref('wf:activity', a) }
+  function handleActivity(a: ActivityType) {
+    setActivity(a)
+    savePref('wf:activity', a)
+    setEndHour(addHoursWrap24(startHour, ACTIVITY_DEFAULT_DURATION_HOURS[a]))
+  }
   function handleGender(g: GenderType) { setGender(g); savePref('wf:gender', g) }
   function handleSensitivity(s: SensitivityLevel) { setSensitivity(s); savePref('wf:sensitivity', s) }
+  function handleStartHour(next: number) {
+    setStartHour(next)
+    const defaultDuration = ACTIVITY_DEFAULT_DURATION_HOURS[activity]
+    setEndHour(addHoursWrap24(next, defaultDuration))
+  }
+  function handleEndHour(next: number) {
+    setEndHour(next)
+  }
+  const selectedDuration = durationFromStartEnd(startHour, endHour)
+
+  useEffect(() => {
+    setStartHour(hour)
+    setEndHour(addHoursWrap24(hour, ACTIVITY_DEFAULT_DURATION_HOURS[activity]))
+  }, [hour, activity])
 
   const result = useMemo(() => {
     if (!weather) return null
@@ -81,11 +123,11 @@ export function OutfitPanel({ weather, dust, terrain, hour }: Props) {
       o3Grade: dust?.o3Grade,
       activity,
       gender,
-      hour,
-      duration: 2,
+      hour: startHour,
+      duration: selectedDuration,
       terrain,
     })
-  }, [weather, dust, activity, gender, hour, terrain, sensitivity])
+  }, [weather, dust, activity, gender, terrain, sensitivity, startHour, selectedDuration])
 
   return (
     <div className="glass-card p-4 sm:p-6 space-y-4 sm:space-y-5 min-w-0 max-w-full overflow-x-hidden">
@@ -93,7 +135,14 @@ export function OutfitPanel({ weather, dust, terrain, hour }: Props) {
         복장 추천 설정
       </h2>
 
-      <ActivitySelector value={activity} onChange={handleActivity} />
+      <ActivitySelector
+        value={activity}
+        onChange={handleActivity}
+        startHour={startHour}
+        endHour={endHour}
+        onStartHourChange={handleStartHour}
+        onEndHourChange={handleEndHour}
+      />
 
       <div className="border-t" style={{ borderColor: 'var(--border)' }} />
 
@@ -139,6 +188,7 @@ export function OutfitPanel({ weather, dust, terrain, hour }: Props) {
           <div className="border-t" style={{ borderColor: 'var(--border)' }} />
           <OutfitResult
             result={result}
+            schedule={{ startHour, endHour, durationHour: selectedDuration }}
             gender={gender}
             calendarMonth={calendarMonthKstFromWeather(weather)}
             showSunshine={

@@ -8,6 +8,10 @@ import type { ActivityGuideData, RiskGuide } from '@/lib/outfit/activityGuides'
 interface Props {
   value: ActivityType
   onChange: (a: ActivityType) => void
+  startHour: number
+  endHour: number
+  onStartHourChange: (hour: number) => void
+  onEndHourChange: (hour: number) => void
 }
 
 const ACTIVITIES: { id: ActivityType; label: string; icon: string }[] = [
@@ -222,9 +226,18 @@ function ActivityGuideModal({ guide, onClose }: { guide: ActivityGuideData; onCl
   )
 }
 
-export function ActivitySelector({ value, onChange }: Props) {
+export function ActivitySelector({
+  value,
+  onChange,
+  startHour,
+  endHour,
+  onStartHourChange,
+  onEndHourChange,
+}: Props) {
   const [guideActivity, setGuideActivity] = useState<ActivityType | null>(null)
   const guideData = guideActivity ? ACTIVITY_GUIDES[guideActivity] : null
+  const hourOptions = Array.from({ length: 24 }, (_, h) => h)
+  const hh = (h: number) => `${String(h).padStart(2, '0')}:00`
 
   return (
     <div>
@@ -272,6 +285,37 @@ export function ActivitySelector({ value, onChange }: Props) {
             </div>
           )
         })}
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <label className="space-y-1">
+          <span className="text-[11px] font-semibold" style={{ color: 'var(--muted)' }}>시작 시간</span>
+          <select
+            value={String(startHour)}
+            onChange={(e) => onStartHourChange(Number(e.target.value))}
+            className="w-full text-xs rounded-lg px-2 py-1.5 outline-none"
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
+            aria-label="운동 시작 시간"
+          >
+            {hourOptions.map((h) => (
+              <option key={`start-${h}`} value={String(h)}>{hh(h)}</option>
+            ))}
+          </select>
+        </label>
+        <label className="space-y-1">
+          <span className="text-[11px] font-semibold" style={{ color: 'var(--muted)' }}>종료 시간</span>
+          <select
+            value={String(endHour)}
+            onChange={(e) => onEndHourChange(Number(e.target.value))}
+            className="w-full text-xs rounded-lg px-2 py-1.5 outline-none"
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
+            aria-label="운동 종료 시간"
+          >
+            {hourOptions.map((h) => (
+              <option key={`end-${h}`} value={String(h)}>{hh(h)}</option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {/* Guide Modal */}

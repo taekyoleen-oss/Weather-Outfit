@@ -151,6 +151,7 @@ export default function HomePage() {
 
   // Highlight range for HourlyWeatherStrip
   const selectedPeriod = TIME_PERIODS.find((p) => p.repHour === selectedPeriodHour)
+  const selectedPeriodStartHour = selectedPeriod?.start ?? selectedPeriodHour
 
   const curPeriodIdx = getPeriodIndex(hour)
 
@@ -463,7 +464,7 @@ export default function HomePage() {
       weather={displayWeather}
       dust={dust}
       terrain={location.terrain ?? 'urban'}
-      hour={selectedPeriodHour}
+      hour={selectedPeriodStartHour}
     />
   )
 

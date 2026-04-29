@@ -203,7 +203,8 @@ export function WeatherCard({
 
   const isNight = period === 'night'
   const textColor = isNight ? TEXT_NIGHT : 'var(--text)'
-  const mutedColor = isNight ? 'rgba(148,163,184,0.8)' : 'var(--muted)'
+  // 모바일 유리배경에서 보조 텍스트 대비를 높여 가독성을 개선한다.
+  const mutedColor = isNight ? 'rgba(203,213,225,0.95)' : 'rgba(51,65,85,0.88)'
   const infoBtnBg = isNight ? 'rgba(148,163,184,0.35)' : 'rgba(148,163,184,0.5)'
 
   if (loading || !weather) {

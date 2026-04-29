@@ -7,12 +7,12 @@ import type {
   DangerLevel,
   GenderType,
 } from '@/types/outfit'
-import { CATEGORY_ORDER, CATEGORY_LABELS } from '@/lib/outfit/categories'
 import { OutfitItemCard } from './OutfitItemCard'
 import { OutfitIllustPanel } from './OutfitIllustPanel'
 
 interface Props {
   result: OutfitResultType
+  schedule?: { startHour: number; endHour: number; durationHour: number }
   gender?: GenderType
   /** KST 달력 월 1–12. 히어로 `fall-layered` 문구용 */
   calendarMonth?: number
@@ -28,6 +28,7 @@ type TabId = 'illust' | 'list'
 
 export function OutfitResult({
   result,
+  schedule,
   gender = 'male',
   calendarMonth,
   showSunshine,
@@ -35,13 +36,11 @@ export function OutfitResult({
 }: Props) {
   const [tab, setTab] = useState<TabId>('illust')
 
-  const byCategory = CATEGORY_ORDER.reduce(
-    (acc, cat) => {
-      const items = result.items.filter((i) => i.category === cat)
-      if (items.length) acc[cat] = items
-      return acc
-    },
-    {} as Record<string, typeof result.items>
+  const requiredItems = result.items.filter((i) => i.required)
+  const optionalItems = result.items.filter((i) => !i.required)
+  const hh = (h: number) => `${String(h).padStart(2, '0')}:00`
+  const optionalGuideLines = optionalItems.map(
+    (item) => `${item.name}${item.condition ? `: ${item.condition}` : ': 기온/체감/바람 변화 시 추가 착용'}`
   )
 
   return (
@@ -60,6 +59,14 @@ export function OutfitResult({
         <h2 className="text-lg font-bold" style={{ color: 'var(--primary)' }}>
           {result.cancelActivity ? '⚠️ 활동 재검토 권고' : '오늘의 복장 추천'}
         </h2>
+        {schedule && optionalItems.length > 0 && (
+          <div className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
+            <p>선택 아이템 착용 가이드 ({hh(schedule.startHour)} ~ {hh(schedule.endHour)}):</p>
+            {optionalGuideLines.map((line) => (
+              <p key={line} className="pl-2">- {line}</p>
+            ))}
+          </div>
+        )}
         <div className="flex items-center gap-2 mt-1">
           <span
             className="text-sm font-medium px-3 py-1 rounded-full"
@@ -165,23 +172,19 @@ export function OutfitResult({
       {/* Tab panel: 아이템 목록 */}
       {tab === 'list' && (
         <div role="tabpanel" className="space-y-4">
-          <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-x-4 lg:gap-y-4">
-            {Object.entries(byCategory).map(([cat, items]) => (
-              <div key={cat} className="flex items-start gap-2 sm:gap-2.5">
-                <p
-                  className="text-xs font-semibold uppercase tracking-wide pt-2 w-12 sm:w-14 shrink-0"
-                  style={{ color: 'var(--muted)' }}
-                >
-                  {CATEGORY_LABELS[cat as keyof typeof CATEGORY_LABELS] ?? cat}
-                </p>
-                <div className="grid grid-cols-1 gap-1.5 flex-1 min-w-0">
-                  {items.map((item) => (
-                    <OutfitItemCard key={item.id} item={item} />
-                  ))}
-                </div>
-              </div>
-            ))}
+          <div
+            className="rounded-xl p-3"
+            style={{ background: 'rgba(91,141,238,0.06)', border: '1px solid rgba(91,141,238,0.18)' }}
+          >
+            <p className="text-xs font-semibold" style={{ color: 'var(--humidity)' }}>추천 기준 설명</p>
+            <p className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--text)' }}>
+              필수는 현재 기상 위험(강수·강풍·미세먼지·자외선)과 활동 시간 동안의 체온 유지/안전을 위해 꼭 필요한 항목입니다.
+              선택은 편의·활동 특화·스타일 보완 항목입니다.
+            </p>
           </div>
+
+          <SectionList title={`필수 아이템 (${requiredItems.length})`} items={requiredItems} />
+          <SectionList title={`선택 아이템 (${optionalItems.length})`} items={optionalItems} />
 
           {/* Tips */}
           {result.tips.length > 0 && (
@@ -201,6 +204,20 @@ export function OutfitResult({
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+function SectionList({ title, items }: { title: string; items: OutfitResultType['items'] }) {
+  if (!items.length) return null
+  return (
+    <div>
+      <p className="text-xs font-semibold mb-2" style={{ color: 'var(--muted)' }}>{title}</p>
+      <div className="grid grid-cols-1 gap-1.5">
+        {items.map((item) => (
+          <OutfitItemCard key={`${title}-${item.id}`} item={item} />
+        ))}
+      </div>
     </div>
   )
 }

@@ -18,7 +18,7 @@ const AUTO_REFRESH_MAX_AGE_MS = 60 * 60 * 1000
 
 type StoredLocation = LocationInfo & { savedAt?: number }
 
-function isValidStored(data: unknown): data is LocationInfo {
+function isValidStored(data: unknown): data is StoredLocation {
   if (!data || typeof data !== 'object') return false
   const o = data as Record<string, unknown>
   return (
@@ -26,7 +26,8 @@ function isValidStored(data: unknown): data is LocationInfo {
     typeof o.lon === 'number' &&
     typeof o.nx === 'number' &&
     typeof o.ny === 'number' &&
-    typeof o.name === 'string'
+    typeof o.name === 'string' &&
+    (o.savedAt === undefined || typeof o.savedAt === 'number')
   )
 }
 
@@ -37,7 +38,7 @@ function loadStoredLocationRaw(): StoredLocation | null {
     if (!raw) return null
     const data = JSON.parse(raw) as unknown
     if (!isValidStored(data)) return null
-    const { lat, lon, nx, ny, name, address, terrain, savedAt } = data as Record<string, unknown>
+    const { lat, lon, nx, ny, name, address, terrain, savedAt } = data
     return {
       lat: Number(lat),
       lon: Number(lon),
