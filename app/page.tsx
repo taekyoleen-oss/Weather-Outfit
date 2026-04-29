@@ -370,7 +370,7 @@ export default function HomePage() {
       sunriseSunset={sunriseSunset}
       uvDisplay={uvForCard}
       dust={dust}
-      pollen={pollen}
+      alerts={alerts}
       previousPeriodWeather={previousPeriodSummary}
       openMeteoCompare={openMeteoCompare}
       morningSummary={morningSummary}
@@ -395,7 +395,6 @@ export default function HomePage() {
       weather={displayWeather}
       dust={dust}
       pollen={pollen}
-      alerts={alerts}
       loading={weatherLoading}
       compact
     />

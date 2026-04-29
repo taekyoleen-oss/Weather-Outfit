@@ -2,15 +2,13 @@
 
 import { useState } from 'react'
 import { HighlightCard } from './HighlightCard'
-import type { CurrentWeather, DustData, PollenData, WeatherAlert } from '@/types/weather'
+import type { CurrentWeather, DustData, PollenData } from '@/types/weather'
 import { dustGradeLabel, dustGradeColor } from '@/lib/utils/formatWeather'
-import { KMA_WEATHER_WARN_PAGE } from '@/lib/weather/kma-alert'
 
 interface Props {
   weather: CurrentWeather | null
   dust?: DustData | null
   pollen?: PollenData | null
-  alerts?: WeatherAlert[]
   loading?: boolean
   compact?: boolean
 }
@@ -95,13 +93,13 @@ function IndexModal({ title, rows, source, onClose }: {
   )
 }
 
-export function HighlightsGrid({ weather, dust, pollen, alerts, loading, compact }: Props) {
+export function HighlightsGrid({ weather, dust, pollen, loading, compact }: Props) {
   const [modal, setModal] = useState<'pm10' | 'pm25' | null>(null)
 
-  // 가시거리는 WeatherCard로 이동 → 여기서는 대기질·초미세먼지·기상특보 3항목
+  // 가시거리는 WeatherCard로 이동 → 여기서는 대기질·초미세먼지 2항목
   const gridClass = compact
-    ? 'grid grid-cols-3 gap-1.5'
-    : 'grid grid-cols-3 md:grid-cols-3 gap-4'
+    ? 'grid grid-cols-2 gap-1.5'
+    : 'grid grid-cols-2 md:grid-cols-2 gap-4'
   const skeletonH = compact ? 'h-[60px]' : 'h-[100px]'
 
   if (loading || !weather) {
@@ -113,7 +111,7 @@ export function HighlightsGrid({ weather, dust, pollen, alerts, loading, compact
           </h2>
         )}
         <div className={gridClass}>
-          {Array.from({ length: 3 }).map((_, i) => (
+          {Array.from({ length: 2 }).map((_, i) => (
             <div key={i} className={`glass-card p-4 ${skeletonH} animate-pulse`}>
               <div className="h-2.5 w-12 bg-gray-200 rounded mb-2" />
               <div className="h-4 w-10 bg-gray-200 rounded" />
@@ -124,7 +122,6 @@ export function HighlightsGrid({ weather, dust, pollen, alerts, loading, compact
     )
   }
 
-  const alertCount = alerts?.length ?? 0
   function pollenLabelByRisk(risk?: number): string {
     if (typeof risk !== 'number') return '--'
     if (risk === 0) return '낮음'
@@ -179,16 +176,6 @@ export function HighlightsGrid({ weather, dust, pollen, alerts, loading, compact
           onInfoClick={() => setModal('pm25')}
         />
 
-        {/* 기상특보 */}
-        <HighlightCard
-          compact={compact}
-          icon="⚠️"
-          label="기상특보"
-          value={alertCount > 0 ? `${alertCount}건` : '없음'}
-          sub={alertCount > 0 ? alerts![0].type : '안전'}
-          accent={alertCount > 0 ? 'var(--danger)' : 'var(--success)'}
-          href={alertCount > 0 ? KMA_WEATHER_WARN_PAGE : undefined}
-        />
       </div>
 
       {/* 꽃가루 위험지수 (종별 3카드) */}

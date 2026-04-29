@@ -8,7 +8,7 @@ import type {
   SunriseSunset,
   TimeOfDay,
   DustData,
-  PollenData,
+  WeatherAlert,
   PreviousPeriodWeatherSummary,
   MorningSummary,
 } from '@/types/weather'
@@ -28,6 +28,7 @@ import {
   heatIndexLabel,
   heatIndexColor,
 } from '@/lib/utils/formatWeather'
+import { KMA_WEATHER_WARN_PAGE } from '@/lib/weather/kma-alert'
 
 interface Props {
   weather: CurrentWeather | null
@@ -37,7 +38,7 @@ interface Props {
   sunriseSunset?: SunriseSunset | null
   uvDisplay?: number
   dust?: DustData | null
-  pollen?: PollenData | null
+  alerts?: WeatherAlert[]
   /** 직전에 끝난 시간대(예: 새벽) 대표 날씨 */
   previousPeriodWeather?: PreviousPeriodWeatherSummary | null
   /** 어제 동시간대·오늘 일 최저·최고 (Open-Meteo) */
@@ -63,6 +64,17 @@ function extractDongUnit(locationName?: string, addressLine?: string | null): st
     if (unit) return unit
   }
   return undefined
+}
+
+function compactAlertSummary(alert: WeatherAlert | null): string {
+  if (!alert) return '특보 없음'
+  const src = `${alert.message ?? ''} ${alert.type ?? ''}`.trim()
+  const matched = src.match(/[가-힣]+(?:주의보|경보)/g) ?? []
+  const uniq = Array.from(new Set(matched))
+  if (uniq.length > 0) return uniq.join(', ')
+  const fallbackType = alert.type?.trim()
+  if (fallbackType) return fallbackType
+  return '특보'
 }
 
 // ─── 기상 지수 안내 데이터 ─────────────────────────────────────────────────────
@@ -176,7 +188,7 @@ export function WeatherCard({
   sunriseSunset,
   uvDisplay,
   dust,
-  pollen,
+  alerts,
   previousPeriodWeather,
   openMeteoCompare,
   morningSummary,
@@ -221,32 +233,9 @@ export function WeatherCard({
   const o3Label = o3GradeLabel(dust?.o3Grade)
   const o3Color = o3GradeColor(dust?.o3Grade)
   const o3Value = dust?.o3Value != null ? `${dust.o3Value.toFixed(3)} ppm` : undefined
-  const pollenTop = (pollen?.risks ?? []).reduce<{ value: number; species: string } | null>((acc, cur) => {
-    if (typeof cur.todayRisk !== 'number') return acc
-    if (!acc || cur.todayRisk > acc.value) {
-      const speciesName = cur.species === 'oak' ? '참나무' : cur.species === 'pine' ? '소나무' : '잡초류'
-      return { value: cur.todayRisk, species: speciesName }
-    }
-    return acc
-  }, null)
-  const pollenLabel =
-    pollenTop == null
-      ? '--'
-      : pollenTop.value === 0
-      ? '낮음'
-      : pollenTop.value === 1
-      ? '보통'
-      : pollenTop.value === 2
-      ? '높음'
-      : '매우높음'
-  const pollenColor =
-    pollenTop == null
-      ? mutedColor
-      : pollenTop.value <= 1
-      ? '#22C55E'
-      : pollenTop.value === 2
-      ? '#F59E0B'
-      : '#EF4444'
+  const alertCount = alerts?.length ?? 0
+  const latestAlert = alertCount > 0 ? alerts![0] : null
+  const alertSummary = compactAlertSummary(latestAlert)
 
   const heatIdx = computeHeatIndex(weather.temperature, weather.humidity)
   const heatIdxDiff = heatIdx != null ? heatIdx - weather.temperature : null
@@ -429,13 +418,13 @@ export function WeatherCard({
         </div>
       )}
 
-      {/* UV + 오존 + 꽃가루 하단 전용 섹션 */}
+      {/* UV + 오존 + 기상특보 하단 전용 섹션 */}
       <div
-        className="mt-2.5 pt-2 flex items-center gap-4"
+        className="mt-2.5 pt-2 flex items-start gap-2"
         style={{ borderTop: `1px solid ${isNight ? 'rgba(148,163,184,0.2)' : 'rgba(0,0,0,0.06)'}` }}
       >
         {/* 자외선 */}
-        <div className="flex-1 flex items-center gap-2">
+        <div className="flex-[0.9] flex items-center gap-2 min-w-0">
           <span className="text-base">☀️</span>
           <div className="min-w-0">
             <p className="text-[10px] leading-none mb-0.5" style={{ color: mutedColor }}>자외선</p>
@@ -445,7 +434,7 @@ export function WeatherCard({
         </div>
 
         {/* 오존 */}
-        <div className="flex-1 flex items-center gap-2">
+        <div className="flex-[0.9] flex items-center gap-2 min-w-0">
           <span className="text-base">⚗️</span>
           <div className="min-w-0">
             <p className="text-[10px] leading-none mb-0.5" style={{ color: mutedColor }}>오존</p>
@@ -458,19 +447,27 @@ export function WeatherCard({
           </div>
         </div>
 
-        {/* 꽃가루 */}
-        <div className="flex-1 flex items-center gap-2">
-          <span className="text-base">🤧</span>
+        {/* 기상특보 */}
+        <div className="flex-[2.8] flex items-start gap-2 min-w-0">
+          <span className="text-base">⚠️</span>
           <div className="min-w-0">
-            <p className="text-[10px] leading-none mb-0.5" style={{ color: mutedColor }}>꽃가루</p>
-            <p className="text-sm font-bold leading-none" style={{ color: pollenColor }}>
-              {pollenLabel}
+            <p className="text-[10px] font-semibold leading-none" style={{ color: alertCount > 0 ? 'var(--danger)' : mutedColor }}>
+              기상특보 {alertCount > 0 ? `${alertCount}건` : '없음'}
             </p>
-            {pollenTop && (
-              <p className="text-[10px] mt-0.5" style={{ color: mutedColor }}>
-                {pollenTop.species}
-              </p>
-            )}
+            <p className="text-[10px] mt-0.5 leading-none line-clamp-1" style={{ color: mutedColor }}>
+              {alertSummary}
+            </p>
+            {alertCount > 0 ? (
+              <a
+                href={KMA_WEATHER_WARN_PAGE}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[10px] mt-0.5 inline-block leading-none underline underline-offset-2"
+                style={{ color: 'var(--humidity)' }}
+              >
+                특보 상세보기
+              </a>
+            ) : null}
           </div>
         </div>
 
