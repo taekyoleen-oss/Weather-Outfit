@@ -16,7 +16,7 @@ export function getMicroclimateOffset(activity: ActivityType): number {
 export function getMicroclimateNote(activity: ActivityType): string | undefined {
   switch (activity) {
     case 'river':
-      return '🌊 한강·강변은 강바람과 수면 증발로 체감온도가 도심보다 2~3°C 낮아요. 방풍 소재 겉옷을 꼭 챙기세요.'
+      return '🌊 강변은 강바람과 수면 증발로 체감온도가 도심보다 2~3°C 낮아요. 방풍 소재 겉옷을 꼭 챙기세요.'
     case 'beach':
       return '🏖️ 해변은 수면 반사로 자외선이 도심보다 30~50% 강합니다. 자외선 차단에 특히 신경 쓰고, 해풍으로 생각보다 시원할 수 있어요.'
     case 'golf':
@@ -46,7 +46,7 @@ export function getMicroclimateItems(
           category: 'outer',
           required: true,
           condition: '강변 강풍·체감온도 저하 대비',
-          activityTag: '한강·강변',
+          activityTag: '강변',
         })
       }
       // mild에서도 방풍 점퍼 권장
@@ -58,7 +58,7 @@ export function getMicroclimateItems(
           category: 'outer',
           required: true,
           condition: '강변 강풍 체감온도 대비',
-          activityTag: '한강·강변',
+          activityTag: '강변',
         })
       }
       break
@@ -158,12 +158,16 @@ export function getMicroclimateItems(
   return items
 }
 
+/**
+ * 체감(°C) 구간 — 공용 기준표와 동일 경계: 28 / 23 / 18 / 12 / 6 / 0
+ * - freezing: 0~5℃ 및 0℃ 미만(세부 외피는 feelsLike로 getBaseItems에서 구분)
+ */
 export function getTempZone(feelsLike: number): TempZone {
   if (feelsLike >= 28) return 'hot'
   if (feelsLike >= 23) return 'warm'
-  if (feelsLike >= 17) return 'mild'
+  if (feelsLike >= 18) return 'mild'
   if (feelsLike >= 12) return 'cool'
-  if (feelsLike >= 5) return 'cold'
+  if (feelsLike >= 6) return 'cold'
   return 'freezing'
 }
 
@@ -186,25 +190,41 @@ export const LAYER_LEVELS: Record<TempZone, number> = {
 }
 
 // Base outfit items by temperature zone and gender
-export function getBaseItems(zone: TempZone, gender: GenderType, activity: ActivityType): OutfitItem[] {
+/** feelsLike: 구간 판정에 쓴 체감(미기후 보정 포함). freezing(0~5·영하) 외피 세분화용 */
+export function getBaseItems(
+  zone: TempZone,
+  gender: GenderType,
+  activity: ActivityType,
+  feelsLike?: number
+): OutfitItem[] {
   const items: OutfitItem[] = []
 
-  // BASE layer (이너)
+  // BASE layer (이너) — 6℃ 미만만 보온 이너 필수(표: 6~11, 0~5, 영하)
   if (zone === 'cold' || zone === 'freezing') {
     items.push({ id: 'top-thermal', name: '기모 긴팔 / 상의 내복', icon: '🧣', category: 'base', required: true })
     if (gender === 'female') {
       items.push({ id: 'bottom-leggings-thermal', name: '기모 레깅스 / 하의 내복', icon: '🩱', category: 'base', required: zone === 'freezing' })
     }
-  } else if (zone === 'cool') {
-    items.push({ id: 'top-thermal', name: '기모 긴팔 / 내복', icon: '🧣', category: 'base', required: false, condition: '체감 온도가 낮을 때' })
   }
+  // 12~17℃(cool): 표에 이너 없음 — 기존 선택 기모 제거
 
-  // TOP layer
-  if (zone === 'hot' || zone === 'warm') {
+  // TOP layer — 가이드 라.2: 28℃+ 반팔·얇은 긴팔 / 23~27℃ 얇은 반팔·긴팔·셔츠
+  if (zone === 'hot') {
     if (gender === 'male') {
-      items.push({ id: 'top-tshirt', name: '반팔 티셔츠', icon: '👕', category: 'top', required: true })
+      items.push({ id: 'top-tshirt', name: '밝은색 기능성 반팔 또는 얇은 긴팔', icon: '👕', category: 'top', required: true })
     } else {
-      items.push({ id: 'top-blouse', name: '반팔 블라우스 / 크롭 티', icon: '👚', category: 'top', required: true })
+      items.push({ id: 'top-blouse', name: '반팔 또는 얇은 긴팔 / UV 가디건', icon: '👚', category: 'top', required: true })
+    }
+    // 골프·해변·스키는 활동 전용 모자·선글라스가 별도로 있음
+    if (activity !== 'golf' && activity !== 'beach' && activity !== 'ski') {
+      items.push({ id: 'acc-hot-hat', name: '모자 (챙 있으면 더 좋음)', icon: '🧢', category: 'acc', required: true })
+      items.push({ id: 'acc-hot-sunglasses', name: 'UV 차단 선글라스', icon: '🕶️', category: 'acc', required: true })
+    }
+  } else if (zone === 'warm') {
+    if (gender === 'male') {
+      items.push({ id: 'top-shirt-light', name: '얇은 반팔·긴팔 또는 카라 셔츠', icon: '👕', category: 'top', required: true })
+    } else {
+      items.push({ id: 'top-blouse-warm', name: '얇은 반팔·긴팔 또는 블라우스', icon: '👚', category: 'top', required: true })
     }
   } else if (zone === 'mild') {
     if (gender === 'male') {
@@ -212,8 +232,14 @@ export function getBaseItems(zone: TempZone, gender: GenderType, activity: Activ
     } else {
       items.push({ id: 'top-longsleeve-f', name: '긴팔 티 / 얇은 니트', icon: '👚', category: 'top', required: true })
     }
+  } else if (zone === 'cool') {
+    if (gender === 'male') {
+      items.push({ id: 'top-shirt', name: '니트·맨투맨 또는 두꺼운 긴팔', icon: '👕', category: 'top', required: true })
+    } else {
+      items.push({ id: 'top-knit', name: '니트·맨투맨 / 두꺼운 긴팔', icon: '👚', category: 'top', required: true })
+    }
   } else {
-    // cool / cold / freezing
+    // cold / freezing
     if (gender === 'male') {
       items.push({ id: 'top-shirt', name: '두꺼운 긴팔 셔츠', icon: '👕', category: 'top', required: true })
     } else {
@@ -251,28 +277,36 @@ export function getBaseItems(zone: TempZone, gender: GenderType, activity: Activ
     }
   } else if (zone === 'cold') {
     if (gender === 'male') {
-      items.push({ id: 'outer-coat', name: '코트 / 두꺼운 점퍼', icon: '🧥', category: 'outer', required: true })
+      items.push({ id: 'outer-coat', name: '경량 패딩 / 코트 / 플리스 겉옷', icon: '🧥', category: 'outer', required: true })
     } else {
-      items.push({ id: 'outer-coat-f', name: '롱코트 / 울 코트', icon: '🧥', category: 'outer', required: true })
+      items.push({ id: 'outer-coat-f', name: '경량 패딩 / 코트 / 플리스 겉옷', icon: '🧥', category: 'outer', required: true })
     }
   } else if (zone === 'freezing') {
-    items.push({ id: 'outer-padding', name: '패딩 점퍼', icon: '🥶', category: 'outer', required: true })
+    const subzero = feelsLike !== undefined && feelsLike < 0
+    items.push({
+      id: 'outer-padding',
+      name: subzero ? '다운 패딩 / 헤비 패딩' : '두꺼운 코트 또는 패딩',
+      icon: '🥶',
+      category: 'outer',
+      required: true,
+      condition: subzero ? '0℃ 미만 — 한파·강풍 시 장시간 야외 자제' : '0~5℃ 구간',
+    })
   }
 
   // BOTTOM
   if (zone === 'hot') {
     if (gender === 'female') {
-      items.push({ id: 'bottom-skirt-mini', name: '미니스커트 / 린넨 쇼츠', icon: '🩱', category: 'bottom', required: true })
+      items.push({ id: 'bottom-skirt-mini', name: '통기성 팬츠·큐롯 / 린넨 쇼츠', icon: '👖', category: 'bottom', required: true })
       items.push({ id: 'bottom-dress', name: '원피스 (선택)', icon: '👗', category: 'bottom', required: false, condition: '원피스로 대체 가능' })
     } else {
-      items.push({ id: 'bottom-shorts-m', name: '반바지 / 면 팬츠', icon: '🩳', category: 'bottom', required: true })
+      items.push({ id: 'bottom-shorts-m', name: '통기성 반바지 / 경량 팬츠', icon: '🩳', category: 'bottom', required: true })
     }
   } else if (zone === 'warm') {
     if (gender === 'female') {
-      items.push({ id: 'bottom-linen-pants-f', name: '린넨 팬츠 / 와이드 팬츠', icon: '👖', category: 'bottom', required: true })
+      items.push({ id: 'bottom-linen-pants-f', name: '통기성 긴바지·레깅스 / 반바지', icon: '👖', category: 'bottom', required: true })
       items.push({ id: 'bottom-midi-skirt', name: '미디스커트 (선택)', icon: '👗', category: 'bottom', required: false, condition: '스커트로 대체 가능' })
     } else {
-      items.push({ id: 'bottom-shorts-m', name: '면 팬츠 / 반바지', icon: '🩳', category: 'bottom', required: true })
+      items.push({ id: 'bottom-shorts-m', name: '통기성 긴바지 또는 반바지', icon: '🩳', category: 'bottom', required: true })
     }
   } else if (zone === 'mild') {
     if (gender === 'female') {
@@ -402,13 +436,14 @@ export function getActivityItems(activity: ActivityType, zone: TempZone, gender:
     items.push({ id: 'acc-bag-f', name: '에코백 / 숄더백', icon: '👜', category: 'acc', required: false, condition: '스타일 포인트' })
   }
 
-  // Warm weather accessories
-  if (zone === 'hot' || zone === 'warm') {
+  // 따뜻한 구간: 가이드 라.2는 23~27℃에 모자 필수는 아님 — UV 높을 때만 권장 (28℃+는 getBaseItems)
+  if (zone === 'warm') {
     if (gender === 'female') {
-      items.push({ id: 'acc-hat-sun-f', name: '챙 넓은 모자 / 버킷햇', icon: '👒', category: 'acc', required: false, condition: 'UV 차단 + 스타일' })
+      items.push({ id: 'acc-hat-sun-f', name: '챙 넓은 모자 / 버킷햇', icon: '👒', category: 'acc', required: false, condition: 'UV 3 이상 권장' })
     } else {
-      items.push({ id: 'acc-hat-sun', name: '챙 넓은 모자', icon: '👒', category: 'acc', required: false, condition: 'UV 지수 높을 때' })
+      items.push({ id: 'acc-hat-sun', name: '캡 또는 챙 넓은 모자', icon: '👒', category: 'acc', required: false, condition: 'UV 3 이상 권장' })
     }
+    items.push({ id: 'acc-sunglasses-warm', name: 'UV 차단 선글라스', icon: '🕶️', category: 'acc', required: false, condition: '자외선 높을 때' })
   }
 
   return items
@@ -428,7 +463,7 @@ export function pickHeroIllust(zone: TempZone, activity: ActivityType, ptyCode: 
   return 'winter-heavy'
 }
 
-// Tips generator — 참고: weather-outdoor-clothing-guide.md
+// Tips generator — weather-outdoor-clothing-guide.md 다·사
 export function generateTips(
   zone: TempZone,
   uvIndex: number,
@@ -439,30 +474,47 @@ export function generateTips(
   duration: number,
   precipitation: number = 0,
   feelsLike: number = 20,
+  humidity?: number,
+  temperature?: number,
+  o3Grade?: string,
 ): string[] {
   const tips: string[] = []
+  const tempForHumid = temperature ?? feelsLike
 
-  // UV tips (기상청 생활기상지수 기준)
+  // UV tips (기상청 생활기상지수 — 가이드 다.1)
   if (uvIndex >= 11) {
-    tips.push('☀️ 자외선 위험 (UV ' + uvIndex + '): 가능한 실내에 머무르세요. 외출 시 긴팔·모자·선글라스·SPF50+ 선크림 필수.')
+    tips.push('☀️ 자외선 위험 (UV ' + uvIndex + '): 가능한 실내에 머무르세요. 외출 시 긴 소매·모자·선글라스·SPF50+ 선크림이 필요합니다.')
   } else if (uvIndex >= 8) {
-    tips.push('☀️ 자외선 매우높음 (UV ' + uvIndex + '): 오전 10시~오후 3시 외출을 피하고, 긴팔·모자·선글라스·선크림을 갖추세요.')
+    tips.push('☀️ 자외선 매우높음 (UV ' + uvIndex + '): 오전 10시~오후 3시 외출을 피하고, 긴 소매·모자·선글라스·선크림을 갖추세요.')
   } else if (uvIndex >= 6) {
-    tips.push('🌡️ 자외선 높음 (UV ' + uvIndex + '): 한낮 그늘에서 쉬고, 긴팔 또는 팔토시·모자·선글라스·선크림을 준비하세요.')
+    tips.push('🌡️ 오늘은 자외선이 강합니다. 긴팔 또는 팔토시, 챙 넓은 모자, UV 차단 선글라스, 자외선 차단제가 필요합니다. (가이드 사)')
   } else if (uvIndex >= 3) {
-    tips.push('💡 UV ' + uvIndex + ': 모자·선글라스·자외선 차단제를 챙겨 두세요.')
+    tips.push('💡 UV ' + uvIndex + ': 모자·선글라스·자외선 차단제를 챙겨 두세요. (기상청 생활기상지수)')
   }
 
   // Dust tips (에어코리아 미세먼지 행동요령 기준)
   if (dustGrade === '4') {
     tips.push('😷 미세먼지 매우나쁨: KF94 마스크 필수. 야외 운동(조깅·등산·자전거)을 중단하고 실내에 머무세요.')
   } else if (dustGrade === '3') {
-    tips.push('😷 미세먼지 나쁨: KF80 이상 마스크를 착용하세요. 숨이 많이 차는 운동은 줄이는 것이 좋습니다.')
+    tips.push('😷 미세먼지가 나쁩니다. 보건용 마스크를 준비하고 조깅, 등산, 자전거처럼 숨이 많이 차는 활동은 줄이세요. (가이드 사)')
   }
 
-  // Ozone-like caution (오전 10시~오후 4시 자외선·오존 피크 시간대 안내)
-  if ((zone === 'hot' || zone === 'warm') && ['running', 'cycling', 'tennis', 'hiking', 'golf'].includes(activity)) {
-    tips.push('⏰ 오존 피크 시간(오전 10시~오후 4시) 고강도 야외 운동을 피하고 이른 아침·저녁으로 조정하세요. (에어코리아 오존 행동요령)')
+  // 오존 나쁨 이상 — 가이드 다.3·사 (assessDanger와 보완)
+  if (o3Grade === '4') {
+    tips.push('⚗️ 오존 매우나쁨: 실외활동을 최소화하고 실내생활이 권고됩니다. (에어코리아)')
+  } else if (o3Grade === '3') {
+    tips.push('⚗️ 오존이 높습니다. 한낮 장시간 운동은 피하고, 아침이나 저녁으로 활동 시간을 조정하세요. (가이드 사)')
+  } else if ((zone === 'hot' || zone === 'warm' || zone === 'mild') && ['running', 'cycling', 'tennis', 'hiking', 'golf'].includes(activity)) {
+    // 오존 피크 시간대 — 수치는 양호해도 시간대 안내 (가이드 다.3)
+    tips.push('⏰ 오존 피크 시간(오전 10시~오후 4시): 고강도 야외 운동은 이른 아침·저녁으로 조정하면 더 안전합니다. (에어코리아 오존 행동요령)')
+  }
+
+  // 23~27℃ + 미세먼지·오존 나쁨 — 가이드 라.2 보정
+  if (
+    zone === 'warm' &&
+    (dustGrade === '3' || dustGrade === '4' || o3Grade === '3' || o3Grade === '4')
+  ) {
+    tips.push('🌡️ 체감이 따뜻한 날 대기질이 나쁩니다. 격한 운동을 줄이고 마스크 또는 활동 시간 조정을 검토하세요. (가이드 라.2)')
   }
 
   // Heat / humidity tips (기상청 폭염 기준 + CDC 권고)
@@ -474,11 +526,20 @@ export function generateTips(
     tips.push('🌡️ 체감온도 ' + Math.round(feelsLike) + '°C: 통기성이 좋은 옷과 충분한 수분 섭취, 그늘 휴식이 필요합니다.')
   }
 
-  // Cold tips (기상청 한파 행동요령 + 미국 기상청 Wind Chill)
-  if (zone === 'freezing' && windSpeed >= 5) {
-    tips.push('🥶 강풍+혹한: 바람이 노출 피부 열손실을 키웁니다. 목도리·모자·장갑으로 노출부를 완전히 덮어야 합니다. (기상청 한파 행동요령)')
-  } else if (zone === 'cold' || zone === 'freezing') {
-    tips.push('❄️ 추운 날씨: 내복·목도리·모자·장갑·방한화를 갖추고 장시간 야외활동을 피하세요.')
+  // 고온·고습 — 가이드 다.3 보정 (습도 70%↑ & 25℃↑)
+  if (humidity !== undefined && humidity >= 70 && tempForHumid >= 25) {
+    tips.push('💧 습도 ' + Math.round(humidity) + '%·기온 ' + Math.round(tempForHumid) + '°C: 땀이 잘 마르는 기능성 소재와 여벌 상의를 추천합니다. (가이드 다.3)')
+  }
+
+  // Cold tips (기상청 한파 행동요령 + 미국 기상청 Wind Chill + 가이드 사)
+  if (zone === 'freezing') {
+    if (windSpeed >= 5) {
+      tips.push('🥶 강풍+혹한: 바람이 노출 피부 열손실을 키웁니다. 목도리·모자·장갑으로 노출부를 완전히 덮어야 합니다. (기상청 한파 행동요령)')
+    } else {
+      tips.push('❄️ 노출 부위 보온이 중요합니다. 내복, 목도리, 모자, 장갑, 방한화를 준비하고 장시간 야외활동은 피하세요. (가이드 사)')
+    }
+  } else if (zone === 'cold') {
+    tips.push('❄️ 추운 날씨: 보온 이너와 겉옷을 겹쳐 입고, 바람이 세면 목도리·장갑·비니를 추가하세요. (가이드 라.2)')
   }
 
   // Wind tips (기상청 강풍 행동요령 기준)

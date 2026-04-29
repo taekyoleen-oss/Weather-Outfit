@@ -135,7 +135,19 @@ export function OutfitPanel({ weather, dust, terrain, hour }: Props) {
       {result && (
         <>
           <div className="border-t" style={{ borderColor: 'var(--border)' }} />
-          <OutfitResult result={result} gender={gender} calendarMonth={calendarMonthKstFromWeather(weather)} />
+          <OutfitResult
+            result={result}
+            gender={gender}
+            calendarMonth={calendarMonthKstFromWeather(weather)}
+            showSunshine={
+              !!weather && weather.ptyCode === '0' && weather.skyCode === '1'
+            }
+            weatherSky={
+              weather
+                ? { skyCode: weather.skyCode, ptyCode: weather.ptyCode }
+                : undefined
+            }
+          />
         </>
       )}
     </div>

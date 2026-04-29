@@ -1,6 +1,7 @@
 /**
  * 활동별 복장 가이드 데이터
- * 근거: 야외활동 복장 추천을 위한 기상정보 취합 및 적용 기준 (weather-outdoor-clothing-guide.md)
+ * 근거: weather-outdoor-clothing-guide.md — 앱의 `rules.ts`·`recommender.ts` 추천 로직과 동기화
+ * (체감 28/23/18/12/6℃, UV 6↑, 풍속 5m/s·14m/s, 미세먼지·오존, 고습 70%↑·25℃↑ 보정)
  */
 import type { ActivityType } from '@/types/outfit'
 
@@ -32,7 +33,7 @@ export interface ActivityGuideData {
 export const ACTIVITY_GUIDES: Record<ActivityType, ActivityGuideData> = {
   urban_walk: {
     id: 'urban_walk',
-    label: '도심 산책·일반 외출',
+    label: '산책·일반 외출',
     icon: '🏙️',
     description: '자외선, 미세먼지, 강수 여부를 우선 확인합니다. 낙하물 위험이 있는 강풍 시에는 공사장·간판 주변을 피하세요.',
     keyRisks: ['자외선 (UV 6 이상)', '미세먼지 나쁨', '강풍 낙하물', '강수 미끄럼'],
@@ -78,7 +79,13 @@ export const ACTIVITY_GUIDES: Record<ActivityType, ActivityGuideData> = {
         level: 'warning',
       },
     ],
-    checklist: ['UV 6 이상 → 긴팔·모자·선크림', 'PM10 81↑ → KF80 마스크', '강풍주의보 → 우산 대신 방수 재킷', '강수 → 미끄럼 적은 신발'],
+    checklist: [
+      '체감 28·23·18·12·6℃ 구간별 기본 복장 (앱 추천과 동일)',
+      'UV 6↑ → 긴팔·팔토시·챙 넓은 모자·선크림',
+      '풍속 5m/s↑ → 얇은 바람막이·모자 고정',
+      'PM10 81↑ → KF80 마스크 · 14m/s↑ 강풍주의보 → 방수 재킷·낙하물 주의',
+      '강수 → 미끄럼 적은 신발',
+    ],
     sourceNote: '기상청 생활기상지수 · 에어코리아 미세먼지 행동요령',
   },
 
@@ -218,7 +225,7 @@ export const ACTIVITY_GUIDES: Record<ActivityType, ActivityGuideData> = {
 
   river: {
     id: 'river',
-    label: '한강·강변',
+    label: '강변',
     icon: '🌊',
     description: '강변은 수면 반사 자외선, 강풍, 높은 습도가 복합적으로 작용합니다. 체감온도가 도심보다 2~3°C 낮고, 호우특보 시 하천변 접근이 금지됩니다.',
     keyRisks: ['호우특보 시 접근 금지', '강변 강풍·체감온도 저하', '수면 반사 자외선', '미끄러운 노면'],
@@ -397,8 +404,9 @@ export const ACTIVITY_GUIDES: Record<ActivityType, ActivityGuideData> = {
     id: 'picnic',
     label: '소풍·캠핑',
     icon: '🧺',
-    description: '야외 장시간 체류로 자외선 누적 노출과 기온 변화 대응이 중요합니다. 호우특보 시 야영·물놀이를 즉시 중단해야 합니다.',
-    keyRisks: ['자외선 장시간 누적', '호우·낙뢰 시 즉시 대피', '기온 변화 레이어링', '미세먼지 장시간 노출'],
+    description:
+      '야외 장시간 체류로 자외선 누적·기온 변화 대응이 중요합니다. 앱 추천과 같이 체감 28·23·18·12·6℃ 구간을 쓰고, 더운 날(28℃↑)에는 모자·선글라스, UV 6↑에는 긴팔·팔토시·챙 넓은 모자, 풍속 5m/s↑에는 얇은 바람막이를 권합니다. 호우·낙뢰 시 야영·물놀이는 즉시 중단합니다.',
+    keyRisks: ['자외선·UV6↑', '호우·낙뢰', '체감 구간·일교차', '미세먼지·오존', '풍속 5m/s·강풍 14m/s'],
     seasons: {
       spring: {
         label: '봄',
@@ -407,8 +415,15 @@ export const ACTIVITY_GUIDES: Record<ActivityType, ActivityGuideData> = {
       },
       summer: {
         label: '여름',
-        items: ['밝은색 통기성 옷', '챙 넓은 모자', '선글라스', 'SPF50+ 선크림 (2시간마다 덧발름)', '물 (충분히)', '얇은 긴팔 (그늘 대기용)'],
-        note: 'AAD: 장시간 야외 활동 시 SPF30 이상 광범위 자외선 차단제를 2시간마다 덧발라야 합니다.',
+        items: [
+          '밝은색·헐렁한 통기성 상의 (28℃↑)',
+          '모자·선글라스 (체감 더운 구간 기본)',
+          'SPF50+ 선크림 (2시간마다 덧발름)',
+          'UV 6↑ 시 얇은 긴팔·팔토시·챙 넓은 모자',
+          '습도 70%↑·25℃↑ 시 기능성 소재·여벌 상의',
+          '물 (충분히)',
+        ],
+        note: '체감이 23~27℃대인데 미세먼지·오존이 나쁘면 격한 활동·장시간 바비큐 연기를 줄이고 마스크·시간 조정을 검토하세요. (가이드 라.2)',
       },
       autumn: {
         label: '가을',
@@ -429,6 +444,30 @@ export const ACTIVITY_GUIDES: Record<ActivityType, ActivityGuideData> = {
         level: 'cancel',
       },
       {
+        condition: '자외선 지수 6 이상',
+        action: '긴팔 또는 팔토시, 챙 넓은 모자, UV 차단 선글라스, 자외선 차단제를 준비하세요.',
+        source: '기상청 생활기상지수 · 가이드 다.3',
+        level: 'caution',
+      },
+      {
+        condition: '체감이 따뜻한 날(약 23~27℃)에 미세먼지·오존 나쁨',
+        action: '격한 운동·연기 많은 활동을 줄이고 보건용 마스크 또는 이른 아침·저녁 시간대로 조정하세요.',
+        source: '가이드 라.2 · 에어코리아',
+        level: 'caution',
+      },
+      {
+        condition: '풍속 5m/s 이상',
+        action: '얇은 바람막이를 챙기고 모자는 턱끈 또는 깊은 형태가 좋습니다.',
+        source: '가이드 다.3',
+        level: 'caution',
+      },
+      {
+        condition: '강풍주의보 (풍속 14m/s 이상)',
+        action: '야외 체류를 자제하고 우산보다 방수 재킷을 준비하세요. 낙하물 위험 구역을 피하세요.',
+        source: '기상청 강풍 행동요령',
+        level: 'warning',
+      },
+      {
         condition: '미세먼지 나쁨 이상',
         action: '장시간 야외 활동을 줄이고 보건용 마스크를 착용하세요.',
         source: '에어코리아 미세먼지 행동요령',
@@ -437,9 +476,12 @@ export const ACTIVITY_GUIDES: Record<ActivityType, ActivityGuideData> = {
     ],
     checklist: [
       '호우·낙뢰 예보 → 야외 활동 취소',
-      '자외선 차단제 2시간마다 덧바름',
-      '미세먼지 → 마스크 + 장시간 체류 자제',
-      '저녁 기온 대비 겉옷 여분 준비',
+      '체감 구간(28/23/18/12/6℃)·앱 추천 복장과 맞춰 준비',
+      'UV 6↑ → 긴팔·팔토시·챙 넓은 모자 · 선크림 2시간마다',
+      '풍 5m/s↑ 방풍 · 14m/s↑ 강풍 시 체류 자제',
+      '미세먼지·오존 나쁨 → 마스크·시간 조정',
+      '야외 2시간↑·겨울 소풍 → 방한화·귀마개 검토',
+      '저녁 기온 대비 겉옷 여분',
     ],
     sourceNote: '기상청 호우·낙뢰 행동요령 · 미국 피부과학회 (AAD)',
   },

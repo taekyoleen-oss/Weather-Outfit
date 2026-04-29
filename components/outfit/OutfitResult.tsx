@@ -1,7 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import type { OutfitResult as OutfitResultType, DangerLevel, GenderType } from '@/types/outfit'
+import type {
+  OutfitResult as OutfitResultType,
+  OutfitWeatherSnapshot,
+  DangerLevel,
+  GenderType,
+} from '@/types/outfit'
 import { CATEGORY_ORDER, CATEGORY_LABELS } from '@/lib/outfit/categories'
 import { OutfitItemCard } from './OutfitItemCard'
 import { OutfitIllustPanel } from './OutfitIllustPanel'
@@ -11,13 +16,23 @@ interface Props {
   gender?: GenderType
   /** KST 달력 월 1–12. 히어로 `fall-layered` 문구용 */
   calendarMonth?: number
+  /** 맑음(맑음·무강수)일 때 일러스트에 햇빛 레이어 표시 */
+  showSunshine?: boolean
+  /** 상단 하늘 밴드 라인 아이콘(하늘·강수형태) */
+  weatherSky?: OutfitWeatherSnapshot
 }
 
 const LAYER_BAR_COLORS = ['#22C55E', '#FFB547', '#EF4444']
 
 type TabId = 'illust' | 'list'
 
-export function OutfitResult({ result, gender = 'male', calendarMonth }: Props) {
+export function OutfitResult({
+  result,
+  gender = 'male',
+  calendarMonth,
+  showSunshine,
+  weatherSky,
+}: Props) {
   const [tab, setTab] = useState<TabId>('illust')
 
   const byCategory = CATEGORY_ORDER.reduce(
@@ -141,6 +156,8 @@ export function OutfitResult({ result, gender = 'male', calendarMonth }: Props) 
             result={result}
             gender={gender}
             calendarMonth={calendarMonth}
+            showSunshine={showSunshine}
+            weatherSky={weatherSky}
           />
         </div>
       )}

@@ -1,4 +1,4 @@
-import type { OutfitResult, GenderType } from '@/types/outfit'
+import type { OutfitResult, OutfitWeatherSnapshot, GenderType } from '@/types/outfit'
 import { CATEGORY_ORDER, CATEGORY_LABELS } from '@/lib/outfit/categories'
 import { OutfitHeroIllustration } from './OutfitHeroIllustration'
 
@@ -10,9 +10,11 @@ interface Props {
   result: OutfitResult
   gender: GenderType
   calendarMonth?: number
+  showSunshine?: boolean
+  weatherSky?: OutfitWeatherSnapshot
 }
 
-export function OutfitIllustPanel({ result, gender, calendarMonth }: Props) {
+export function OutfitIllustPanel({ result, gender, calendarMonth, showSunshine, weatherSky }: Props) {
   const byCategory = CATEGORY_ORDER.reduce(
     (acc, cat) => {
       const items = result.items.filter((i) => i.category === cat)
@@ -44,6 +46,8 @@ export function OutfitIllustPanel({ result, gender, calendarMonth }: Props) {
             gender={gender}
             calendarMonth={calendarMonth}
             size={220}
+            showSunshine={showSunshine}
+            weatherSky={weatherSky}
           />
         </div>
 

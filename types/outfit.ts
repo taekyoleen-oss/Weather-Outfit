@@ -1,11 +1,19 @@
+import type { PtyCode, SkyCode } from '@/types/weather'
+
+/** 복장 일러스트 상단 날씨 라인 데코용 */
+export interface OutfitWeatherSnapshot {
+  skyCode: SkyCode
+  ptyCode: PtyCode
+}
+
 export type ActivityType =
-  | 'urban_walk'    // 도심 산책·쇼핑
+  | 'urban_walk'    // 산책·쇼핑 등 일상 외출
   | 'running'       // 달리기·조깅
   | 'cycling'       // 자전거
   | 'golf'          // 골프
   | 'hiking'        // 등산·트레킹
   | 'picnic'        // 소풍·캠핑
-  | 'river'         // 한강·강변
+  | 'river'         // 강변
   | 'beach'         // 해변·해수욕
   | 'ski'           // 스키·스노보드
   | 'tennis'        // 테니스·배드민턴
@@ -54,13 +62,14 @@ export interface OutfitResult {
   ozoneTimeWarning: string | null  // 오전 10시~오후 4시 오존 피크 시간대 경고
 }
 
+/** 체감 구간 — weather-outdoor-clothing-guide.md 라.2 기준 */
 export type TempZone =
   | 'hot'         // 28°C 이상
   | 'warm'        // 23~27°C
-  | 'mild'        // 17~22°C
-  | 'cool'        // 12~16°C
-  | 'cold'        // 5~11°C
-  | 'freezing'    // 4°C 이하
+  | 'mild'        // 18~22°C
+  | 'cool'        // 12~17°C
+  | 'cold'        // 6~11°C
+  | 'freezing'    // 0~5℃ 및 0℃ 미만(세부는 feelsLike로 구분)
 
 export type HeroIllustKey =
   | 'summer-light'

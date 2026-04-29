@@ -1,7 +1,8 @@
 import Image from 'next/image'
-import type { HeroIllustKey, GenderType } from '@/types/outfit'
+import type { HeroIllustKey, GenderType, OutfitWeatherSnapshot } from '@/types/outfit'
 import type { OutfitItem } from '@/types/outfit'
 import { DynamicOutfitIllustration } from './illustration/DynamicOutfitIllustration'
+import { illustDisplayHeightOverWidth } from './illustration/illustViewBox'
 
 interface Props {
   illustKey: HeroIllustKey
@@ -12,6 +13,9 @@ interface Props {
   items?: OutfitItem[]
   gender?: GenderType
   large?: boolean
+  /** 맑은 날 햇빛·광선 레이어 (동적 SVG일 때만) */
+  showSunshine?: boolean
+  weatherSky?: OutfitWeatherSnapshot
 }
 
 const ILLUST_LABELS: Record<HeroIllustKey, string> = {
@@ -36,9 +40,21 @@ function heroLabel(illustKey: HeroIllustKey, calendarMonth?: number): string {
   return ILLUST_LABELS['fall-layered']
 }
 
-export function OutfitHeroIllustration({ illustKey, size = 180, calendarMonth, items, gender = 'male', large }: Props) {
+export function OutfitHeroIllustration({
+  illustKey,
+  size = 180,
+  calendarMonth,
+  items,
+  gender = 'male',
+  large,
+  showSunshine,
+  weatherSky,
+}: Props) {
   const label = heroLabel(illustKey, calendarMonth)
   const displaySize = large ? 300 : size
+  const pad = large ? 8 : 16
+  const innerW = displaySize - 2 * pad
+  const innerH = Math.round(innerW * illustDisplayHeightOverWidth())
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -48,8 +64,8 @@ export function OutfitHeroIllustration({ illustKey, size = 180, calendarMonth, i
           background: 'rgba(255,255,255,0.6)',
           border: '1px solid var(--surface-border)',
           width: displaySize,
-          height: Math.round(displaySize * 1.2),
-          padding: large ? 8 : 16,
+          height: innerH + 2 * pad,
+          padding: pad,
         }}
       >
         {items != null ? (
@@ -57,7 +73,9 @@ export function OutfitHeroIllustration({ illustKey, size = 180, calendarMonth, i
             items={items}
             illustKey={illustKey}
             gender={gender}
-            size={displaySize - (large ? 16 : 32)}
+            size={innerW}
+            showSunshine={showSunshine}
+            weatherSky={weatherSky}
           />
         ) : (
           <Image

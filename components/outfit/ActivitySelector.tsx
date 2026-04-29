@@ -11,13 +11,13 @@ interface Props {
 }
 
 const ACTIVITIES: { id: ActivityType; label: string; icon: string }[] = [
-  { id: 'urban_walk', label: '도심 산책', icon: '🏙️' },
+  { id: 'urban_walk', label: '산책', icon: '🏙️' },
   { id: 'running', label: '달리기', icon: '🏃' },
   { id: 'cycling', label: '자전거', icon: '🚴' },
   { id: 'golf', label: '골프', icon: '⛳' },
   { id: 'hiking', label: '등산', icon: '🏔️' },
   { id: 'picnic', label: '소풍', icon: '🧺' },
-  { id: 'river', label: '한강·강변', icon: '🌊' },
+  { id: 'river', label: '강변', icon: '🌊' },
   { id: 'beach', label: '해변', icon: '🏖️' },
   { id: 'ski', label: '스키', icon: '⛷️' },
   { id: 'tennis', label: '테니스', icon: '🎾' },
@@ -75,6 +75,13 @@ function ActivityGuideModal({ guide, onClose }: { guide: ActivityGuideData; onCl
             </div>
             <p className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--muted)' }}>
               {guide.description}
+            </p>
+            <p className="text-[10px] mt-2 leading-relaxed rounded-lg px-2 py-1.5" style={{ color: 'var(--muted)', background: 'var(--surface)', border: '1px solid var(--border)' }}>
+              이 가이드는 앱 추천과 같은 기준을 따릅니다. 체감 <strong style={{ color: 'var(--text)' }}>28·23·18·12·6℃</strong> 구간,
+              {' '}<strong style={{ color: 'var(--text)' }}>UV 6↑</strong> 시 긴팔·팔토시·챙 넓은 모자,
+              {' '}<strong style={{ color: 'var(--text)' }}>풍속 5m/s↑</strong> 방풍·모자 고정,
+              {' '}<strong style={{ color: 'var(--text)' }}>14m/s↑</strong> 강풍주의보,
+              {' '}미세먼지·오존·<strong style={{ color: 'var(--text)' }}>고습(70%↑·25℃↑)</strong> 보정을 반영했습니다.
             </p>
           </div>
           <button
@@ -257,8 +264,8 @@ export function ActivitySelector({ value, onChange }: Props) {
                   border: '1px solid rgba(148, 163, 184, 0.22)',
                   boxShadow: 'none',
                 }}
-                aria-label={`${a.label} 복장 가이드 보기`}
-                title={`${a.label} 복장 가이드`}
+                aria-label={`${a.label} 복장 가이드: 체감 구간·UV·바람·대기질 기준 (앱 추천과 동기화)`}
+                title={`${a.label} 복장 가이드 — 체감 28/23/18/12/6℃, UV6↑, 풍 5m/s·14m/s, 미세먼지·오존·고습 반영`}
               >
                 ?
               </button>

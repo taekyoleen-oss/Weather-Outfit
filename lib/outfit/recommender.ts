@@ -123,12 +123,13 @@ export function recommendOutfit(input: OutfitInput): OutfitResult {
   const danger = assessDanger(input)
 
   // 장소 미기후 보정: 강바람·고도·해풍 등을 반영해 체감온도 조정
-  const baseZone = getTempZone(input.feelsLike)
   const microOffset = getMicroclimateOffset(input.activity)
-  const zone = microOffset !== 0 ? getTempZone(input.feelsLike + microOffset) : baseZone
+  const flZone = microOffset !== 0 ? input.feelsLike + microOffset : input.feelsLike
+  const baseZone = getTempZone(input.feelsLike)
+  const zone = getTempZone(flZone)
 
   // Collect all items
-  const baseItems = getBaseItems(zone, input.gender, input.activity)
+  const baseItems = getBaseItems(zone, input.gender, input.activity, flZone)
   const activityItems = getActivityItems(input.activity, zone, input.gender)
   const microclimateItems = getMicroclimateItems(input.activity, baseZone, input.gender)
 
@@ -140,6 +141,77 @@ export function recommendOutfit(input: OutfitInput): OutfitResult {
       seen.add(item.id)
       allItems.push(item)
     }
+  }
+
+  const pushCorr = (item: OutfitItem) => {
+    if (!seen.has(item.id)) {
+      seen.add(item.id)
+      allItems.push(item)
+    }
+  }
+
+  // 가이드 다.3: UV 6↑ — 긴팔·팔토시, 챙 넓은 모자 (28℃+는 getBaseItems에 모자·선글라스 있음)
+  if (input.uvIndex >= 6 && !['beach', 'ski'].includes(input.activity)) {
+    pushCorr({
+      id: 'corr-uv-sleeves',
+      name: '긴팔 겉옷 또는 UV 팔토시',
+      icon: '👕',
+      category: 'top',
+      required: input.uvIndex >= 8,
+      condition: 'UV ' + input.uvIndex + ' — 기상청 생활기상지수(높음 이상)',
+    })
+    if (zone !== 'hot') {
+      pushCorr({
+        id: 'corr-uv-widehat',
+        name: '챙 넓은 모자',
+        icon: '👒',
+        category: 'acc',
+        required: false,
+        condition: 'UV 6 이상',
+      })
+    }
+  }
+
+  // 가이드 다.3·라.2: 풍속 5m/s↑ 방풍 외피 (강변·등산은 getMicroclimateItems에서 이미 방풍 권장)
+  const skipFiveMWindOuter =
+    (input.activity === 'river' && ['hot', 'warm', 'mild'].includes(baseZone)) ||
+    (input.activity === 'hiking' && ['hot', 'warm', 'mild'].includes(baseZone))
+  if (input.windSpeed >= 5 && !skipFiveMWindOuter && ['warm', 'mild', 'cool', 'cold'].includes(zone)) {
+    pushCorr({
+      id: 'corr-wind-fives',
+      name: '얇은 바람막이 (방풍)',
+      icon: '💨',
+      category: 'outer',
+      required: false,
+      condition: zone === 'mild' ? '풍속 5m/s 이상 — 가이드 라.2(18~22℃) 방풍 외피 권장' : '풍속 5m/s 이상 — 가이드 다.3',
+    })
+  }
+
+  // 가이드 라.2: 6~11℃ + 바람 강하면 목도리·장갑·비니
+  if (zone === 'cold' && input.windSpeed >= 5 && input.activity !== 'ski') {
+    pushCorr({ id: 'corr-cold-wind-scarf', name: '목도리 / 넥워머', icon: '🧣', category: 'acc', required: false, condition: '바람 강함 + 추운 구간' })
+    pushCorr({ id: 'corr-cold-wind-gloves', name: '장갑', icon: '🧤', category: 'acc', required: false, condition: '바람 강함 + 추운 구간' })
+    pushCorr({ id: 'corr-cold-wind-beanie', name: '비니 / 니트 모자', icon: '🎓', category: 'acc', required: false, condition: '바람 강함 + 추운 구간' })
+  }
+
+  // 가이드 라.2: 0~5℃ 장시간 야외 시 방한화·귀마개
+  if (zone === 'freezing' && flZone >= 0 && flZone < 6 && input.duration >= 2 && input.activity !== 'ski') {
+    pushCorr({
+      id: 'corr-freeze-duration-boots',
+      name: '방한화',
+      icon: '🥾',
+      category: 'foot',
+      required: false,
+      condition: '장시간 야외(2시간↑) — 가이드 라.2',
+    })
+    pushCorr({
+      id: 'corr-freeze-duration-ear',
+      name: '귀마개 / 이어워머',
+      icon: '🎓',
+      category: 'acc',
+      required: false,
+      condition: '장시간 야외(2시간↑) — 가이드 라.2',
+    })
   }
 
   // Rain / snow items
@@ -191,9 +263,8 @@ export function recommendOutfit(input: OutfitInput): OutfitResult {
     })
   }
 
-  // Wind alert threshold by activity
-  const windThreshold = ['river', 'beach', 'golf', 'hiking'].includes(input.activity) ? 7 : 10
-  const windAlert = input.windSpeed >= windThreshold
+  // UI 배지: 강풍주의보 수준(육상 14m/s↑) — 가이드 다.6·라. 보정표
+  const windAlert = input.windSpeed >= 14
 
   const heroIllust = pickHeroIllust(zone, input.activity, input.ptyCode)
 
@@ -207,6 +278,9 @@ export function recommendOutfit(input: OutfitInput): OutfitResult {
     input.duration,
     input.precipitation,
     input.feelsLike,
+    input.humidity,
+    input.temperature,
+    input.o3Grade,
   )
 
   const microclimateNote = getMicroclimateNote(input.activity)
