@@ -60,7 +60,7 @@ export function OutfitResult({
           {result.cancelActivity ? '⚠️ 활동 재검토 권고' : '오늘의 복장 추천'}
         </h2>
         {schedule && optionalItems.length > 0 && (
-          <div className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
+          <div className="text-[13px] sm:text-xs mt-1" style={{ color: 'var(--muted)' }}>
             <p>선택 아이템 착용 가이드 ({hh(schedule.startHour)} ~ {hh(schedule.endHour)}):</p>
             {optionalGuideLines.map((line) => (
               <p key={line} className="pl-2">- {line}</p>
@@ -173,11 +173,11 @@ export function OutfitResult({
       {tab === 'list' && (
         <div role="tabpanel" className="space-y-4">
           <div
-            className="rounded-xl p-3"
+            className="rounded-xl p-2.5 sm:p-3"
             style={{ background: 'rgba(91,141,238,0.06)', border: '1px solid rgba(91,141,238,0.18)' }}
           >
-            <p className="text-xs font-semibold" style={{ color: 'var(--humidity)' }}>추천 기준 설명</p>
-            <p className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--text)' }}>
+            <p className="text-[13px] sm:text-xs font-semibold" style={{ color: 'var(--humidity)' }}>추천 기준 설명</p>
+            <p className="text-[13px] sm:text-xs mt-1 leading-relaxed" style={{ color: 'var(--text)' }}>
               필수는 현재 기상 위험(강수·강풍·미세먼지·자외선)과 활동 시간 동안의 체온 유지/안전을 위해 꼭 필요한 항목입니다.
               선택은 편의·활동 특화·스타일 보완 항목입니다.
             </p>
@@ -189,10 +189,10 @@ export function OutfitResult({
           {/* Tips */}
           {result.tips.length > 0 && (
             <div
-              className="rounded-xl p-3 space-y-1.5"
+              className="rounded-xl p-2.5 sm:p-3 space-y-1.5"
               style={{ background: 'rgba(91,141,238,0.06)', border: '1px solid rgba(91,141,238,0.15)' }}
             >
-              <p className="text-xs font-semibold" style={{ color: 'var(--humidity)' }}>
+              <p className="text-[13px] sm:text-xs font-semibold" style={{ color: 'var(--humidity)' }}>
                 착장 팁
               </p>
               {result.tips.map((tip, i) => (

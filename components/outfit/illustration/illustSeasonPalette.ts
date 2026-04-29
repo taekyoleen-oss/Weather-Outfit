@@ -189,7 +189,8 @@ export function bottomSeasonFills(season: IllustSeason, variant: string): Bottom
     return { main: S.charcoal, seam: S.ice }
   }
   if (variant === 'slacks') {
-    if (season === 'spring') return { main: '#E8F5E9', seam: '#A5D6A7', belt: S.lemon }
+    // 상의(연녹색 아우터)와 하의가 겹쳐 보이지 않도록 봄 슬랙스는 푸른 톤으로 분리
+    if (season === 'spring') return { main: '#DCE8FF', seam: '#8FA6D8', belt: S.lemon }
     if (season === 'summer') return { main: S.coolGray, seam: '#ADB5BD', belt: S.ocean }
     if (season === 'autumn') return { main: S.sand, seam: S.olive, belt: S.burgundy }
     return { main: S.charcoal, seam: S.deep, belt: S.ice }

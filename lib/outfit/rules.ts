@@ -343,7 +343,7 @@ function getShoes(activity: ActivityType, zone: TempZone, gender: GenderType = '
   if (activity === 'running' || activity === 'cycling') return { id: 'foot-sneaker', name: '러닝화 / 운동화', icon: '👟', category: 'foot', required: true }
   if (activity === 'golf') return { id: 'foot-golf', name: '골프화', icon: '👞', category: 'foot', required: true }
   if (activity === 'beach') return { id: 'foot-sandal', name: '샌들 / 아쿠아슈즈', icon: '🩴', category: 'foot', required: true }
-  if (activity === 'ski') return { id: 'foot-ski', name: '스키화 (렌탈 포함)', icon: '⛷️', category: 'foot', required: true }
+  if (activity === 'ski') return { id: 'foot-boots', name: '방한 부츠', icon: '🥾', category: 'foot', required: true }
   if (zone === 'cold' || zone === 'freezing') {
     if (gender === 'female') return { id: 'foot-boots-f', name: '방한 부츠 / 앵클 부츠', icon: '🥾', category: 'foot', required: true }
     return { id: 'foot-boots', name: '방한 부츠', icon: '🥾', category: 'foot', required: true }
@@ -380,7 +380,6 @@ export function getActivityItems(activity: ActivityType, zone: TempZone, gender:
   switch (activity) {
     case 'golf':
       items.push({ id: 'acc-golf-hat', name: '골프 모자', icon: '🧢', category: 'acc', required: true, activityTag })
-      items.push({ id: 'acc-golf-glove', name: '골프 장갑', icon: '🧤', category: 'acc', required: true, activityTag })
       if (gender === 'female') items.push({ id: 'top-golf-skirt', name: '골프 스커트 / 팬츠', icon: '🩺', category: 'bottom', required: false, activityTag })
       break
     case 'hiking':
@@ -400,15 +399,11 @@ export function getActivityItems(activity: ActivityType, zone: TempZone, gender:
       break
     case 'beach':
       items.push({ id: 'acc-sunglasses', name: '선글라스', icon: '🕶️', category: 'acc', required: true, activityTag })
-      items.push({ id: 'top-swimsuit', name: '수영복', icon: '🩱', category: 'top', required: true, activityTag })
-      items.push({ id: 'acc-rashguard', name: '래쉬가드', icon: '🩱', category: 'top', required: false, activityTag })
       break
     case 'ski':
       items.push({ id: 'top-ski-inner', name: '기능성 내의 (상하)', icon: '🎿', category: 'base', required: true, activityTag })
       items.push({ id: 'outer-ski-jacket', name: '스키 재킷 (방수·방풍)', icon: '🎿', category: 'outer', required: true, activityTag })
       items.push({ id: 'bottom-ski-pants', name: '스키 팬츠', icon: '🎿', category: 'bottom', required: true, activityTag })
-      items.push({ id: 'acc-helmet', name: '헬멧 (안전 필수)', icon: '⛷️', category: 'acc', required: true, activityTag })
-      items.push({ id: 'acc-goggles', name: '스키 고글', icon: '🥽', category: 'acc', required: true, activityTag })
       items.push({ id: 'acc-ski-gloves', name: '스키 장갑 (방수)', icon: '🧤', category: 'acc', required: true, activityTag })
       break
   }

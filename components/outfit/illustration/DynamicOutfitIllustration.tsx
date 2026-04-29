@@ -85,8 +85,8 @@ export function DynamicOutfitIllustration({
       height={fluid ? undefined : pxH}
       style={
         fluid
-          ? { display: 'block', aspectRatio: `${ILLUST_VB_W} / ${ILLUST_VIEWBOX_HEIGHT}` }
-          : { display: 'block' }
+          ? { display: 'block', aspectRatio: `${ILLUST_VB_W} / ${ILLUST_VIEWBOX_HEIGHT}`, filter: 'saturate(1.08) contrast(1.04)' }
+          : { display: 'block', filter: 'saturate(1.08) contrast(1.04)' }
       }
       preserveAspectRatio={fluid ? 'xMidYMid meet' : undefined}
       aria-hidden="true"
