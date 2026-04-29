@@ -17,7 +17,7 @@ import { useAutoLocation } from '@/lib/hooks/useAutoLocation'
 import { useWeather } from '@/lib/hooks/useWeather'
 import { useWeeklyForecast } from '@/lib/hooks/useWeeklyForecast'
 import { getTimeOfDay, currentHourKst, kstTodayYmd } from '@/lib/utils/timeOfDay'
-import { feelsLike, weatherLabel, weatherEmojiFromLabel } from '@/lib/utils/formatWeather'
+import { feelsLike, weatherLabel, weatherEmojiFromLabel, pickIllustKey, illustFile } from '@/lib/utils/formatWeather'
 import {
   TIME_PERIODS,
   getPeriodIndex,
@@ -37,6 +37,22 @@ import type {
 } from '@/types/weather'
 import type { LocationInfo } from '@/types/location'
 import type { OpenMeteoDailyCompare } from '@/lib/weather/openMeteoCompare'
+
+function sunsetHmFromText(sunsetTime?: string): string | undefined {
+  if (!sunsetTime) return undefined
+  const t = sunsetTime.trim()
+  const compact = t.includes(':') ? t.replace(':', '') : t
+  const hm = parseInt(compact, 10)
+  if (!Number.isFinite(hm)) return undefined
+  return String(hm).padStart(4, '0')
+}
+
+function sunsetHmNumber(sunsetTime?: string): number | null {
+  const s = sunsetHmFromText(sunsetTime)
+  if (!s) return null
+  const n = parseInt(s, 10)
+  return Number.isFinite(n) ? n : null
+}
 
 function hourlyToCurrentWeather(entry: HourlyForecast, base: CurrentWeather): CurrentWeather {
   return {
@@ -82,6 +98,11 @@ export default function HomePage() {
     () => ({ repHour: TIME_PERIODS[getPeriodIndex(currentHourKst())].repHour, dayOffset: 0 })
   )
   const selectedPeriodHour = selectedPeriodSelection.repHour
+
+  // 앱 시작 시 자동 위치 갱신: 저장 위치가 오래됐거나 실제 이동이 큰 경우에만 조용히 갱신
+  useEffect(() => {
+    requestGps({ reason: 'auto', silent: true })
+  }, [requestGps])
 
   // Reset selected period to current when location changes
   useEffect(() => {
@@ -268,6 +289,21 @@ export default function HomePage() {
     return base.uvIndex
   }, [weatherData, displayWeather])
 
+  const heroIconSrc = useMemo((): string | undefined => {
+    const sunsetHHMM = sunsetHmFromText(sunriseSunset?.sunset)
+    const firstHourly = displayedHourly[0]
+    if (firstHourly) {
+      const iconHour = parseInt(firstHourly.time.split(':')[0], 10)
+      const tod = getTimeOfDay(iconHour, undefined, sunsetHHMM)
+      return `/illust/weather/${illustFile(pickIllustKey(firstHourly.skyCode, firstHourly.ptyCode), tod)}.svg`
+    }
+    if (!displayWeather) return undefined
+    const tod = getTimeOfDay(hour, undefined, sunsetHHMM)
+    return `/illust/weather/${illustFile(pickIllustKey(displayWeather.skyCode, displayWeather.ptyCode), tod)}.svg`
+  }, [displayedHourly, displayWeather, hour, sunriseSunset?.sunset])
+  const heroIconHour = displayedHourly[0] ? parseInt(displayedHourly[0].time.split(':')[0], 10) : hour
+  const heroSunsetHm = sunsetHmNumber(sunriseSunset?.sunset)
+
   useEffect(() => {
     if (!location) return
     let cancelled = false
@@ -308,10 +344,25 @@ export default function HomePage() {
       .then((d) => { if (!d.error) setDust(d) })
       .catch(() => {})
 
-    fetch(`/api/pollen?lat=${lat}&lon=${lon}&nx=${nx}&ny=${ny}`)
-      .then((r) => r.json())
-      .then((d) => { if (!d.error) setPollen(d) })
-      .catch(() => {})
+    const pollenUrl = `/api/pollen?lat=${lat}&lon=${lon}&nx=${nx}&ny=${ny}`
+    const fetchPollenWithRetry = async () => {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const r = await fetch(pollenUrl)
+          const d = await r.json()
+          if (!d?.error) {
+            setPollen(d)
+            return
+          }
+        } catch {
+          // retry once on transient failures
+        }
+        if (attempt === 0) {
+          await new Promise((resolve) => setTimeout(resolve, 800))
+        }
+      }
+    }
+    void fetchPollenWithRetry()
 
     fetch(`/api/sunrise?lat=${lat}&lon=${lon}`)
       .then((r) => r.json())
@@ -365,6 +416,9 @@ export default function HomePage() {
     <WeatherCard
       weather={displayWeather}
       period={period}
+      heroIconSrc={heroIconSrc}
+      heroIconHour={heroIconHour}
+      heroSunsetHm={heroSunsetHm}
       loading={weatherLoading}
       addressLine={location.address}
       sunriseSunset={sunriseSunset}

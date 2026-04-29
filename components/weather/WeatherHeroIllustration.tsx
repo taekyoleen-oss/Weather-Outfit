@@ -1,17 +1,43 @@
 import Image from 'next/image'
 import type { SkyCode, PtyCode, TimeOfDay } from '@/types/weather'
-import { pickIllustKey, illustFile } from '@/lib/utils/formatWeather'
+import { pickIllustKey, illustFile, weatherLabel } from '@/lib/utils/formatWeather'
 
 interface Props {
   skyCode: SkyCode
   ptyCode: PtyCode
   period: TimeOfDay
+  iconSrc?: string
+  iconHour?: number
+  sunsetHm?: number | null
   size?: number
 }
 
-export function WeatherHeroIllustration({ skyCode, ptyCode, period, size = 160 }: Props) {
+const WEATHER_EMOJI: Record<string, string> = {
+  '맑음': '☀️',
+  '구름 많음': '🌤',
+  '흐림': '☁️',
+  '비': '🌧',
+  '비/눈': '🌨',
+  '눈': '❄️',
+  '소나기': '⛈',
+}
+
+export function WeatherHeroIllustration({ skyCode, ptyCode, period, iconSrc, iconHour, sunsetHm, size = 160 }: Props) {
   const key = pickIllustKey(skyCode, ptyCode)
   const file = illustFile(key, period)
+  const src = iconSrc ?? `/illust/weather/${file}.svg`
+  const label = weatherLabel(skyCode, ptyCode)
+  const isNight =
+    typeof iconHour === 'number'
+      ? (sunsetHm == null ? (iconHour >= 19 || iconHour < 6) : (iconHour * 100 > sunsetHm || iconHour < 6))
+      : period === 'night'
+  const isNightCloudy = isNight && label === '구름 많음'
+  const emoji =
+    isNight && label === '맑음'
+      ? '🌙'
+      : isNightCloudy
+      ? '🌙'
+      : (WEATHER_EMOJI[label] ?? '🌤')
 
   return (
     <div
@@ -19,13 +45,53 @@ export function WeatherHeroIllustration({ skyCode, ptyCode, period, size = 160 }
       style={{ width: size, height: size }}
       aria-hidden="true"
     >
-      <Image
-        src={`/illust/weather/${file}.svg`}
-        alt=""
-        width={size}
-        height={size}
-        priority
-      />
+      {iconHour !== undefined ? (
+        isNightCloudy ? (
+          <span
+            className="relative inline-block"
+            style={{
+              width: Math.round(size * 0.42),
+              height: Math.round(size * 0.38),
+              color: '#94A3B8',
+              filter: 'grayscale(1) saturate(0)',
+              fontFamily: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif',
+            }}
+          >
+            <span
+              className="absolute leading-none"
+              style={{ left: Math.round(size * 0.03), top: Math.round(size * -0.12), fontSize: Math.round(size * 0.34) }}
+            >
+              🌙
+            </span>
+            <span
+              className="absolute leading-none"
+              style={{ left: Math.round(size * 0.17), top: Math.round(size * 0.03), fontSize: Math.round(size * 0.26) }}
+            >
+              ☁️
+            </span>
+          </span>
+        ) : (
+          <span
+            className="leading-none"
+            style={{
+              fontSize: Math.round(size * 0.45),
+              color: isNight ? '#94A3B8' : 'initial',
+              filter: isNight ? 'grayscale(1) saturate(0)' : 'none',
+              fontFamily: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif',
+            }}
+          >
+            {emoji}
+          </span>
+        )
+      ) : (
+        <Image
+          src={src}
+          alt=""
+          width={size}
+          height={size}
+          priority
+        />
+      )}
     </div>
   )
 }

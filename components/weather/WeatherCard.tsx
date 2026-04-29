@@ -33,6 +33,9 @@ import { KMA_WEATHER_WARN_PAGE } from '@/lib/weather/kma-alert'
 interface Props {
   weather: CurrentWeather | null
   period: TimeOfDay
+  heroIconSrc?: string
+  heroIconHour?: number
+  heroSunsetHm?: number | null
   loading?: boolean
   addressLine?: string | null
   sunriseSunset?: SunriseSunset | null
@@ -183,6 +186,9 @@ function IndexTable({ rows, source }: { rows: IndexRow[]; source: string }) {
 export function WeatherCard({
   weather,
   period,
+  heroIconSrc,
+  heroIconHour,
+  heroSunsetHm,
   loading,
   addressLine,
   sunriseSunset,
@@ -267,7 +273,10 @@ export function WeatherCard({
           skyCode={weather.skyCode}
           ptyCode={weather.ptyCode}
           period={period}
-          size={80}
+          iconSrc={heroIconSrc}
+          iconHour={heroIconHour}
+          sunsetHm={heroSunsetHm}
+          size={120}
         />
       </div>
 
@@ -420,7 +429,7 @@ export function WeatherCard({
 
       {/* UV + 오존 + 기상특보 하단 전용 섹션 */}
       <div
-        className="mt-2.5 pt-2 flex items-start gap-2"
+        className="mt-2.5 pt-2 flex items-start gap-1"
         style={{ borderTop: `1px solid ${isNight ? 'rgba(148,163,184,0.2)' : 'rgba(0,0,0,0.06)'}` }}
       >
         {/* 자외선 */}
@@ -448,7 +457,7 @@ export function WeatherCard({
         </div>
 
         {/* 기상특보 */}
-        <div className="flex-[2.8] flex items-start gap-2 min-w-0">
+        <div className="flex-[1.3] flex items-start gap-1 min-w-0">
           <span className="text-base">⚠️</span>
           <div className="min-w-0">
             <p className="text-[10px] font-semibold leading-none" style={{ color: alertCount > 0 ? 'var(--danger)' : mutedColor }}>

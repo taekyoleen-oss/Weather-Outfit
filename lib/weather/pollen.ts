@@ -20,10 +20,26 @@ function currentKstDateHour() {
   return { ymd: `${yyyy}${mm}${dd}`, hour: hh, month: Number(mm) }
 }
 
-function latestAnnouncementTimeKst(): string {
+function shiftYmd(ymd: string, deltaDays: number): string {
+  const y = parseInt(ymd.slice(0, 4), 10)
+  const m = parseInt(ymd.slice(4, 6), 10) - 1
+  const d = parseInt(ymd.slice(6, 8), 10)
+  const next = new Date(Date.UTC(y, m, d + deltaDays))
+  return `${next.getUTCFullYear()}${String(next.getUTCMonth() + 1).padStart(2, '0')}${String(next.getUTCDate()).padStart(2, '0')}`
+}
+
+/**
+ * 발표 시각 후보(우선순위 순):
+ * - 18시 이후: 오늘 18시 -> 오늘 06시
+ * - 06~17시: 오늘 06시 -> 어제 18시
+ * - 00~05시: 어제 18시 -> 어제 06시
+ */
+function announcementTimeCandidatesKst(): string[] {
   const { ymd, hour } = currentKstDateHour()
-  const slot = hour >= 18 ? '18' : '06'
-  return `${ymd}${slot}`
+  const yesterday = shiftYmd(ymd, -1)
+  if (hour >= 18) return [`${ymd}18`, `${ymd}06`]
+  if (hour >= 6) return [`${ymd}06`, `${yesterday}18`]
+  return [`${yesterday}18`, `${yesterday}06`]
 }
 
 function parseRisk(item: Record<string, unknown>): number | undefined {
@@ -90,12 +106,25 @@ export async function fetchPollen(args: {
   const serviceKey = process.env.KMA_HEALTH_IDX_SERVICE_KEY
   if (!serviceKey) throw new Error('KMA_HEALTH_IDX_SERVICE_KEY not set')
   const { month } = currentKstDateHour()
-  const time = latestAnnouncementTimeKst()
+  const timeCandidates = announcementTimeCandidatesKst()
+  const time = timeCandidates[0]
   const species = activeSpeciesByMonth(month)
 
-  const risks = await Promise.all(
-    species.map((s) => fetchSpeciesRisk({ serviceKey, areaNo: args.areaNo, time, species: s }))
-  )
+  let risks: PollenSpeciesRisk[] = []
+  for (const candidate of timeCandidates) {
+    risks = await Promise.all(
+      species.map((s) => fetchSpeciesRisk({ serviceKey, areaNo: args.areaNo, time: candidate, species: s }))
+    )
+    if (risks.some((r) => typeof r.todayRisk === 'number')) {
+      return {
+        areaNo: args.areaNo,
+        announcedAt: candidate,
+        seasonActive: month >= 4 && month <= 10,
+        risks,
+        fetchedAt: Date.now(),
+      }
+    }
+  }
 
   return {
     areaNo: args.areaNo,

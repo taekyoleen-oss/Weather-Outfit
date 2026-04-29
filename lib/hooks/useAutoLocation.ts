@@ -13,6 +13,10 @@ const DEFAULT_LOCATION: LocationInfo = {
 }
 
 const STORAGE_KEY = 'weatherfit:lastLocation'
+const AUTO_REFRESH_MIN_MOVE_KM = 2
+const AUTO_REFRESH_MAX_AGE_MS = 60 * 60 * 1000
+
+type StoredLocation = LocationInfo & { savedAt?: number }
 
 function isValidStored(data: unknown): data is LocationInfo {
   if (!data || typeof data !== 'object') return false
@@ -26,18 +30,34 @@ function isValidStored(data: unknown): data is LocationInfo {
   )
 }
 
-function loadStoredLocation(): LocationInfo | null {
+function loadStoredLocationRaw(): StoredLocation | null {
   if (typeof window === 'undefined') return null
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return null
     const data = JSON.parse(raw) as unknown
     if (!isValidStored(data)) return null
-    const { lat, lon, nx, ny, name, address, terrain } = data
-    return { lat, lon, nx, ny, name, address, terrain: terrain ?? 'urban' }
+    const { lat, lon, nx, ny, name, address, terrain, savedAt } = data as Record<string, unknown>
+    return {
+      lat: Number(lat),
+      lon: Number(lon),
+      nx: Number(nx),
+      ny: Number(ny),
+      name: String(name),
+      address: typeof address === 'string' ? address : undefined,
+      terrain: terrain === 'urban' || terrain === 'mountain' || terrain === 'coastal' ? terrain : 'urban',
+      savedAt: typeof savedAt === 'number' ? savedAt : undefined,
+    }
   } catch {
     return null
   }
+}
+
+function loadStoredLocation(): LocationInfo | null {
+  const s = loadStoredLocationRaw()
+  if (!s) return null
+  const { savedAt: _savedAt, ...loc } = s
+  return loc
 }
 
 function storeLocation(loc: LocationInfo) {
@@ -55,18 +75,31 @@ function getCurrentPositionAsync(options: PositionOptions): Promise<GeolocationP
   })
 }
 
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180
+  const R = 6371
+  const dLat = toRad(lat2 - lat1)
+  const dLon = toRad(lon2 - lon1)
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
+  return 2 * R * Math.asin(Math.sqrt(a))
+}
+
 export function useAutoLocation() {
   const [location, setLocation] = useState<LocationInfo>(() => loadStoredLocation() ?? DEFAULT_LOCATION)
   const [gpsLoading, setGpsLoading] = useState(false)
   const [gpsError, setGpsError] = useState<string | null>(null)
 
-  const requestGps = useCallback(() => {
+  const requestGps = useCallback((opts?: { reason?: 'manual' | 'auto'; silent?: boolean }) => {
+    const reason = opts?.reason ?? 'manual'
+    const silent = opts?.silent ?? reason === 'auto'
     if (!navigator.geolocation) {
-      setGpsError('이 브라우저는 위치 서비스를 지원하지 않습니다.')
+      if (!silent) setGpsError('이 브라우저는 위치 서비스를 지원하지 않습니다.')
       return
     }
     setGpsLoading(true)
-    setGpsError(null)
+    if (!silent) setGpsError(null)
 
     void (async () => {
       const applyStored = (): boolean => {
@@ -113,11 +146,24 @@ export function useAutoLocation() {
       try {
         if (pos) {
           const { latitude: lat, longitude: lon } = pos.coords
+          if (reason === 'auto') {
+            const stored = loadStoredLocationRaw()
+            if (stored) {
+              const movedKm = haversineKm(stored.lat, stored.lon, lat, lon)
+              const ageMs = Date.now() - (stored.savedAt ?? 0)
+              const isStale = !stored.savedAt || ageMs >= AUTO_REFRESH_MAX_AGE_MS
+              const movedFar = movedKm >= AUTO_REFRESH_MIN_MOVE_KM
+              if (!isStale && !movedFar) {
+                setGpsLoading(false)
+                return
+              }
+            }
+          }
           await resolveFromCoords(lat, lon)
         } else if (!applyStored()) {
-          if (lastErrCode === GeolocationPositionError.PERMISSION_DENIED) {
+          if (!silent && lastErrCode === GeolocationPositionError.PERMISSION_DENIED) {
             setGpsError('위치 권한이 거부되었습니다. 브라우저 설정에서 허용하거나, 검색으로 지역을 선택해 주세요.')
-          } else {
+          } else if (!silent) {
             setGpsError(
               'GPS로 위치를 잡지 못했습니다. 이전에 저장된 위치가 없으면 검색으로 지역을 선택해 주세요.'
             )
@@ -125,7 +171,7 @@ export function useAutoLocation() {
         }
       } catch {
         if (!applyStored()) {
-          setGpsError('위치 변환에 실패했습니다. 검색으로 지역을 선택해 주세요.')
+          if (!silent) setGpsError('위치 변환에 실패했습니다. 검색으로 지역을 선택해 주세요.')
         }
       } finally {
         setGpsLoading(false)

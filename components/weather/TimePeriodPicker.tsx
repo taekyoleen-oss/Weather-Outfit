@@ -227,17 +227,35 @@ export function TimePeriodPicker({
               )}
             </div>
 
-            {/* Weather emoji */}
-            <span
-              className="text-lg max-lg:text-xl leading-none"
-              style={{
-                color: 'initial',
-                filter: isNight ? 'grayscale(1) saturate(0)' : 'none',
-                fontFamily: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif',
-              }}
-            >
-              {weatherEmoji}
-            </span>
+            {/* Weather emoji - keep icon row height aligned with hourly strip */}
+            <div className="h-[20px] w-full flex items-center justify-center">
+              {weatherEmoji === '🌙☁️' ? (
+                <span
+                  className="relative inline-block w-[24px] h-[20px]"
+                  style={{
+                    color: 'initial',
+                    filter: isNight ? 'grayscale(1) saturate(0)' : 'none',
+                    fontFamily: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif',
+                    transform: 'translateY(1px)',
+                  }}
+                >
+                  <span className="absolute left-0 top-[1px] text-lg max-lg:text-xl leading-none">🌙</span>
+                  <span className="absolute left-[10px] top-[3px] text-base max-lg:text-lg leading-none">☁️</span>
+                </span>
+              ) : (
+                <span
+                  className="text-lg max-lg:text-xl leading-none inline-block whitespace-nowrap"
+                  style={{
+                    color: 'initial',
+                    filter: isNight ? 'grayscale(1) saturate(0)' : 'none',
+                    fontFamily: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif',
+                    transform: 'translateY(1px)',
+                  }}
+                >
+                  {weatherEmoji}
+                </span>
+              )}
+            </div>
 
             {/* Period label */}
             <span
