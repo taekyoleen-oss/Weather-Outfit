@@ -15,6 +15,36 @@ const WEATHER_EMOJI: Record<string, string> = {
   '소나기': '⛈',
 }
 
+function emojiForHourAndLabel(
+  hourNum: number,
+  label: string | null,
+  fallback: string,
+  sunsetHm: number | null
+): string {
+  if (!label) return fallback
+  const slotHm = hourNum * 100
+  const isNight =
+    sunsetHm == null ? (hourNum >= 19 || hourNum < 6) : (slotHm > sunsetHm || hourNum < 6)
+  if (!isNight) return WEATHER_EMOJI[label] ?? fallback
+  if (label === '맑음') return '🌙'
+  if (label === '구름 많음') return '🌙☁️'
+  return WEATHER_EMOJI[label] ?? fallback
+}
+
+function isNightByHour(hourNum: number, sunsetHm: number | null): boolean {
+  const slotHm = hourNum * 100
+  return sunsetHm == null ? (hourNum >= 19 || hourNum < 6) : (slotHm > sunsetHm || hourNum < 6)
+}
+
+function sunsetHmFromText(sunsetTime?: string): number | null {
+  if (!sunsetTime) return null
+  const t = sunsetTime.trim()
+  // "1845" or "18:45" 모두 지원
+  const compact = t.includes(':') ? t.replace(':', '') : t
+  const hm = parseInt(compact, 10)
+  return Number.isFinite(hm) ? hm : null
+}
+
 interface Props {
   currentHour: number
   /** 관측/초단기 현재기온 — '지금' 칩에만 사용 */
@@ -22,6 +52,7 @@ interface Props {
   hourly: HourlyForecast[]
   selectedRepHour: number
   selectedDayOffset: number
+  sunsetTime?: string
   onSelect: (repHour: number, dayOffset: number) => void
 }
 
@@ -71,6 +102,7 @@ export function TimePeriodPicker({
   hourly,
   selectedRepHour,
   selectedDayOffset,
+  sunsetTime,
   onSelect,
 }: Props) {
   const currentIdx = getPeriodIndex(currentHour)
@@ -87,6 +119,7 @@ export function TimePeriodPicker({
 
   const periodCount = TIME_PERIODS.length
   const curHourStr = String(currentHour).padStart(2, '0') + ':00'
+  const sunsetHm = sunsetHmFromText(sunsetTime)
 
   function fallbackTempForNow(): number | undefined {
     // 1) 가장 안정적: "오늘 + 현재시각 슬롯" (예: 18:00)
@@ -131,7 +164,8 @@ export function TimePeriodPicker({
       : isCurrent && currentConditions
         ? weatherLabel(currentConditions.skyCode, currentConditions.ptyCode)
         : null
-    const weatherEmoji = label ? (WEATHER_EMOJI[label] ?? period.emoji) : period.emoji
+    const isNight = isNightByHour(displayHour, sunsetHm)
+    const weatherEmoji = emojiForHourAndLabel(displayHour, label, period.emoji, sunsetHm)
 
     let temperature: number | undefined
     if (isCurrent) {
@@ -148,6 +182,7 @@ export function TimePeriodPicker({
       isCurrent,
       temperature,
       weatherEmoji,
+      isNight,
       isSelected: selectedRepHour === period.repHour && selectedDayOffset === dayOffset,
     }
   })
@@ -161,7 +196,7 @@ export function TimePeriodPicker({
         🕐 시간대 선택
       </h3>
       <div className="grid grid-cols-4 gap-1.5">
-        {chips.map(({ period, isTomorrow, dayOffset, isCurrent, temperature, weatherEmoji, isSelected }) => (
+        {chips.map(({ period, isTomorrow, dayOffset, isCurrent, temperature, weatherEmoji, isNight, isSelected }) => (
           <button
             key={period.id + (isTomorrow ? '-t' : '')}
             onClick={() => onSelect(period.repHour, dayOffset)}
@@ -193,7 +228,16 @@ export function TimePeriodPicker({
             </div>
 
             {/* Weather emoji */}
-            <span className="text-lg max-lg:text-xl leading-none">{weatherEmoji}</span>
+            <span
+              className="text-lg max-lg:text-xl leading-none"
+              style={{
+                color: 'initial',
+                filter: isNight ? 'grayscale(1) saturate(0)' : 'none',
+                fontFamily: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif',
+              }}
+            >
+              {weatherEmoji}
+            </span>
 
             {/* Period label */}
             <span

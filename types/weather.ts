@@ -72,6 +72,20 @@ export interface DustData {
   fetchedAt: number
 }
 
+export interface PollenSpeciesRisk {
+  species: 'oak' | 'pine' | 'weeds'
+  /** 0=낮음, 1=보통, 2=높음, 3=매우높음 */
+  todayRisk?: number
+}
+
+export interface PollenData {
+  areaNo: string
+  announcedAt: string
+  seasonActive: boolean
+  risks: PollenSpeciesRisk[]
+  fetchedAt: number
+}
+
 export type DustGrade = 'good' | 'normal' | 'bad' | 'very_bad'
 
 export interface SunriseSunset {

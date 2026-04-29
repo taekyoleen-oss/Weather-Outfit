@@ -2,13 +2,14 @@
 
 import { useState } from 'react'
 import { HighlightCard } from './HighlightCard'
-import type { CurrentWeather, DustData, WeatherAlert } from '@/types/weather'
+import type { CurrentWeather, DustData, PollenData, WeatherAlert } from '@/types/weather'
 import { dustGradeLabel, dustGradeColor } from '@/lib/utils/formatWeather'
 import { KMA_WEATHER_WARN_PAGE } from '@/lib/weather/kma-alert'
 
 interface Props {
   weather: CurrentWeather | null
   dust?: DustData | null
+  pollen?: PollenData | null
   alerts?: WeatherAlert[]
   loading?: boolean
   compact?: boolean
@@ -94,7 +95,7 @@ function IndexModal({ title, rows, source, onClose }: {
   )
 }
 
-export function HighlightsGrid({ weather, dust, alerts, loading, compact }: Props) {
+export function HighlightsGrid({ weather, dust, pollen, alerts, loading, compact }: Props) {
   const [modal, setModal] = useState<'pm10' | 'pm25' | null>(null)
 
   // 가시거리는 WeatherCard로 이동 → 여기서는 대기질·초미세먼지·기상특보 3항목
@@ -124,6 +125,28 @@ export function HighlightsGrid({ weather, dust, alerts, loading, compact }: Prop
   }
 
   const alertCount = alerts?.length ?? 0
+  function pollenLabelByRisk(risk?: number): string {
+    if (typeof risk !== 'number') return '--'
+    if (risk === 0) return '낮음'
+    if (risk === 1) return '보통'
+    if (risk === 2) return '높음'
+    return '매우높음'
+  }
+
+  function pollenColorByRisk(risk?: number): string {
+    if (typeof risk !== 'number') return 'var(--muted)'
+    if (risk <= 1) return '#22C55E'
+    if (risk === 2) return '#F59E0B'
+    return '#EF4444'
+  }
+
+  function pollenRiskOf(species: 'oak' | 'pine' | 'weeds'): number | undefined {
+    return pollen?.risks?.find((r) => r.species === species)?.todayRisk
+  }
+
+  const oakRisk = pollenRiskOf('oak')
+  const pineRisk = pollenRiskOf('pine')
+  const weedsRisk = pollenRiskOf('weeds')
 
   return (
     <div>
@@ -131,7 +154,7 @@ export function HighlightsGrid({ weather, dust, alerts, loading, compact }: Prop
         className={compact ? 'text-xs font-semibold mb-1.5' : 'text-sm font-semibold mb-3'}
         style={{ color: 'var(--muted)' }}
       >
-        Highlights
+        대기정보
       </h2>
       <div className={gridClass}>
         {/* 대기질 (PM10) */}
@@ -166,6 +189,42 @@ export function HighlightsGrid({ weather, dust, alerts, loading, compact }: Prop
           accent={alertCount > 0 ? 'var(--danger)' : 'var(--success)'}
           href={alertCount > 0 ? KMA_WEATHER_WARN_PAGE : undefined}
         />
+      </div>
+
+      {/* 꽃가루 위험지수 (종별 3카드) */}
+      <div className={compact ? 'mt-1.5' : 'mt-3'}>
+        <p
+          className={compact ? 'text-xs font-semibold mb-1.5' : 'text-sm font-semibold mb-3'}
+          style={{ color: 'var(--muted)' }}
+        >
+          꽃가루농도지수
+        </p>
+        <div className={compact ? 'grid grid-cols-3 gap-1.5' : 'grid grid-cols-3 gap-4'}>
+        <HighlightCard
+          compact={compact}
+          icon="🌳"
+          label="참나무"
+          value={pollenLabelByRisk(oakRisk)}
+          sub={typeof oakRisk === 'number' ? 'Oak' : '데이터 없음'}
+          accent={pollenColorByRisk(oakRisk)}
+        />
+        <HighlightCard
+          compact={compact}
+          icon="🌲"
+          label="소나무"
+          value={pollenLabelByRisk(pineRisk)}
+          sub={typeof pineRisk === 'number' ? 'Pine' : '데이터 없음'}
+          accent={pollenColorByRisk(pineRisk)}
+        />
+        <HighlightCard
+          compact={compact}
+          icon="🌿"
+          label="잡초류"
+          value={pollenLabelByRisk(weedsRisk)}
+          sub={typeof weedsRisk === 'number' ? 'Weeds' : '데이터 없음'}
+          accent={pollenColorByRisk(weedsRisk)}
+        />
+        </div>
       </div>
 
       {/* PM10 안내 모달 */}

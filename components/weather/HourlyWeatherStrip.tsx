@@ -10,6 +10,7 @@ interface Props {
   selectedPeriodStart?: number
   selectedPeriodEnd?: number
   selectedDayOffset?: number
+  sunsetTime?: string
 }
 
 function ymdToUtcMidnight(ymd: string): number {
@@ -61,7 +62,23 @@ const WEATHER_EMOJI: Record<string, string> = {
   '소나기': '⛈',
 }
 
-export function HourlyWeatherStrip({ hourly, currentHour, selectedPeriodStart, selectedPeriodEnd, selectedDayOffset = 0 }: Props) {
+function sunsetHmFromText(sunsetTime?: string): number | null {
+  if (!sunsetTime) return null
+  const t = sunsetTime.trim()
+  // "1845" or "18:45" 모두 지원
+  const compact = t.includes(':') ? t.replace(':', '') : t
+  const hm = parseInt(compact, 10)
+  return Number.isFinite(hm) ? hm : null
+}
+
+export function HourlyWeatherStrip({
+  hourly,
+  currentHour,
+  selectedPeriodStart,
+  selectedPeriodEnd,
+  selectedDayOffset = 0,
+  sunsetTime,
+}: Props) {
   if (!hourly.length) {
     return (
       <div className="glass-card p-4">
@@ -94,34 +111,76 @@ export function HourlyWeatherStrip({ hourly, currentHour, selectedPeriodStart, s
     const d = new Date(ms)
     return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`
   })()
+  const sunsetHm = sunsetHmFromText(sunsetTime)
 
   return (
     <div className="glass-card p-3 sm:p-4">
       <h3 className="text-sm font-semibold mb-2.5" style={{ color: 'var(--muted)' }}>
         시간별 예보
       </h3>
-      <div className="scroll-strip flex gap-1.5 sm:gap-2.5 pb-1">
-        {hourly.map((h, i) => {
-          const hourNum = parseInt(h.time.split(':')[0], 10)
-          const slotYmd = slotYmds[i] ?? todayYmd
-          const isCurrent = hourNum === currentHour && slotYmd === todayYmd
-          const isInPeriod =
-            selectedPeriodStart !== undefined &&
-            selectedPeriodEnd !== undefined &&
-            hourNum >= selectedPeriodStart &&
-            hourNum <= selectedPeriodEnd &&
-            slotYmd === selectedTargetYmd
-          const label = weatherLabel(h.skyCode, h.ptyCode)
-          const emoji = WEATHER_EMOJI[label] ?? '🌤'
+      <div className="flex gap-0.5 sm:gap-1 pb-1">
+        {/* 좌측 고정 라벨 열 */}
+        <div className="grid grid-rows-[14px_14px_20px_14px_14px_14px_14px] min-w-[46px] sm:min-w-[54px] py-1.5 px-1 rounded-xl bg-white/35">
+          {/* 배너/시간/기온 행은 비워서 높이만 맞춤 */}
+          <div className="h-[14px] w-full" />
+          <div className="h-[14px] flex items-center">
+            <span className="text-[10px] leading-none select-none opacity-0" aria-hidden>시간</span>
+          </div>
+          <div className="h-[20px] flex items-center">
+            <span className="text-[10px] leading-none select-none opacity-0" aria-hidden>아이콘</span>
+          </div>
+          <div className="h-[14px] flex items-center">
+            <span className="text-[10px] leading-none select-none opacity-0" aria-hidden>기온</span>
+          </div>
+          <div className="h-[14px] flex items-center">
+            <span className="text-[10px] font-semibold leading-none" style={{ color: 'var(--muted)' }}>강수(%)</span>
+          </div>
+          <div className="h-[14px] flex items-center">
+            <span className="text-[10px] font-semibold leading-none" style={{ color: 'var(--muted)' }}>습도(%)</span>
+          </div>
+          <div className="h-[14px] flex items-center">
+            <span className="text-[10px] font-semibold leading-none" style={{ color: 'var(--muted)' }}>바람(m/s)</span>
+          </div>
+        </div>
 
-          const prevYmd = i > 0 ? slotYmds[i - 1]! : null
-          const showDayBanner = i === 0 ? dayBannerLabel(todayYmd, slotYmd) !== null : slotYmd !== prevYmd
-          const dayBanner = showDayBanner ? dayBannerLabel(todayYmd, slotYmd) : null
-
-          return (
+        <div className="scroll-strip flex gap-1.5 sm:gap-2.5">
+          {hourly.map((h, i) => {
+            const hourNum = parseInt(h.time.split(':')[0], 10)
+            const slotYmd = slotYmds[i] ?? todayYmd
+            const isCurrent = hourNum === currentHour && slotYmd === todayYmd
+            const isInPeriod =
+              selectedPeriodStart !== undefined &&
+              selectedPeriodEnd !== undefined &&
+              hourNum >= selectedPeriodStart &&
+              hourNum <= selectedPeriodEnd &&
+              slotYmd === selectedTargetYmd
+            const prevYmd = i > 0 ? slotYmds[i - 1]! : null
+            const showDayBanner = i === 0 ? dayBannerLabel(todayYmd, slotYmd) !== null : slotYmd !== prevYmd
+            const dayBanner = showDayBanner ? dayBannerLabel(todayYmd, slotYmd) : null
+            const dayChanged = i > 0 && slotYmd !== prevYmd
+            const label = weatherLabel(h.skyCode, h.ptyCode)
+            const slotHm = hourNum * 100
+            const isNight =
+              sunsetHm == null ? (hourNum >= 19 || hourNum < 6) : (slotHm > sunsetHm || hourNum < 6)
+            const isNightCloudy = isNight && label === '구름 많음'
+            const baseEmoji = WEATHER_EMOJI[label] ?? '🌤'
+            const emoji =
+              isNight && label === '맑음'
+                ? '🌙'
+                : isNightCloudy
+                ? '🌙'
+                : baseEmoji
+            return (
+            <div key={`${slotYmd}-${h.time}-${i}`} className="relative">
+              {dayChanged && (
+                <span
+                  className="absolute -left-1 top-1 bottom-1 w-px"
+                  style={{ background: 'var(--border)' }}
+                  aria-hidden
+                />
+              )}
             <div
-              key={`${slotYmd}-${h.time}-${i}`}
-              className="flex flex-col items-center gap-1 min-w-[42px] sm:min-w-[50px] py-1.5 px-0.5 rounded-xl transition-colors"
+              className="grid grid-rows-[14px_14px_20px_14px_14px_14px_14px] items-center min-w-[52px] sm:min-w-[58px] py-1.5 px-1 rounded-xl transition-colors text-center"
               style={{
                 background: isCurrent
                   ? 'rgba(255,181,71,0.12)'
@@ -153,26 +212,49 @@ export function HourlyWeatherStrip({ hourly, currentHour, selectedPeriodStart, s
                 )}
               </div>
               <span
-                className="text-xs font-medium"
+                className="h-[14px] flex items-center justify-center text-xs font-medium"
                 style={{ color: isCurrent ? 'var(--accent)' : 'var(--muted)' }}
               >
                 {isCurrent ? '지금' : h.time.slice(0, 2) + '시'}
               </span>
-              <span className="text-xl">{emoji}</span>
+              {isNightCloudy ? (
+                <span
+                  className="h-[20px] relative w-[26px] flex items-center justify-center leading-none"
+                  style={{
+                    color: '#94A3B8',
+                    filter: 'grayscale(1) saturate(0)',
+                    fontFamily: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif',
+                  }}
+                >
+                  <span className="absolute left-[2px] -top-[5px] text-lg">🌙</span>
+                  <span className="absolute left-[10px] top-[3px] text-base">☁️</span>
+                </span>
+              ) : (
+                <span
+                  className="h-[20px] flex items-center justify-center text-xl leading-none"
+                  style={{
+                    color: isNight ? '#94A3B8' : 'initial',
+                    filter: isNight ? 'grayscale(1) saturate(0)' : 'none',
+                    fontFamily: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif',
+                  }}
+                >
+                  {emoji}
+                </span>
+              )}
               <span
-                className="text-xs font-bold"
+                className="h-[14px] flex items-center justify-center text-xs font-bold"
                 style={{ color: 'var(--text)' }}
               >
                 {formatTemp1(h.temperature)}°
               </span>
-              {h.pop > 0 && (
-                <span className="text-xs" style={{ color: 'var(--humidity)' }}>
-                  {h.pop}%
-                </span>
-              )}
+              <span className="h-[14px] flex items-center justify-center text-xs" style={{ color: 'var(--humidity)' }}>{h.pop > 0 ? h.pop : '-'}</span>
+              <span className="h-[14px] flex items-center justify-center text-xs" style={{ color: 'var(--muted)' }}>{Math.round(h.humidity)}</span>
+              <span className="h-[14px] flex items-center justify-center text-xs" style={{ color: 'var(--muted)' }}>{h.windSpeed.toFixed(1)}</span>
             </div>
-          )
-        })}
+            </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   )

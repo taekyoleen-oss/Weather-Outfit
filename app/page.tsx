@@ -27,6 +27,7 @@ import {
 } from '@/lib/utils/timePeriods'
 import type {
   DustData,
+  PollenData,
   SunriseSunset,
   WeatherAlert,
   CurrentWeather,
@@ -69,6 +70,7 @@ export default function HomePage() {
   const { data: weekly, loading: weeklyLoading } = useWeeklyForecast(location)
 
   const [dust, setDust] = useState<DustData | null>(null)
+  const [pollen, setPollen] = useState<PollenData | null>(null)
   const [sunriseSunset, setSunriseSunset] = useState<SunriseSunset | null>(null)
   const [alerts, setAlerts] = useState<WeatherAlert[]>([])
   const [openMeteoCompare, setOpenMeteoCompare] = useState<OpenMeteoDailyCompare | null>(null)
@@ -306,6 +308,11 @@ export default function HomePage() {
       .then((d) => { if (!d.error) setDust(d) })
       .catch(() => {})
 
+    fetch(`/api/pollen?lat=${lat}&lon=${lon}&nx=${nx}&ny=${ny}`)
+      .then((r) => r.json())
+      .then((d) => { if (!d.error) setPollen(d) })
+      .catch(() => {})
+
     fetch(`/api/sunrise?lat=${lat}&lon=${lon}`)
       .then((r) => r.json())
       .then((d) => { if (d.sunrise) setSunriseSunset(d) })
@@ -349,6 +356,7 @@ export default function HomePage() {
       hourly={weatherData?.hourly ?? []}
       selectedRepHour={selectedPeriodHour}
       selectedDayOffset={selectedPeriodSelection.dayOffset}
+      sunsetTime={sunriseSunset?.sunset}
       onSelect={(repHour, dayOffset) => setSelectedPeriodSelection({ repHour, dayOffset })}
     />
   )
@@ -362,12 +370,16 @@ export default function HomePage() {
       sunriseSunset={sunriseSunset}
       uvDisplay={uvForCard}
       dust={dust}
+      pollen={pollen}
       previousPeriodWeather={previousPeriodSummary}
       openMeteoCompare={openMeteoCompare}
       morningSummary={morningSummary}
     />
   )
   const currentDongName = extractDongName(location.name, location.address)
+  const normalizedLocationName = location.name?.trim()
+  const currentPlaceName =
+    normalizedLocationName && normalizedLocationName !== currentDongName ? normalizedLocationName : undefined
   const hourlyStrip = (
     <HourlyWeatherStrip
       hourly={displayedHourly}
@@ -375,12 +387,14 @@ export default function HomePage() {
       selectedPeriodStart={selectedPeriod?.start}
       selectedPeriodEnd={selectedPeriod?.end}
       selectedDayOffset={selectedPeriodSelection.dayOffset}
+      sunsetTime={sunriseSunset?.sunset}
     />
   )
   const highlightsGrid = (
     <HighlightsGrid
       weather={displayWeather}
       dust={dust}
+      pollen={pollen}
       alerts={alerts}
       loading={weatherLoading}
       compact
@@ -409,6 +423,7 @@ export default function HomePage() {
           gpsLoading={gpsLoading}
           gpsError={gpsError}
           onGps={requestGps}
+          currentPlaceName={currentPlaceName}
           currentDongName={currentDongName}
           recentChips={<>{recentChips}{nearbyChips}</>}
           periodPicker={timePeriodPicker}
@@ -443,6 +458,19 @@ export default function HomePage() {
                     title={`현재 조회 위치: ${currentDongName}`}
                   >
                     {currentDongName}
+                  </span>
+                )}
+                {currentPlaceName && (
+                  <span
+                    className="text-xs font-medium px-2 py-1 rounded-full"
+                    style={{
+                      color: 'var(--humidity)',
+                      background: 'rgba(91,141,238,0.12)',
+                      border: '1px solid var(--border)',
+                    }}
+                    title={`조회 장소: ${currentPlaceName}`}
+                  >
+                    {currentPlaceName}
                   </span>
                 )}
               </div>

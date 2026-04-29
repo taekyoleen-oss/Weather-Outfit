@@ -8,6 +8,7 @@ interface Props {
   gpsLoading: boolean
   gpsError: string | null
   onGps: () => void
+  currentPlaceName?: string
   currentDongName?: string
   recentChips: ReactNode
   /** 탭과 무관하게 날씨·복장 패널 바로 위에 표시 */
@@ -21,6 +22,7 @@ export function MobileLayout({
   gpsLoading,
   gpsError,
   onGps,
+  currentPlaceName,
   currentDongName,
   recentChips,
   periodPicker,
@@ -43,6 +45,15 @@ export function MobileLayout({
         <div className="flex gap-2 items-end">
           <div className="flex-1 min-w-0">{locationSearch}</div>
           <div className="flex flex-col items-center justify-end gap-1 pb-0.5 flex-shrink-0">
+            {currentPlaceName && (
+              <p
+                className="text-[10px] max-lg:text-[11px] leading-none max-w-[96px] truncate max-lg:tracking-wide"
+                style={{ color: 'var(--humidity)' }}
+                title={`조회 장소: ${currentPlaceName}`}
+              >
+                {currentPlaceName}
+              </p>
+            )}
             {currentDongName && (
               <p
                 className="text-[10px] max-lg:text-[11px] leading-none max-w-[70px] truncate max-lg:tracking-wide"

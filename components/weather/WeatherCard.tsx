@@ -3,7 +3,15 @@
 import { useState } from 'react'
 import { WeatherHeroIllustration } from './WeatherHeroIllustration'
 import { FreshnessBadge } from './FreshnessBadge'
-import type { CurrentWeather, SunriseSunset, TimeOfDay, DustData, PreviousPeriodWeatherSummary, MorningSummary } from '@/types/weather'
+import type {
+  CurrentWeather,
+  SunriseSunset,
+  TimeOfDay,
+  DustData,
+  PollenData,
+  PreviousPeriodWeatherSummary,
+  MorningSummary,
+} from '@/types/weather'
 import type { OpenMeteoDailyCompare } from '@/lib/weather/openMeteoCompare'
 import {
   weatherLabel,
@@ -29,6 +37,7 @@ interface Props {
   sunriseSunset?: SunriseSunset | null
   uvDisplay?: number
   dust?: DustData | null
+  pollen?: PollenData | null
   /** 직전에 끝난 시간대(예: 새벽) 대표 날씨 */
   previousPeriodWeather?: PreviousPeriodWeatherSummary | null
   /** 어제 동시간대·오늘 일 최저·최고 (Open-Meteo) */
@@ -167,6 +176,7 @@ export function WeatherCard({
   sunriseSunset,
   uvDisplay,
   dust,
+  pollen,
   previousPeriodWeather,
   openMeteoCompare,
   morningSummary,
@@ -211,6 +221,32 @@ export function WeatherCard({
   const o3Label = o3GradeLabel(dust?.o3Grade)
   const o3Color = o3GradeColor(dust?.o3Grade)
   const o3Value = dust?.o3Value != null ? `${dust.o3Value.toFixed(3)} ppm` : undefined
+  const pollenTop = (pollen?.risks ?? []).reduce<{ value: number; species: string } | null>((acc, cur) => {
+    if (typeof cur.todayRisk !== 'number') return acc
+    if (!acc || cur.todayRisk > acc.value) {
+      const speciesName = cur.species === 'oak' ? '참나무' : cur.species === 'pine' ? '소나무' : '잡초류'
+      return { value: cur.todayRisk, species: speciesName }
+    }
+    return acc
+  }, null)
+  const pollenLabel =
+    pollenTop == null
+      ? '--'
+      : pollenTop.value === 0
+      ? '낮음'
+      : pollenTop.value === 1
+      ? '보통'
+      : pollenTop.value === 2
+      ? '높음'
+      : '매우높음'
+  const pollenColor =
+    pollenTop == null
+      ? mutedColor
+      : pollenTop.value <= 1
+      ? '#22C55E'
+      : pollenTop.value === 2
+      ? '#F59E0B'
+      : '#EF4444'
 
   const heatIdx = computeHeatIndex(weather.temperature, weather.humidity)
   const heatIdxDiff = heatIdx != null ? heatIdx - weather.temperature : null
@@ -393,7 +429,7 @@ export function WeatherCard({
         </div>
       )}
 
-      {/* UV + 오존 하단 전용 섹션 */}
+      {/* UV + 오존 + 꽃가루 하단 전용 섹션 */}
       <div
         className="mt-2.5 pt-2 flex items-center gap-4"
         style={{ borderTop: `1px solid ${isNight ? 'rgba(148,163,184,0.2)' : 'rgba(0,0,0,0.06)'}` }}
@@ -418,6 +454,22 @@ export function WeatherCard({
             </p>
             {o3Value && (
               <p className="text-[10px] mt-0.5" style={{ color: mutedColor }}>{o3Value}</p>
+            )}
+          </div>
+        </div>
+
+        {/* 꽃가루 */}
+        <div className="flex-1 flex items-center gap-2">
+          <span className="text-base">🤧</span>
+          <div className="min-w-0">
+            <p className="text-[10px] leading-none mb-0.5" style={{ color: mutedColor }}>꽃가루</p>
+            <p className="text-sm font-bold leading-none" style={{ color: pollenColor }}>
+              {pollenLabel}
+            </p>
+            {pollenTop && (
+              <p className="text-[10px] mt-0.5" style={{ color: mutedColor }}>
+                {pollenTop.species}
+              </p>
             )}
           </div>
         </div>

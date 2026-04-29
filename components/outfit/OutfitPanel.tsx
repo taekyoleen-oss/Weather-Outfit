@@ -28,15 +28,15 @@ interface Props {
 type SensitivityLevel = -2 | 0 | 2
 
 const SENSITIVITY_OPTIONS: { value: SensitivityLevel; label: string; emoji: string; desc: string }[] = [
-  { value: -2, label: '추위 탐', emoji: '🥶', desc: '추위를 많이 타요' },
-  { value: 0,  label: '보통',    emoji: '😊', desc: '평균 체감' },
-  { value: 2,  label: '더위 탐', emoji: '🥵', desc: '더위를 많이 타요' },
+  { value: -2, label: '더위에 강함', emoji: '🥶', desc: '더위를 덜 타는 편이에요' },
+  { value: 0,  label: '보통',       emoji: '😊', desc: '평균 체감' },
+  { value: 2,  label: '추위에 강함', emoji: '🥵', desc: '추위를 덜 타는 편이에요' },
 ]
 
 const SENSITIVITY_LABEL_MAP: Record<SensitivityLevel, string> = {
-  [-2]: '🥶 추위 탐',
+  [-2]: '🥶 더위에 강함',
   [0]: '😊 보통',
-  [2]: '🥵 더위 탐',
+  [2]: '🥵 추위에 강함',
 }
 
 function loadPref<T>(key: string, fallback: T): T {
@@ -66,8 +66,8 @@ export function OutfitPanel({ weather, dust, terrain, hour }: Props) {
   const result = useMemo(() => {
     if (!weather) return null
     // 민감도 보정:
-    // - 추위 탐(-2) => 체감 온도를 낮춰(더 춥게) 따뜻한 복장 추천
-    // - 더위 탐(+2) => 체감 온도를 높여(더 덥게) 시원한 복장 추천
+    // - 더위에 강함(-2) => 체감 온도를 낮춰(더 춥게) 따뜻한 복장 추천
+    // - 추위에 강함(+2) => 체감 온도를 높여(더 덥게) 시원한 복장 추천
     const adjustedFeelsLike = weather.feelsLike + sensitivity
     return recommendOutfit({
       temperature: weather.temperature,
