@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { CurrentWeather, DustData } from '@/types/weather'
 import type { ActivityType, GenderType, OutfitResult as OutfitResultType } from '@/types/outfit'
 import type { TerrainType } from '@/types/location'
@@ -115,7 +115,7 @@ export function OutfitLlmSuggest({
     ],
   )
 
-  useEffect(() => {
+  async function requestSuggestion() {
     abortRef.current?.abort()
     const ac = new AbortController()
     abortRef.current = ac
@@ -157,52 +157,48 @@ export function OutfitLlmSuggest({
       windAlert: result.windAlert,
     }
 
-    fetch('/api/outfit-llm', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: ac.signal,
-    })
-      .then(async (r) => {
-        const j = (await r.json()) as {
-          error?: string
-          message?: string
-          detail?: string
-          explanation?: string
-          outfitSuggestions?: { area: string; detail: string }[]
-        }
-        if (ac.signal.aborted) return
-        if (!r.ok) {
-          if (j.error === 'no_api_key') {
-            setState({ status: 'error', message: j.message ?? 'AI API 키가 없습니다.' })
-            return
-          }
-          const extra = j.detail ? ` (${j.detail})` : ''
-          setState({
-            status: 'error',
-            message: `${j.message ?? 'AI 제안을 불러오지 못했습니다.'}${extra}`,
-          })
+    try {
+      const r = await fetch('/api/outfit-llm', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: ac.signal,
+      })
+      const j = (await r.json()) as {
+        error?: string
+        message?: string
+        detail?: string
+        explanation?: string
+        outfitSuggestions?: { area: string; detail: string }[]
+      }
+      if (ac.signal.aborted) return
+      if (!r.ok) {
+        if (j.error === 'no_api_key') {
+          setState({ status: 'error', message: j.message ?? 'AI API 키가 없습니다.' })
           return
         }
-        if (j.explanation && j.outfitSuggestions?.length) {
-          setState({
-            status: 'ok',
-            explanation: j.explanation,
-            outfitSuggestions: j.outfitSuggestions,
-          })
-        } else {
-          setState({ status: 'error', message: j.message ?? '응답이 올바르지 않습니다.' })
-        }
-      })
-      .catch((e: Error) => {
-        if (ac.signal.aborted || e.name === 'AbortError') return
-        setState({ status: 'error', message: '네트워크 오류로 AI 제안을 불러오지 못했습니다.' })
-      })
-
-    return () => ac.abort()
-    // reqKey에 날씨·복장 요약이 포함됨
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reqKey])
+        const extra = j.detail ? ` (${j.detail})` : ''
+        setState({
+          status: 'error',
+          message: `${j.message ?? 'AI 제안을 불러오지 못했습니다.'}${extra}`,
+        })
+        return
+      }
+      if (j.explanation && j.outfitSuggestions?.length) {
+        setState({
+          status: 'ok',
+          explanation: j.explanation,
+          outfitSuggestions: j.outfitSuggestions,
+        })
+      } else {
+        setState({ status: 'error', message: j.message ?? '응답이 올바르지 않습니다.' })
+      }
+    } catch (e) {
+      const err = e as Error
+      if (ac.signal.aborted || err.name === 'AbortError') return
+      setState({ status: 'error', message: '네트워크 오류로 AI 제안을 불러오지 못했습니다.' })
+    }
+  }
 
   return (
     <div
@@ -217,6 +213,15 @@ export function OutfitLlmSuggest({
           위 복장은 앱 가이드라인·룰 기준이며, 아래는 동일한 날씨·미세먼지·바람·활동 시간·활동 종류를 반영한
           보조 설명과 착용 아이디어입니다. (Claude API)
         </p>
+        <button
+          type="button"
+          onClick={requestSuggestion}
+          disabled={state.status === 'loading'}
+          className="mt-2 text-xs sm:text-sm px-3 py-1.5 rounded-lg transition-opacity disabled:opacity-60"
+          style={{ background: 'var(--primary)', color: '#fff' }}
+        >
+          {state.status === 'loading' ? 'AI 제안 생성 중…' : state.status === 'ok' ? 'AI 제안 다시 생성' : 'AI 맞춤 제안 생성'}
+        </button>
       </div>
 
       {state.status === 'loading' && (
