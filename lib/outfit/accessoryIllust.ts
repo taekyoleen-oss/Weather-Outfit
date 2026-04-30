@@ -10,6 +10,7 @@ export const OUTFIT_ACCESSORY_ASSETS = {
   hatFemaleWide: '/outfit/accessories/acc-hat-female-wide-v1.png',
   sunglasses: '/outfit/accessories/acc-sunglasses-v1.png',
   gloves: '/outfit/accessories/acc-gloves-v1.png',
+  scarf: '/outfit/accessories/acc-scarf-v1.png',
   windbreaker: '/outfit/accessories/acc-windbreaker-v1.png',
 } as const
 

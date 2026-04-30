@@ -71,6 +71,7 @@
 | `public/outfit/accessories/acc-hat-female-wide-v1.png` | 모자 일러 (여성·와이드 챙) — 앱 아이템명은 공통 **모자** |
 | `public/outfit/accessories/acc-sunglasses-v1.png` | 선글라스 |
 | `public/outfit/accessories/acc-gloves-v1.png` | 장갑 |
+| `public/outfit/accessories/acc-scarf-v1.png` | 목도리(스카프/머플러 계열) |
 | `public/outfit/accessories/acc-windbreaker-v1.png` | 바람막이(바람 대비) |
 
 코드에서 경로 객체: `lib/outfit/accessoryIllust.ts` (`outfitAccessorySrc`, `OUTFIT_ACCESSORY_ASSETS`)
@@ -137,6 +138,7 @@
 | 2026-04-30 | 추천 아이템명: 챙 넓은 모자 등 → 공통 **모자**로 통일(`rules`/`recommender`). 모자 PNG 사용자 교체 반영. |
 | 2026-04-30 | 추천 칩과 동일 종류 소품은 일러스트 탭 PNG 생략(`outfitItemCoversAccessoryIllust`). |
 | 2026-04-30 | 일러스트 탭: 매핑되는 추천 항목은 칩 대신 악세사리 PNG(`outfitItemToAccessoryKey`), 크기 확대. |
+| 2026-04-30 | 목도리 소품 `acc-scarf-v1.png` 추가 및 경로 연동(`accessoryIllust.ts`). |
 
 ---
 

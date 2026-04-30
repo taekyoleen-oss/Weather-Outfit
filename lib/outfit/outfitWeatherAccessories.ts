@@ -28,6 +28,12 @@ export function outfitItemCoversAccessoryIllust(items: OutfitItem[], key: Outfit
       )
     case 'gloves':
       return items.some((it) => it.category === 'acc' && (it.name.includes('장갑') || it.icon === '🧤'))
+    case 'scarf':
+      return items.some(
+        (it) =>
+          it.category === 'acc' &&
+          (it.name.includes('목도리') || it.name.includes('머플러') || it.name.includes('넥워머') || it.name.includes('숄') || it.icon === '🧣'),
+      )
     case 'umbrellaOpen':
       return items.some(
         (it) =>
@@ -105,6 +111,7 @@ export const ACCESSORY_ALT: Record<OutfitAccessoryKey, string> = {
   hatFemaleWide: '모자',
   sunglasses: '선글라스',
   gloves: '장갑',
+  scarf: '목도리',
   windbreaker: '바람막이',
 }
 
@@ -126,6 +133,15 @@ export function outfitItemToAccessoryKey(item: OutfitItem, gender: GenderType): 
     }
     if (item.name.includes('장갑') || item.icon === '🧤') {
       return 'gloves'
+    }
+    if (
+      item.name.includes('목도리') ||
+      item.name.includes('머플러') ||
+      item.name.includes('넥워머') ||
+      item.name.includes('숄') ||
+      item.icon === '🧣'
+    ) {
+      return 'scarf'
     }
   }
   if (

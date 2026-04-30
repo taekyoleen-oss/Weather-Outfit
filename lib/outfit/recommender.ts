@@ -189,7 +189,7 @@ export function recommendOutfit(input: OutfitInput): OutfitResult {
 
   // 가이드 라.2: 6~11℃ + 바람 강하면 목도리·장갑·비니
   if (zone === 'cold' && input.windSpeed >= 5 && input.activity !== 'ski') {
-    pushCorr({ id: 'corr-cold-wind-scarf', name: '목도리 / 넥워머', icon: '🧣', category: 'acc', required: false, condition: '바람 강함 + 추운 구간' })
+    pushCorr({ id: 'corr-cold-wind-scarf', name: '목도리', icon: '🧣', category: 'acc', required: false, condition: '바람 강함 + 추운 구간' })
     pushCorr({ id: 'corr-cold-wind-gloves', name: '장갑', icon: '🧤', category: 'acc', required: false, condition: '바람 강함 + 추운 구간' })
     pushCorr({ id: 'corr-cold-wind-beanie', name: '비니 / 니트 모자', icon: '🎓', category: 'acc', required: false, condition: '바람 강함 + 추운 구간' })
   }

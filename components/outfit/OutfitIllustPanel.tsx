@@ -11,15 +11,15 @@ import { OutfitHeroIllustration } from './OutfitHeroIllustration'
 /** PC·모바일 공통 6단(머리→발): 좌 카테고리 배치 (null = 빈 칸) */
 const PC_BAND_LEFT: (OutfitCategoryKey | null)[] = ['acc', 'top', 'mid', 'outer', 'foot', null]
 /** 우측 6단 — 하의(bottom)는 4단(좌측 `outer` 아우터와 같은 행) */
-const PC_BAND_RIGHT: (OutfitCategoryKey | null)[] = ['rain', 'mask', 'base', 'bottom', null, null]
+const PC_BAND_RIGHT: (OutfitCategoryKey | null)[] = ['acc', 'rain', 'base', 'bottom', null, null]
 
 const BLANK_CATS = new Set(['rain', 'acc', 'mask'])
 
 const ILLUST_ACC_IMG_CLASS =
-  'h-20 w-20 shrink-0 object-contain sm:h-[5.5rem] sm:w-[5.5rem]'
+  'h-10 w-10 shrink-0 object-contain sm:h-[2.75rem] sm:w-[2.75rem]'
 
 function itemChipsOrAccessoryImages(items: OutfitItem[], gender: GenderType) {
-  return items.map((item) => {
+  return items.map((item, idx) => {
     const accKey = outfitItemToAccessoryKey(item, gender)
     if (accKey) {
       return (
@@ -27,9 +27,10 @@ function itemChipsOrAccessoryImages(items: OutfitItem[], gender: GenderType) {
           key={item.id}
           src={outfitAccessorySrc(accKey)}
           alt={item.name}
-          width={88}
-          height={88}
+          width={44}
+          height={44}
           className={ILLUST_ACC_IMG_CLASS}
+          style={{ marginLeft: idx === 0 ? 0 : -10 }}
           draggable={false}
           loading="lazy"
         />
@@ -59,6 +60,7 @@ function CategoryBlock({
   showBlank,
   accessoryKeys,
   gender,
+  variantLabel,
 }: {
   cat: OutfitCategoryKey | null
   items: OutfitItem[]
@@ -66,6 +68,7 @@ function CategoryBlock({
   showBlank: boolean
   accessoryKeys?: OutfitAccessoryKey[]
   gender: GenderType
+  variantLabel?: '필수' | '선택'
 }) {
   /** PC에서도 flex-1 줄 수 유지 — `hidden`이면 좌·우 단수가 달라져 하의 등이 어긋남 */
   if (!cat) {
@@ -91,10 +94,24 @@ function CategoryBlock({
   const isRight = align === 'right'
   const rowClass = `flex min-h-0 flex-1 flex-col justify-center gap-1 py-0.5 lg:gap-1 ${isRight ? 'items-start text-left' : 'items-end text-right'}`
   const accCount = accessoryKeys?.length ?? 0
+  const isVariantAccRow = cat === 'acc' && variantLabel != null
   const hasLargeAccessoryVisual =
     hasItems && items.some((it) => outfitItemToAccessoryKey(it, gender) != null)
   /** PC: 칩 없이 빈 행만 유지할 때만 데스크톱에서 숨김 — 날씨 소품이 있으면 표시 */
   const reserveRowOnDesktop = !hasItems && accCount === 0
+  const showVariant = variantLabel != null && (hasItems || accCount > 0)
+  const variantBadge = showVariant ? (
+    <span
+      className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
+      style={{
+        color: variantLabel === '필수' ? 'var(--danger)' : 'var(--muted)',
+        border: `1px solid ${variantLabel === '필수' ? 'rgba(239,68,68,0.25)' : 'var(--border)'}`,
+        background: variantLabel === '필수' ? 'rgba(239,68,68,0.08)' : 'rgba(100,116,139,0.08)',
+      }}
+    >
+      {variantLabel}
+    </span>
+  ) : null
 
   return (
     <div
@@ -106,22 +123,34 @@ function CategoryBlock({
         style={{ color: hasItems || keep || accCount > 0 ? 'var(--muted)' : 'transparent' }}
       >
         {label}
+        <span className="ml-1.5">{variantBadge}</span>
       </span>
       <div
-        className={`flex flex-wrap gap-1.5 min-w-0 sm:gap-2 items-center ${isRight ? 'justify-start' : 'justify-end'}`}
+        className={`flex min-w-0 items-center ${
+          isVariantAccRow
+            ? `w-full flex-nowrap gap-1 px-2 sm:px-3 ${isRight ? 'justify-start' : 'justify-end'}`
+            : `flex-wrap gap-1.5 sm:gap-2 ${isRight ? 'justify-start' : 'justify-end'}`
+        }`}
         style={{
           minHeight: Math.max(22, accCount > 0 || hasLargeAccessoryVisual ? (hasLargeAccessoryVisual ? 88 : 40) : 22),
+          width: isVariantAccRow ? '150%' : undefined,
+          transform: isVariantAccRow ? `translateX(${isRight ? '-40px' : '40px'})` : undefined,
         }}
       >
+        {/* 모바일/태블릿에서는 카테고리 라벨이 숨겨져 필수/선택 배지를 행 안에 노출 */}
+        {showVariant ? (
+          <span className="lg:hidden inline-flex shrink-0">{variantBadge}</span>
+        ) : null}
         {hasItems ? itemChipsOrAccessoryImages(items, gender) : null}
-        {accessoryKeys?.map((key) => (
+        {accessoryKeys?.map((key, idx) => (
           <img
             key={key}
             src={outfitAccessorySrc(key)}
             alt={ACCESSORY_ALT[key]}
-            width={88}
-            height={88}
+            width={44}
+            height={44}
             className={ILLUST_ACC_IMG_CLASS}
+            style={{ marginLeft: idx === 0 ? 0 : -10 }}
             draggable={false}
             loading="lazy"
           />
@@ -150,21 +179,27 @@ export function OutfitIllustPanel({ result, gender, calendarMonth, showSunshine,
   )
 
   const weatherAccessories = accessoriesByOutfitCategory(result, gender, weatherSky, showSunshine)
+  const allAccItems = ((byCategory.acc ?? []) as OutfitItem[]).filter(
+    (it) => !it.name.includes('넥워머'),
+  )
+  const requiredAccItems = allAccItems.filter((it) => it.required)
+  const optionalAccItems = allAccItems.filter((it) => !it.required)
 
   return (
     <div className="w-full min-w-0">
-      <div className="mx-auto flex max-w-full flex-row flex-nowrap items-stretch justify-center gap-2 overflow-x-auto pb-0.5 sm:gap-3 lg:gap-6 lg:max-w-full">
+      <div className="mx-auto flex max-w-full flex-row flex-nowrap items-stretch justify-center gap-1 overflow-x-auto pb-0.5 sm:gap-2 lg:gap-3 lg:max-w-full">
         {/* 좌측 6단 */}
-        <div className="order-1 z-auto flex min-h-0 w-[min(112px,28vw)] min-w-0 max-w-[200px] flex-none flex-col max-lg:z-10 max-lg:-mr-[80px] sm:w-[min(130px,26vw)] lg:mr-0 lg:w-[min(260px,28vw)]">
+        <div className="order-1 z-auto flex min-h-0 w-[min(108px,27vw)] min-w-0 max-w-[180px] flex-none flex-col max-lg:z-10 max-lg:-mr-[84px] sm:w-[min(124px,25vw)] lg:mr-0 lg:w-[min(220px,24vw)]">
           {PC_BAND_LEFT.map((cat, i) => (
             <CategoryBlock
               key={`L-${i}-${cat ?? 'x'}`}
               cat={cat}
-              items={cat ? (byCategory[cat] ?? []) : []}
+              items={cat === 'acc' ? requiredAccItems : cat ? (byCategory[cat] ?? []) : []}
               align="left"
               showBlank
-              accessoryKeys={cat ? weatherAccessories[cat] : undefined}
+              accessoryKeys={cat === 'acc' ? undefined : cat ? weatherAccessories[cat] : undefined}
               gender={gender}
+              variantLabel={cat === 'acc' ? '필수' : undefined}
             />
           ))}
         </div>
@@ -184,16 +219,17 @@ export function OutfitIllustPanel({ result, gender, calendarMonth, showSunshine,
         </div>
 
         {/* 우측 6단 */}
-        <div className="order-3 z-auto flex min-h-0 w-[min(112px,28vw)] min-w-0 max-w-[200px] flex-none flex-col max-lg:z-10 max-lg:-ml-[80px] sm:w-[min(130px,26vw)] lg:ml-0 lg:w-[min(260px,28vw)]">
+        <div className="order-3 z-auto flex min-h-0 w-[min(108px,27vw)] min-w-0 max-w-[180px] flex-none flex-col max-lg:z-10 max-lg:-ml-[84px] sm:w-[min(124px,25vw)] lg:ml-0 lg:w-[min(220px,24vw)]">
           {PC_BAND_RIGHT.map((cat, i) => (
             <CategoryBlock
               key={`R-${i}-${cat ?? 'x'}`}
               cat={cat}
-              items={cat ? (byCategory[cat] ?? []) : []}
+              items={cat === 'acc' ? optionalAccItems : cat ? (byCategory[cat] ?? []) : []}
               align="right"
               showBlank
-              accessoryKeys={cat ? weatherAccessories[cat] : undefined}
+              accessoryKeys={cat === 'acc' ? undefined : cat ? weatherAccessories[cat] : undefined}
               gender={gender}
+              variantLabel={cat === 'acc' ? '선택' : undefined}
             />
           ))}
         </div>

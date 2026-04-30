@@ -199,8 +199,8 @@ export function getBaseItems(
 ): OutfitItem[] {
   const items: OutfitItem[] = []
 
-  // BASE layer (이너) — 6℃ 미만만 보온 이너 필수(표: 6~11, 0~5, 영하)
-  if (zone === 'cold' || zone === 'freezing') {
+  // BASE layer (이너) — 6℃ 미만(freezing)에서만 보온 이너 필수
+  if (zone === 'freezing') {
     items.push({ id: 'top-thermal', name: '기모 긴팔 / 상의 내복', icon: '🧣', category: 'base', required: true })
     if (gender === 'female') {
       items.push({ id: 'bottom-leggings-thermal', name: '기모 레깅스 / 하의 내복', icon: '🩱', category: 'base', required: zone === 'freezing' })
@@ -394,7 +394,6 @@ export function getActivityItems(activity: ActivityType, zone: TempZone, gender:
       items.push({ id: 'acc-headband', name: '헤드밴드 / 스포츠 모자', icon: '🎽', category: 'acc', required: false, activityTag })
       if (zone === 'cold' || zone === 'freezing') {
         items.push({ id: 'acc-gloves-sport', name: '얇은 장갑', icon: '🧤', category: 'acc', required: true, activityTag })
-        items.push({ id: 'acc-neckwarmer', name: '넥워머', icon: '🧣', category: 'acc', required: false, activityTag })
       }
       break
     case 'beach':
