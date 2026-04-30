@@ -101,7 +101,7 @@ export function getMicroclimateItems(
       // 해변 자외선은 항상 강하므로 API 수치 무관하게 필수 추가
       items.push({
         id: 'mc-beach-uvhat',
-        name: '챙 넓은 UV 차단 모자',
+        name: '모자',
         icon: '👒',
         category: 'acc',
         required: true,
@@ -217,7 +217,7 @@ export function getBaseItems(
     }
     // 골프·해변·스키는 활동 전용 모자·선글라스가 별도로 있음
     if (activity !== 'golf' && activity !== 'beach' && activity !== 'ski') {
-      items.push({ id: 'acc-hot-hat', name: '모자 (챙 있으면 더 좋음)', icon: '🧢', category: 'acc', required: true })
+      items.push({ id: 'acc-hot-hat', name: '모자', icon: '🧢', category: 'acc', required: true })
       items.push({ id: 'acc-hot-sunglasses', name: 'UV 차단 선글라스', icon: '🕶️', category: 'acc', required: true })
     }
   } else if (zone === 'warm') {
@@ -434,9 +434,9 @@ export function getActivityItems(activity: ActivityType, zone: TempZone, gender:
   // 따뜻한 구간: 가이드 라.2는 23~27℃에 모자 필수는 아님 — UV 높을 때만 권장 (28℃+는 getBaseItems)
   if (zone === 'warm') {
     if (gender === 'female') {
-      items.push({ id: 'acc-hat-sun-f', name: '챙 넓은 모자 / 버킷햇', icon: '👒', category: 'acc', required: false, condition: 'UV 3 이상 권장' })
+      items.push({ id: 'acc-hat-sun-f', name: '모자', icon: '👒', category: 'acc', required: false, condition: 'UV 3 이상 권장' })
     } else {
-      items.push({ id: 'acc-hat-sun', name: '캡 또는 챙 넓은 모자', icon: '👒', category: 'acc', required: false, condition: 'UV 3 이상 권장' })
+      items.push({ id: 'acc-hat-sun', name: '모자', icon: '👒', category: 'acc', required: false, condition: 'UV 3 이상 권장' })
     }
     items.push({ id: 'acc-sunglasses-warm', name: 'UV 차단 선글라스', icon: '🕶️', category: 'acc', required: false, condition: '자외선 높을 때' })
   }
@@ -482,7 +482,7 @@ export function generateTips(
   } else if (uvIndex >= 8) {
     tips.push('☀️ 자외선 매우높음 (UV ' + uvIndex + '): 오전 10시~오후 3시 외출을 피하고, 긴 소매·모자·선글라스·선크림을 갖추세요.')
   } else if (uvIndex >= 6) {
-    tips.push('🌡️ 오늘은 자외선이 강합니다. 긴팔 또는 팔토시, 챙 넓은 모자, UV 차단 선글라스, 자외선 차단제가 필요합니다. (가이드 사)')
+    tips.push('🌡️ 오늘은 자외선이 강합니다. 긴팔 또는 팔토시, 모자, UV 차단 선글라스, 자외선 차단제가 필요합니다. (가이드 사)')
   } else if (uvIndex >= 3) {
     tips.push('💡 UV ' + uvIndex + ': 모자·선글라스·자외선 차단제를 챙겨 두세요. (기상청 생활기상지수)')
   }
@@ -578,7 +578,7 @@ export function generateTips(
     if (zone === 'mild' || zone === 'cool') {
       tips.push('⛳ 이른 아침 라운딩은 기온이 낮습니다. 윈드 베스트 등 보온 레이어를 준비하세요.')
     } else {
-      tips.push('⛳ 골프장은 탁 트인 개방지라 자외선이 강합니다. UV 팔토시·챙 넓은 모자를 챙기세요.')
+      tips.push('⛳ 골프장은 탁 트인 개방지라 자외선이 강합니다. UV 팔토시·모자를 챙기세요.')
     }
     tips.push('⚡ 낙뢰 예상 시 골프채를 즉시 내려놓고 클럽하우스나 차량으로 대피하세요. (기상청 낙뢰 행동요령)')
   }

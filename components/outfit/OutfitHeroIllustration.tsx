@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import type { HeroIllustKey, GenderType, OutfitWeatherSnapshot } from '@/types/outfit'
+import type { HeroIllustKey, GenderType, OutfitWeatherSnapshot, TempZone } from '@/types/outfit'
 import type { OutfitItem } from '@/types/outfit'
 import { DynamicOutfitIllustration } from './illustration/DynamicOutfitIllustration'
 import { illustDisplayHeightOverWidth } from './illustration/illustViewBox'
@@ -9,9 +9,11 @@ interface Props {
   size?: number
   /** 1–12, KST 달력. `fall-layered` 캡션만 봄/가을로 구분 */
   calendarMonth?: number
-  /** 동적 모드: 추천 아이템 목록. 주어지면 인라인 SVG 합성으로 렌더 */
+  /** 동적 모드: 추천 아이템 목록. 주어지면 캐릭터 PNG 등으로 렌더 */
   items?: OutfitItem[]
   gender?: GenderType
+  /** 동적 모드에서 체감 구간별 캐릭터 에셋 선택 */
+  tempZone?: TempZone
   large?: boolean
   /** 맑은 날 햇빛·광선 레이어 (동적 SVG일 때만) */
   showSunshine?: boolean
@@ -46,18 +48,19 @@ export function OutfitHeroIllustration({
   calendarMonth,
   items,
   gender = 'male',
+  tempZone = 'mild',
   large,
   showSunshine,
   weatherSky,
 }: Props) {
   const label = heroLabel(illustKey, calendarMonth)
-  const displaySize = large ? 300 : size
+  const displaySize = large ? 320 : Math.round(size * 1.12)
   const pad = large ? 8 : 16
   const innerW = displaySize - 2 * pad
   const innerH = Math.round(innerW * illustDisplayHeightOverWidth())
   const frameClass = 'rounded-3xl flex items-center justify-center overflow-hidden'
   /** 모바일: 좌우 패딩 축소로 SVG 가로 여백 최소화, sm+ 에서 기존 16px 느낌 복원 */
-  const framePadClass = large ? 'p-2' : 'px-1.5 py-2.5 sm:px-4 sm:py-4'
+  const framePadClass = large ? 'p-2' : 'px-0.5 py-1 sm:px-1.5 sm:py-2'
   const frameBaseStyle = {
     background: 'rgba(255,255,255,0.6)',
     border: '1px solid var(--surface-border)',
@@ -79,6 +82,7 @@ export function OutfitHeroIllustration({
               items={items}
               illustKey={illustKey}
               gender={gender}
+              tempZone={tempZone}
               size={innerW}
               calendarMonth={calendarMonth}
               showSunshine={showSunshine}
@@ -102,6 +106,7 @@ export function OutfitHeroIllustration({
               items={items}
               illustKey={illustKey}
               gender={gender}
+              tempZone={tempZone}
               layout="fluid"
               size={displaySize}
               calendarMonth={calendarMonth}

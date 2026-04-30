@@ -150,7 +150,7 @@ export function recommendOutfit(input: OutfitInput): OutfitResult {
     }
   }
 
-  // 가이드 다.3: UV 6↑ — 긴팔·팔토시, 챙 넓은 모자 (28℃+는 getBaseItems에 모자·선글라스 있음)
+  // 가이드 다.3: UV 6↑ — 긴팔·팔토시, 모자 (28℃+는 getBaseItems에 모자·선글라스 있음)
   if (input.uvIndex >= 6 && !['beach', 'ski'].includes(input.activity)) {
     pushCorr({
       id: 'corr-uv-sleeves',
@@ -163,7 +163,7 @@ export function recommendOutfit(input: OutfitInput): OutfitResult {
     if (zone !== 'hot') {
       pushCorr({
         id: 'corr-uv-widehat',
-        name: '챙 넓은 모자',
+        name: '모자',
         icon: '👒',
         category: 'acc',
         required: false,

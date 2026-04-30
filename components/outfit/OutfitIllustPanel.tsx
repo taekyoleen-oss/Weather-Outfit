@@ -1,5 +1,11 @@
 import type { OutfitItem, OutfitResult, OutfitWeatherSnapshot, GenderType } from '@/types/outfit'
 import { CATEGORY_ORDER, CATEGORY_LABELS, type OutfitCategoryKey } from '@/lib/outfit/categories'
+import { outfitAccessorySrc, type OutfitAccessoryKey } from '@/lib/outfit/accessoryIllust'
+import {
+  ACCESSORY_ALT,
+  accessoriesByOutfitCategory,
+  outfitItemToAccessoryKey,
+} from '@/lib/outfit/outfitWeatherAccessories'
 import { OutfitHeroIllustration } from './OutfitHeroIllustration'
 
 /** PC·모바일 공통 6단(머리→발): 좌 카테고리 배치 (null = 빈 칸) */
@@ -9,21 +15,41 @@ const PC_BAND_RIGHT: (OutfitCategoryKey | null)[] = ['rain', 'mask', 'base', 'bo
 
 const BLANK_CATS = new Set(['rain', 'acc', 'mask'])
 
-function itemChips(items: OutfitItem[]) {
-  return items.map((item) => (
-    <span
-      key={item.id}
-      className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full sm:text-[11px]"
-      style={{
-        background: item.required ? 'rgba(239,68,68,0.07)' : 'rgba(100,116,139,0.08)',
-        color: item.required ? 'var(--danger)' : 'var(--text)',
-        border: `1px solid ${item.required ? 'rgba(239,68,68,0.2)' : 'var(--border)'}`,
-      }}
-    >
-      <span>{item.icon}</span>
-      <span className="font-medium">{item.name}</span>
-    </span>
-  ))
+const ILLUST_ACC_IMG_CLASS =
+  'h-20 w-20 shrink-0 object-contain sm:h-[5.5rem] sm:w-[5.5rem]'
+
+function itemChipsOrAccessoryImages(items: OutfitItem[], gender: GenderType) {
+  return items.map((item) => {
+    const accKey = outfitItemToAccessoryKey(item, gender)
+    if (accKey) {
+      return (
+        <img
+          key={item.id}
+          src={outfitAccessorySrc(accKey)}
+          alt={item.name}
+          width={88}
+          height={88}
+          className={ILLUST_ACC_IMG_CLASS}
+          draggable={false}
+          loading="lazy"
+        />
+      )
+    }
+    return (
+      <span
+        key={item.id}
+        className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full sm:text-[11px]"
+        style={{
+          background: item.required ? 'rgba(239,68,68,0.07)' : 'rgba(100,116,139,0.08)',
+          color: item.required ? 'var(--danger)' : 'var(--text)',
+          border: `1px solid ${item.required ? 'rgba(239,68,68,0.2)' : 'var(--border)'}`,
+        }}
+      >
+        <span>{item.icon}</span>
+        <span className="font-medium">{item.name}</span>
+      </span>
+    )
+  })
 }
 
 function CategoryBlock({
@@ -31,11 +57,15 @@ function CategoryBlock({
   items,
   align,
   showBlank,
+  accessoryKeys,
+  gender,
 }: {
   cat: OutfitCategoryKey | null
   items: OutfitItem[]
   align: 'left' | 'right'
   showBlank: boolean
+  accessoryKeys?: OutfitAccessoryKey[]
+  gender: GenderType
 }) {
   /** PC에서도 flex-1 줄 수 유지 — `hidden`이면 좌·우 단수가 달라져 하의 등이 어긋남 */
   if (!cat) {
@@ -60,8 +90,11 @@ function CategoryBlock({
 
   const isRight = align === 'right'
   const rowClass = `flex min-h-0 flex-1 flex-col justify-center gap-1 py-0.5 lg:gap-1 ${isRight ? 'items-start text-left' : 'items-end text-right'}`
-  /** PC: 칩 없어도 행 높이 유지(투명) — 좌·우 6단 정렬 */
-  const reserveRowOnDesktop = !hasItems
+  const accCount = accessoryKeys?.length ?? 0
+  const hasLargeAccessoryVisual =
+    hasItems && items.some((it) => outfitItemToAccessoryKey(it, gender) != null)
+  /** PC: 칩 없이 빈 행만 유지할 때만 데스크톱에서 숨김 — 날씨 소품이 있으면 표시 */
+  const reserveRowOnDesktop = !hasItems && accCount === 0
 
   return (
     <div
@@ -70,15 +103,29 @@ function CategoryBlock({
       {/* 항목명(카테고리): PC(lg+)만 표시 — 모바일·태블릿은 칩만 */}
       <span
         className={`hidden text-xs font-semibold uppercase tracking-wide shrink-0 lg:block ${isRight ? 'text-left' : 'text-right'}`}
-        style={{ color: hasItems || keep ? 'var(--muted)' : 'transparent' }}
+        style={{ color: hasItems || keep || accCount > 0 ? 'var(--muted)' : 'transparent' }}
       >
         {label}
       </span>
       <div
-        className={`flex flex-wrap gap-1 min-w-0 sm:gap-1.5 ${isRight ? 'justify-start' : 'justify-end'}`}
-        style={{ minHeight: 22 }}
+        className={`flex flex-wrap gap-1.5 min-w-0 sm:gap-2 items-center ${isRight ? 'justify-start' : 'justify-end'}`}
+        style={{
+          minHeight: Math.max(22, accCount > 0 || hasLargeAccessoryVisual ? (hasLargeAccessoryVisual ? 88 : 40) : 22),
+        }}
       >
-        {hasItems ? itemChips(items) : null}
+        {hasItems ? itemChipsOrAccessoryImages(items, gender) : null}
+        {accessoryKeys?.map((key) => (
+          <img
+            key={key}
+            src={outfitAccessorySrc(key)}
+            alt={ACCESSORY_ALT[key]}
+            width={88}
+            height={88}
+            className={ILLUST_ACC_IMG_CLASS}
+            draggable={false}
+            loading="lazy"
+          />
+        ))}
       </div>
     </div>
   )
@@ -102,6 +149,8 @@ export function OutfitIllustPanel({ result, gender, calendarMonth, showSunshine,
     {} as Record<string, typeof result.items>
   )
 
+  const weatherAccessories = accessoriesByOutfitCategory(result, gender, weatherSky, showSunshine)
+
   return (
     <div className="w-full min-w-0">
       <div className="mx-auto flex max-w-full flex-row flex-nowrap items-stretch justify-center gap-2 overflow-x-auto pb-0.5 sm:gap-3 lg:gap-6 lg:max-w-full">
@@ -114,6 +163,8 @@ export function OutfitIllustPanel({ result, gender, calendarMonth, showSunshine,
               items={cat ? (byCategory[cat] ?? []) : []}
               align="left"
               showBlank
+              accessoryKeys={cat ? weatherAccessories[cat] : undefined}
+              gender={gender}
             />
           ))}
         </div>
@@ -124,6 +175,7 @@ export function OutfitIllustPanel({ result, gender, calendarMonth, showSunshine,
             illustKey={result.heroIllust}
             items={result.items}
             gender={gender}
+            tempZone={result.tempZone}
             calendarMonth={calendarMonth}
             size={220}
             showSunshine={showSunshine}
@@ -140,6 +192,8 @@ export function OutfitIllustPanel({ result, gender, calendarMonth, showSunshine,
               items={cat ? (byCategory[cat] ?? []) : []}
               align="right"
               showBlank
+              accessoryKeys={cat ? weatherAccessories[cat] : undefined}
+              gender={gender}
             />
           ))}
         </div>
