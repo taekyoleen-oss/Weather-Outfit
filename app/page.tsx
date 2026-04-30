@@ -153,6 +153,12 @@ export default function HomePage() {
   const selectedPeriod = TIME_PERIODS.find((p) => p.repHour === selectedPeriodHour)
   const selectedPeriodStartHour = selectedPeriod?.start ?? selectedPeriodHour
 
+  /** 오늘·선택 구간이 현재 시각 구간과 같을 때(지금): 활동 시작 시각 하한을 KST 현재 시+1로 둠 */
+  const isOutfitNowPeriod =
+    selectedPeriodSelection.dayOffset === 0 &&
+    getPeriodIndex(selectedPeriodHour) === getPeriodIndex(hour)
+  const outfitScheduleSyncKey = `${selectedPeriodHour}|${selectedPeriodSelection.dayOffset}`
+
   const curPeriodIdx = getPeriodIndex(hour)
 
   /** 가장 최근에 끝난 시간대의 대표 기온·체감(시간별 예보 슬롯 기준) */
@@ -464,7 +470,10 @@ export default function HomePage() {
       weather={displayWeather}
       dust={dust}
       terrain={location.terrain ?? 'urban'}
-      hour={selectedPeriodStartHour}
+      outfitPeriodStartHour={selectedPeriodStartHour}
+      outfitIsNowPeriod={isOutfitNowPeriod}
+      outfitCurrentKstHour={hour}
+      outfitScheduleSyncKey={outfitScheduleSyncKey}
     />
   )
 

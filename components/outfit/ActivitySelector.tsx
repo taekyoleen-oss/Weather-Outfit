@@ -9,6 +9,8 @@ interface Props {
   value: ActivityType
   onChange: (a: ActivityType) => void
   startHour: number
+  /** 시작 시각 `<select>`에 나올 최소 시(시간대 시작 또는 지금 구간일 때 현재 시+1, KST) */
+  startHourMin: number
   endHour: number
   onStartHourChange: (hour: number) => void
   onEndHourChange: (hour: number) => void
@@ -230,13 +232,15 @@ export function ActivitySelector({
   value,
   onChange,
   startHour,
+  startHourMin,
   endHour,
   onStartHourChange,
   onEndHourChange,
 }: Props) {
   const [guideActivity, setGuideActivity] = useState<ActivityType | null>(null)
   const guideData = guideActivity ? ACTIVITY_GUIDES[guideActivity] : null
-  const hourOptions = Array.from({ length: 24 }, (_, h) => h)
+  const minH = Math.min(23, Math.max(0, Math.floor(startHourMin)))
+  const hourOptions = Array.from({ length: 24 - minH }, (_, i) => minH + i)
   const hh = (h: number) => `${String(h).padStart(2, '0')}:00`
 
   return (
