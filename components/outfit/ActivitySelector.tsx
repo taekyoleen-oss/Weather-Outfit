@@ -18,15 +18,13 @@ interface Props {
 
 const ACTIVITIES: { id: ActivityType; label: string; icon: string }[] = [
   { id: 'urban_walk', label: '산책', icon: '🏙️' },
-  { id: 'running', label: '달리기', icon: '🏃' },
-  { id: 'cycling', label: '자전거', icon: '🚴' },
-  { id: 'golf', label: '골프', icon: '⛳' },
-  { id: 'hiking', label: '등산', icon: '🏔️' },
   { id: 'picnic', label: '소풍', icon: '🧺' },
   { id: 'river', label: '강변', icon: '🌊' },
   { id: 'beach', label: '해변', icon: '🏖️' },
-  { id: 'ski', label: '스키', icon: '⛷️' },
-  { id: 'tennis', label: '테니스', icon: '🎾' },
+  { id: 'running', label: '달리기', icon: '🏃' },
+  { id: 'cycling', label: '자전거', icon: '🚴' },
+  { id: 'hiking', label: '등산', icon: '🏔️' },
+  { id: 'golf', label: '골프', icon: '⛳' },
 ]
 
 const RISK_COLORS: Record<RiskGuide['level'], { bg: string; text: string; border: string; badge: string }> = {
@@ -248,7 +246,7 @@ export function ActivitySelector({
       <p className="text-base font-semibold mb-3" style={{ color: 'var(--text)' }}>
         활동 선택
       </p>
-      <div className="grid grid-cols-5 gap-1.5">
+      <div className="grid grid-cols-4 gap-1.5">
         {ACTIVITIES.map((a) => {
           const selected = value === a.id
           return (

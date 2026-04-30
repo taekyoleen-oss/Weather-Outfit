@@ -46,9 +46,10 @@ const OUTER_MAP: Record<string, OuterVariant> = {
   'outer-coat-f':             'coat',
   'outer-padding':            'padding',
   'outer-ski-jacket':         'ski-jacket',
-  'mc-river-windbreaker':     'windbreaker',
-  'mc-river-windbreaker-mild':'windbreaker',
-  'mc-hiking-windbreaker':    'windbreaker',
+  // 일반 바람막이/점퍼는 과한 스포츠 전용 실루엣 대신 기본 재킷 실루엣을 사용
+  'mc-river-windbreaker':     'jacket',
+  'mc-river-windbreaker-mild':'jacket',
+  'mc-hiking-windbreaker':    'jacket',
   'mc-beach-coverup':         'jacket',
 }
 
