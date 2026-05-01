@@ -9,6 +9,7 @@ import { GolfOutfitCard, type OutfitSummary } from './GolfOutfitCard'
 import { GolfRiskAlerts } from './GolfRiskAlerts'
 import type { LocationInfo } from '@/types/location'
 import type { GolfScore } from '@/lib/spot/golfScore'
+import { latLonToGrid } from '@/lib/location/geoConvert'
 
 interface LivingIdxOut {
   value: number
@@ -86,6 +87,14 @@ interface Props {
   compact?: boolean
   showHeader?: boolean
 }
+
+const MOUNTAIN_CHOICES: LocationInfo[] = [
+  { name: '북한산', address: '서울 강북구/도봉구', lat: 37.6587, lon: 126.9786, ...latLonToGrid({ lat: 37.6587, lon: 126.9786 }), terrain: 'mountain' },
+  { name: '관악산', address: '서울 관악구/과천시', lat: 37.4450, lon: 126.9648, ...latLonToGrid({ lat: 37.4450, lon: 126.9648 }), terrain: 'mountain' },
+  { name: '청계산', address: '서울 서초구/성남시', lat: 37.4133, lon: 127.0394, ...latLonToGrid({ lat: 37.4133, lon: 127.0394 }), terrain: 'mountain' },
+  { name: '한라산', address: '제주 제주시/서귀포시', lat: 33.3617, lon: 126.5292, ...latLonToGrid({ lat: 33.3617, lon: 126.5292 }), terrain: 'mountain' },
+  { name: '치악산', address: '강원 원주시', lat: 37.3651, lon: 128.0531, ...latLonToGrid({ lat: 37.3651, lon: 128.0531 }), terrain: 'mountain' },
+]
 
 function LivingIndicesRow({ indices, compact }: { indices: SpotApiResponse['indices']; compact: boolean }) {
   const uv =
@@ -176,6 +185,50 @@ export function SpotPanel({
       )}
 
       <LocationSearchBar onSelect={setSpot} />
+      <div
+        className={`rounded-xl ${compact ? 'p-2.5' : 'p-3'}`}
+        style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+      >
+        <p className="text-[11px] font-semibold mb-1" style={{ color: 'var(--muted)' }}>
+          산악 기상 빠른 선택
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {MOUNTAIN_CHOICES.map((m) => (
+            <button
+              key={m.name}
+              type="button"
+              onClick={() => setSpot(m)}
+              className="text-[11px] px-2 py-1 rounded-full"
+              style={{ background: 'rgba(91,141,238,0.1)', color: 'var(--humidity)', border: '1px solid var(--border)' }}
+            >
+              ⛰ {m.name}
+            </button>
+          ))}
+        </div>
+        <p className="text-[10px] mt-1.5" style={{ color: 'var(--muted)' }}>
+          장소명 검색에서도 산 이름(예: 북한산, 설악산)으로 조회할 수 있습니다.
+        </p>
+      </div>
+
+      {spot && (
+        <div
+          className={`rounded-xl ${compact ? 'p-2.5' : 'p-3'}`}
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+        >
+          <p className="text-[10px] font-semibold mb-1" style={{ color: 'var(--muted)' }}>
+            4번째 탭 기준 위치
+          </p>
+          <p className="text-xs font-semibold" style={{ color: 'var(--text)' }}>
+            장소: {spot.name}
+          </p>
+          <p className="text-[11px] mt-1" style={{ color: 'var(--muted)' }}>
+            주소: {spot.address ?? '주소 정보 없음'}
+          </p>
+          <p className="text-[10px] mt-1" style={{ color: 'var(--muted)' }}>
+            좌표: {spot.lat.toFixed(4)}, {spot.lon.toFixed(4)} · 격자: {spot.nx}, {spot.ny}
+          </p>
+        </div>
+      )}
 
       {!spot && !loading && (
         <div
