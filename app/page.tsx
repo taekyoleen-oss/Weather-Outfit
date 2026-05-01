@@ -442,24 +442,6 @@ export default function HomePage() {
     />
   )
 
-  const weatherCard = (
-    <WeatherCard
-      weather={displayWeather}
-      period={period}
-      heroIconSrc={heroIconSrc}
-      heroIconHour={heroIconHour}
-      heroSunsetHm={heroSunsetHm}
-      loading={weatherLoading}
-      addressLine={location.address}
-      sunriseSunset={sunriseSunset}
-      uvDisplay={uvForCard}
-      dust={dust}
-      alerts={alerts}
-      previousPeriodWeather={previousPeriodSummary}
-      openMeteoCompare={openMeteoCompare}
-      morningSummary={morningSummary}
-    />
-  )
   const currentDongName = extractDongName(location.name, location.address)
   const normalizedLocationName = location.name?.trim()
   const currentPlaceName =
@@ -493,6 +475,25 @@ export default function HomePage() {
     hourly: weatherData?.hourly ?? [],
     loading: weeklyLoading && weeklyDisplayDaily.length === 0,
   } as const
+  const weatherCard = (
+    <WeatherCard
+      weather={displayWeather}
+      period={period}
+      heroIconSrc={heroIconSrc}
+      heroIconHour={heroIconHour}
+      heroSunsetHm={heroSunsetHm}
+      loading={weatherLoading}
+      addressLine={location.address}
+      sunriseSunset={sunriseSunset}
+      uvDisplay={uvForCard}
+      dust={dust}
+      alerts={alerts}
+      previousPeriodWeather={previousPeriodSummary}
+      openMeteoCompare={openMeteoCompare}
+      morningSummary={morningSummary}
+      futureDaily={weeklyDisplayDaily.slice(0, 2)}
+    />
+  )
   const outfitPanel = (
     <OutfitPanel
       weather={displayWeather}

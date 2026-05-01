@@ -10,21 +10,21 @@ export interface TimePeriod {
 }
 
 export const TIME_PERIODS: TimePeriod[] = [
-  { id: 'dawn',      label: '새벽', emoji: '🌙', repHour: 4,  start: 0,  end: 5  },
-  { id: 'morning',   label: '오전', emoji: '🌅', repHour: 9,  start: 6,  end: 11 },
+  { id: 'dawn',      label: '새벽', emoji: '🌙', repHour: 4,  start: 0,  end: 6  },
+  { id: 'morning',   label: '오전', emoji: '🌅', repHour: 9,  start: 7,  end: 11 },
   { id: 'afternoon', label: '오후', emoji: '🌤', repHour: 14, start: 12, end: 17 },
   { id: 'evening',   label: '저녁', emoji: '🌇', repHour: 19, start: 18, end: 23 },
 ]
 
 export function getPeriodIndex(hour: number): number {
-  if (hour <= 5) return 0
+  if (hour <= 6) return 0
   if (hour <= 11) return 1
   if (hour <= 17) return 2
   return 3
 }
 
 /**
- * 오전(6~12시)일 때는 오전 전체가 보이도록 6시부터 시작.
+ * 오전(7~11시)일 때는 오전 전체가 보이도록 7시부터 시작.
  * 오후/저녁은 현재 시각부터 시작.
  */
 export function samePeriodHourlySliceFloor(currentHourKst: number, _currentPeriodIdx: number): number {
@@ -37,7 +37,7 @@ function hourNum(t: string): number {
 }
 
 /**
- * 오후 전(KST): 같은 일자 블록 안에서 오전(6~12시)을 맨 앞에 배치.
+ * 오후 전(KST): 같은 일자 블록 안에서 오전(7~11시)을 맨 앞에 배치.
  * 자정 넘김이 있으면 자정 **이전** 구간만 재배열하고 이후는 순서 유지.
  */
 export function orderHourlyStripBeforeNoon(list: HourlyForecast[], hourKst: number): HourlyForecast[] {
@@ -57,7 +57,7 @@ function orderBeforeNoonSegment(seg: HourlyForecast[]): HourlyForecast[] {
   const lo: HourlyForecast[] = []
   for (const h of seg) {
     const n = hourNum(h.time)
-    if (n >= 6 && n <= 11) morning.push(h)
+    if (n >= 7 && n <= 11) morning.push(h)
     else if (n >= 12) hi.push(h)
     else lo.push(h)
   }

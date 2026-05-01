@@ -11,6 +11,7 @@ import type {
   WeatherAlert,
   PreviousPeriodWeatherSummary,
   MorningSummary,
+  DailyForecast,
 } from '@/types/weather'
 import type { OpenMeteoDailyCompare } from '@/lib/weather/openMeteoCompare'
 import {
@@ -48,6 +49,8 @@ interface Props {
   openMeteoCompare?: OpenMeteoDailyCompare | null
   /** 오전(6–11시) 날씨 요약 — 오후에만 전달 */
   morningSummary?: MorningSummary | null
+  /** 내일/모레 요약(작은 텍스트): 날씨 + 최고/최저 */
+  futureDaily?: DailyForecast[]
 }
 
 const BG_MAP: Record<TimeOfDay, string> = {
@@ -237,6 +240,7 @@ export function WeatherCard({
   previousPeriodWeather,
   openMeteoCompare,
   morningSummary,
+  futureDaily,
 }: Props) {
   const [modal, setModal] = useState<'uv' | 'heat' | null>(null)
 
@@ -321,11 +325,22 @@ export function WeatherCard({
 
       {/* Temperature */}
       <div className="mt-1">
-        <div className="flex items-end gap-1.5">
-          <span className="text-5xl font-bold leading-none tabular-nums" style={{ color: textColor }}>
-            {formatTemp1(weather.temperature)}°
-          </span>
-          <span className="text-lg mb-0.5" style={{ color: mutedColor }}>C</span>
+        <div className="flex items-end justify-between gap-2">
+          <div className="flex items-end gap-1.5">
+            <span className="text-5xl font-bold leading-none tabular-nums" style={{ color: textColor }}>
+              {formatTemp1(weather.temperature)}°
+            </span>
+            <span className="text-lg mb-0.5" style={{ color: mutedColor }}>C</span>
+          </div>
+          {(futureDaily?.length ?? 0) > 0 && (
+            <div className="min-w-0 text-right space-y-0.5 pb-0.5">
+              {futureDaily!.slice(0, 2).map((d, i) => (
+                <p key={`${d.date}-${i}`} className="text-xs sm:text-[13px] leading-snug tabular-nums truncate" style={{ color: mutedColor }}>
+                  {i === 0 ? '내일' : '모레'} {weatherLabel(d.skyCode, d.ptyCode)} · {formatTemp1(d.maxTemp)}°/{formatTemp1(d.minTemp)}°
+                </p>
+              ))}
+            </div>
+          )}
         </div>
         <p className="text-sm mt-0.5 leading-snug" style={{ color: textColor }}>
           <span className="font-medium">{weatherLabel(weather.skyCode, weather.ptyCode)}</span>

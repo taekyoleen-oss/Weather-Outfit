@@ -98,7 +98,7 @@ export function MobileLayout({
       >
         {(
           [
-            { key: 'outfit', emoji: '👔', label: '복장 추천' },
+            { key: 'outfit', emoji: '👔', label: '외출 옷 추천' },
             { key: 'weather', emoji: '🌤', label: '세부 날씨' },
           ] as const
         ).map((t) => {
