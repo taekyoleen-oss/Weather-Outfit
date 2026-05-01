@@ -44,20 +44,6 @@ export function FairwayWindCard({ windSpeedMs, vecDeg, score, bestTeeHours, comp
       <p className={`font-bold ${compact ? 'text-xs' : 'text-sm'}`} style={{ color: 'var(--primary)' }}>
         골프 지수
       </p>
-      <div className="mt-1">
-        <p className={`font-black ${compact ? 'text-2xl' : 'text-3xl'}`} style={{ color: GRADE_COLOR[g] }}>
-          {score.score}
-          <span className="ml-1 text-base font-semibold" style={{ color: 'var(--muted)' }}>/100</span>
-        </p>
-        <p className="text-xs font-semibold" style={{ color: 'var(--text)' }}>
-          {GRADE_LABEL[g]}
-        </p>
-        {bestTeeHours.length > 0 && (
-          <p className="text-[11px] mt-1" style={{ color: 'var(--humidity)' }}>
-            추천 티타임: {bestTeeHours.map((h) => `${h}시`).join(', ')}
-          </p>
-        )}
-      </div>
       <div className="mt-2 flex items-center gap-3">
         <div
           className="flex items-center justify-center rounded-full flex-shrink-0"
@@ -80,6 +66,20 @@ export function FairwayWindCard({ windSpeedMs, vecDeg, score, bestTeeHours, comp
             {hint}
           </p>
         </div>
+      </div>
+      <div className="mt-1">
+        <p className={`font-black ${compact ? 'text-2xl' : 'text-3xl'}`} style={{ color: GRADE_COLOR[g] }}>
+          {score.score}
+          <span className="ml-1 text-base font-semibold" style={{ color: 'var(--muted)' }}>/100</span>
+        </p>
+        <p className="text-xs font-semibold" style={{ color: 'var(--text)' }}>
+          {GRADE_LABEL[g]}
+        </p>
+        {bestTeeHours.length > 0 && (
+          <p className="text-[11px] mt-1" style={{ color: 'var(--humidity)' }}>
+            추천 티타임: {bestTeeHours.map((h) => `${h}시`).join(', ')}
+          </p>
+        )}
       </div>
     </div>
   )
