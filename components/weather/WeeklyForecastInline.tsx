@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import type { CSSProperties } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import type { DailyForecast, HourlyForecast } from '@/types/weather'
 import { weatherLabel, formatTemp1 } from '@/lib/utils/formatWeather'
@@ -35,6 +36,17 @@ function dayLabel(dateStr: string): string {
 function mmdd(dateStr: string): string {
   return `${dateStr.slice(4, 6)}/${dateStr.slice(6, 8)}`
 }
+
+const TODAY_CHART_MARGIN = { top: 10, right: 10, left: -20, bottom: 0 }
+const WEEK_CHART_MARGIN = { top: 10, right: 10, left: -20, bottom: 0 }
+const CHART_TOOLTIP_STYLE: CSSProperties = {
+  background: 'rgba(255,255,255,0.9)',
+  border: '1px solid #E2E8F0',
+  borderRadius: '12px',
+  fontSize: 12,
+}
+/** 탭 전환·flex 레이아웃 직후 ResizeObserver 폭주로 인한 무한 업데이트 완화 */
+const RESPONSIVE_DEBOUNCE_MS = 50
 
 export function WeeklyForecastInline({ daily, hourly, loading }: Props) {
   const [tab, setTab] = useState<'today' | 'week'>('today')
@@ -82,6 +94,42 @@ export function WeeklyForecastInline({ daily, hourly, loading }: Props) {
 }
 
 function TodayView({ hourly, loading }: { hourly: HourlyForecast[]; loading?: boolean }) {
+  const chartData = useMemo(() => {
+    if (!hourly.length) return []
+    const sortedHourly = [...hourly].sort((a, b) => {
+      const ak = `${a.fcstDate ?? ''}${a.time}`
+      const bk = `${b.fcstDate ?? ''}${b.time}`
+      return ak.localeCompare(bk)
+    })
+    const nowKst = currentHourKst()
+    const todayYmd = kstTodayYmd()
+    const toHourNum = (t: string) => parseInt(t.split(':')[0], 10)
+
+    let startIdx = sortedHourly.findIndex(
+      (h) => h.fcstDate === todayYmd && toHourNum(h.time) >= nowKst
+    )
+    if (startIdx < 0) {
+      startIdx = sortedHourly.findIndex((h) => (h.fcstDate ?? '') > todayYmd)
+    }
+    if (startIdx < 0) {
+      startIdx = 0
+    }
+
+    const windowed = sortedHourly.slice(startIdx, startIdx + 12)
+    return windowed.map((h, i) => {
+      const hourNum = toHourNum(h.time)
+      const prevHourNum = i > 0 ? toHourNum(windowed[i - 1].time) : null
+      const timeLabel = prevHourNum === 23 && hourNum === 0 ? '24:00' : h.time.slice(0, 5)
+      return {
+        time: timeLabel,
+        temp: Math.round(h.temperature * 10) / 10,
+        pop: h.pop,
+      }
+    })
+  }, [hourly])
+
+  const formatTempTooltip = useCallback((v: unknown) => [`${typeof v === 'number' ? v.toFixed(1) : v}°`, '기온'], [])
+
   if (loading || !hourly.length) {
     return (
       <div className="h-40 flex items-center justify-center animate-pulse">
@@ -90,41 +138,10 @@ function TodayView({ hourly, loading }: { hourly: HourlyForecast[]; loading?: bo
     )
   }
 
-  const sortedHourly = [...hourly].sort((a, b) => {
-    const ak = `${a.fcstDate ?? ''}${a.time}`
-    const bk = `${b.fcstDate ?? ''}${b.time}`
-    return ak.localeCompare(bk)
-  })
-  const nowKst = currentHourKst()
-  const todayYmd = kstTodayYmd()
-  const toHourNum = (t: string) => parseInt(t.split(':')[0], 10)
-
-  let startIdx = sortedHourly.findIndex(
-    (h) => h.fcstDate === todayYmd && toHourNum(h.time) >= nowKst
-  )
-  if (startIdx < 0) {
-    startIdx = sortedHourly.findIndex((h) => (h.fcstDate ?? '') > todayYmd)
-  }
-  if (startIdx < 0) {
-    startIdx = 0
-  }
-
-  const windowed = sortedHourly.slice(startIdx, startIdx + 12)
-  const chartData = windowed.map((h, i) => {
-    const hourNum = toHourNum(h.time)
-    const prevHourNum = i > 0 ? toHourNum(windowed[i - 1].time) : null
-    const timeLabel = prevHourNum === 23 && hourNum === 0 ? '24:00' : h.time.slice(0, 5)
-    return {
-      time: timeLabel,
-      temp: Math.round(h.temperature * 10) / 10,
-      pop: h.pop,
-    }
-  })
-
   return (
-    <div className="min-w-0 w-full max-w-full">
-      <ResponsiveContainer width="100%" height={140}>
-        <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+    <div className="min-w-0 w-full max-w-full" style={{ minHeight: 140 }}>
+      <ResponsiveContainer width="100%" height={140} debounce={RESPONSIVE_DEBOUNCE_MS}>
+        <LineChart data={chartData} margin={TODAY_CHART_MARGIN}>
           <XAxis
             dataKey="time"
             tick={{ fontSize: 11, fill: '#64748B' }}
@@ -137,15 +154,7 @@ function TodayView({ hourly, loading }: { hourly: HourlyForecast[]; loading?: bo
             tickLine={false}
             domain={['auto', 'auto']}
           />
-          <Tooltip
-            contentStyle={{
-              background: 'rgba(255,255,255,0.9)',
-              border: '1px solid #E2E8F0',
-              borderRadius: '12px',
-              fontSize: 12,
-            }}
-            formatter={(v) => [`${typeof v === 'number' ? v.toFixed(1) : v}°`, '기온']}
-          />
+          <Tooltip contentStyle={CHART_TOOLTIP_STYLE} formatter={formatTempTooltip} />
           <Line
             type="monotone"
             dataKey="temp"
@@ -171,6 +180,16 @@ function WeekView({
   expandedDay: string | null
   onToggleDay: (d: string) => void
 }) {
+  const chartData = useMemo(
+    () =>
+      daily.map((d) => ({
+        date: mmdd(d.date),
+        min: d.minTemp,
+        max: d.maxTemp,
+      })),
+    [daily],
+  )
+
   if (loading || !daily.length) {
     return (
       <div className="space-y-2 animate-pulse">
@@ -181,26 +200,20 @@ function WeekView({
     )
   }
 
-  const chartData = daily.map((d) => ({
-    date: mmdd(d.date),
-    min: d.minTemp,
-    max: d.maxTemp,
-  }))
-
   return (
     <div className="space-y-2">
       {/* Line chart */}
-      <ResponsiveContainer width="100%" height={120}>
-        <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+      <div className="min-w-0 w-full" style={{ minHeight: 120 }}>
+        <ResponsiveContainer width="100%" height={120} debounce={RESPONSIVE_DEBOUNCE_MS}>
+          <LineChart data={chartData} margin={WEEK_CHART_MARGIN}>
           <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} />
           <YAxis tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} domain={['auto', 'auto']} />
-          <Tooltip
-            contentStyle={{ background: 'rgba(255,255,255,0.9)', border: '1px solid #E2E8F0', borderRadius: '12px', fontSize: 12 }}
-          />
+          <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
           <Line type="monotone" dataKey="max" stroke="#F0A04B" strokeWidth={2} dot={{ r: 3, fill: '#F0A04B', strokeWidth: 0 }} name="최고" />
           <Line type="monotone" dataKey="min" stroke="#5B8DEE" strokeWidth={2} dot={{ r: 3, fill: '#5B8DEE', strokeWidth: 0 }} name="최저" />
         </LineChart>
-      </ResponsiveContainer>
+        </ResponsiveContainer>
+      </div>
 
       {/* Day cards */}
       <div className="space-y-1.5 mt-3">
