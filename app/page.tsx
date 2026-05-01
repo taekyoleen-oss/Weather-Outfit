@@ -31,6 +31,7 @@ import {
   orderHourlyStripBeforeNoon,
 } from '@/lib/utils/timePeriods'
 import { buildHourlySlotYmds, resolveHourlyForYmdBand } from '@/lib/utils/resolveHourlyForPeriod'
+import { mergeWeeklyDailyStartingTomorrow } from '@/lib/weather/weeklyFromTomorrow'
 import type {
   DustData,
   PollenData,
@@ -483,10 +484,14 @@ export default function HomePage() {
       compact
     />
   )
+  const weeklyDisplayDaily = useMemo(
+    () => mergeWeeklyDailyStartingTomorrow(weekly, weatherData?.hourly ?? [], todayYmdKst),
+    [weekly, weatherData?.hourly, todayYmdKst],
+  )
   const weeklyProps = {
-    daily: weekly,
+    daily: weeklyDisplayDaily,
     hourly: weatherData?.hourly ?? [],
-    loading: weeklyLoading,
+    loading: weeklyLoading && weeklyDisplayDaily.length === 0,
   } as const
   const outfitPanel = (
     <OutfitPanel
@@ -519,10 +524,10 @@ export default function HomePage() {
           currentPlaceName={currentPlaceName}
           currentDongName={currentDongName}
           recentChips={<>{recentChips}{nearbyChips}</>}
+          weatherCard={weatherCard}
           periodPicker={timePeriodPicker}
           weatherContent={
             <>
-              {weatherCard}
               {hourlyStrip}
               {highlightsGrid}
               <WeeklyForecastInline key="weekly-inline-mobile" {...weeklyProps} />
