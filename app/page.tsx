@@ -496,6 +496,7 @@ export default function HomePage() {
   const outfitPanel = (
     <OutfitPanel
       weather={displayWeather}
+      hourly={weatherData?.hourly ?? []}
       dust={dust}
       alerts={alerts}
       terrain={location.terrain ?? 'urban'}

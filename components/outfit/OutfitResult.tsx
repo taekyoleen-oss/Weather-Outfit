@@ -9,10 +9,12 @@ import type {
 } from '@/types/outfit'
 import { OutfitItemCard } from './OutfitItemCard'
 import { OutfitIllustPanel } from './OutfitIllustPanel'
+import { formatTemp1 } from '@/lib/utils/formatWeather'
 
 interface Props {
   result: OutfitResultType
   schedule?: { startHour: number; endHour: number; durationHour: number }
+  periodWeather?: { label: string; minTemp: number; maxTemp: number } | null
   gender?: GenderType
   /** KST 달력 월 1–12. 히어로 `fall-layered` 문구용 */
   calendarMonth?: number
@@ -29,6 +31,7 @@ type TabId = 'illust' | 'list'
 export function OutfitResult({
   result,
   schedule,
+  periodWeather,
   gender = 'male',
   calendarMonth,
   showSunshine,
@@ -68,25 +71,32 @@ export function OutfitResult({
             ))}
           </div>
         )}
-        <div className="flex items-center gap-2 mt-1">
-          <span
-            className="text-sm font-medium px-3 py-1 rounded-full"
-            style={{ background: 'rgba(255,181,71,0.15)', color: 'var(--accent)' }}
-          >
-            {result.layerLabel}
-          </span>
-          {/* Layer level bar */}
-          <div className="flex gap-1">
-            {[1, 2, 3].map((l) => (
-              <div
-                key={l}
-                className="w-3 h-3 rounded-full"
-                style={{
-                  background: l <= result.layerLevel ? LAYER_BAR_COLORS[result.layerLevel - 1] : 'var(--border)',
-                }}
-              />
-            ))}
+        <div className="flex items-center justify-between gap-2 mt-1">
+          <div className="flex items-center gap-2 min-w-0">
+            <span
+              className="text-sm font-medium px-3 py-1 rounded-full"
+              style={{ background: 'rgba(255,181,71,0.15)', color: 'var(--accent)' }}
+            >
+              {result.layerLabel}
+            </span>
+            {/* Layer level bar */}
+            <div className="flex gap-1">
+              {[1, 2, 3].map((l) => (
+                <div
+                  key={l}
+                  className="w-3 h-3 rounded-full"
+                  style={{
+                    background: l <= result.layerLevel ? LAYER_BAR_COLORS[result.layerLevel - 1] : 'var(--border)',
+                  }}
+                />
+              ))}
+            </div>
           </div>
+          {periodWeather && (
+            <p className="text-[11px] sm:text-xs font-semibold tabular-nums text-right leading-snug" style={{ color: 'var(--muted)' }}>
+              {periodWeather.label} · 최고 {formatTemp1(periodWeather.maxTemp)}° / 최저 {formatTemp1(periodWeather.minTemp)}°
+            </p>
+          )}
         </div>
       </div>
 

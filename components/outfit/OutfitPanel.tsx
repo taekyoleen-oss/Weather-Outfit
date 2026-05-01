@@ -7,10 +7,12 @@ import { OutfitResult } from './OutfitResult'
 import { OutfitLlmSuggest } from './OutfitLlmSuggest'
 import { recommendOutfit } from '@/lib/outfit/recommender'
 import type { ActivityType, GenderType } from '@/types/outfit'
-import type { CurrentWeather, DustData, WeatherAlert } from '@/types/weather'
+import type { CurrentWeather, DustData, HourlyForecast, WeatherAlert } from '@/types/weather'
 import type { TerrainType } from '@/types/location'
-import { kstTodayYmd } from '@/lib/utils/timeOfDay'
+import { addCalendarDaysFromKstYmd, kstTodayYmd } from '@/lib/utils/timeOfDay'
 import { OutfitDayChecklist } from './OutfitDayChecklist'
+import { weatherLabel } from '@/lib/utils/formatWeather'
+import { buildHourlySlotYmds } from '@/lib/utils/resolveHourlyForPeriod'
 
 function calendarMonthKstFromWeather(w: CurrentWeather | null): number | undefined {
   if (!w) return undefined
@@ -22,6 +24,7 @@ function calendarMonthKstFromWeather(w: CurrentWeather | null): number | undefin
 
 interface Props {
   weather: CurrentWeather | null
+  hourly?: HourlyForecast[]
   dust?: DustData | null
   alerts?: WeatherAlert[]
   terrain: TerrainType
@@ -100,6 +103,7 @@ function activityStartFloor(periodStart: number, isNow: boolean, kstHour: number
 
 export function OutfitPanel({
   weather,
+  hourly = [],
   dust,
   alerts = [],
   terrain,
@@ -199,6 +203,35 @@ export function OutfitPanel({
     })
   }, [weather, dust, activity, gender, terrain, sensitivity, startHour, selectedDuration])
 
+  const periodWeather = useMemo(() => {
+    if (!hourly.length) return null
+    const slotYmds = buildHourlySlotYmds(hourly, kstTodayYmd())
+    const nextYmd = addCalendarDaysFromKstYmd(scheduleYmd, 1)
+    const inRange = hourly.filter((h, i) => {
+      const slotYmd = slotYmds[i]
+      if (!slotYmd) return false
+      const hour = parseInt(h.time.slice(0, 2), 10)
+      if (Number.isNaN(hour)) return false
+      if (startHour <= endHour) {
+        return slotYmd === scheduleYmd && hour >= startHour && hour <= endHour
+      }
+      return (slotYmd === scheduleYmd && hour >= startHour) || (slotYmd === nextYmd && hour <= endHour)
+    })
+    if (!inRange.length) return null
+
+    const minTemp = Math.min(...inRange.map((h) => h.temperature))
+    const maxTemp = Math.max(...inRange.map((h) => h.temperature))
+    const labelCounts = new Map<string, number>()
+    for (const h of inRange) {
+      const label = weatherLabel(h.skyCode, h.ptyCode)
+      labelCounts.set(label, (labelCounts.get(label) ?? 0) + 1)
+    }
+    const label =
+      [...labelCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ??
+      weatherLabel(inRange[0]!.skyCode, inRange[0]!.ptyCode)
+    return { label, minTemp, maxTemp }
+  }, [hourly, scheduleYmd, startHour, endHour])
+
   return (
     <div className="glass-card p-4 sm:p-6 space-y-4 sm:space-y-5 min-w-0 max-w-full overflow-x-hidden">
       <h2 className="text-base font-bold" style={{ color: 'var(--primary)' }}>
@@ -267,6 +300,7 @@ export function OutfitPanel({
           <OutfitResult
             result={result}
             schedule={{ startHour, endHour, durationHour: selectedDuration }}
+            periodWeather={periodWeather}
             gender={gender}
             calendarMonth={calendarMonthKstFromWeather(weather)}
             showSunshine={
