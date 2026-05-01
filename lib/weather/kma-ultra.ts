@@ -191,3 +191,83 @@ export function parseNcstSurface(row: Record<string, string>): {
   const rn1 = parseFloat(row.RN1 ?? '0') || 0
   return { temperature, humidity, windSpeed, ptyCode, rn1 }
 }
+
+/** 초단기예보 1회 호출로 향후 N시간(0~6h) 슬롯의 멀티 카테고리(T1H·SKY·PTY·RN1·WSD) 묶음 반환 */
+export interface UltraSrtFcstSlot {
+  fcstDate: string
+  fcstTime: string
+  T1H?: string
+  SKY?: string
+  PTY?: string
+  RN1?: string
+  WSD?: string
+  REH?: string
+}
+
+export async function fetchUltraSrtFcstSlots(
+  nx: number,
+  ny: number,
+  hours = 6
+): Promise<{ slots: UltraSrtFcstSlot[]; baseDate: string; baseTime: string } | null> {
+  /* 최근 발표분부터 역추적: 10분 단위 base_time, 발표 시점이 너무 최근이면 빈 응답이 와서 폴백 */
+  const candidates: { baseDate: string; baseTime: string }[] = []
+  for (let back = 0; back < 12; back++) {
+    const shifted = new Date(Date.now() - back * 10 * 60 * 1000 + 9 * 60 * 60 * 1000)
+    const y = shifted.getUTCFullYear()
+    const mo = String(shifted.getUTCMonth() + 1).padStart(2, '0')
+    const da = String(shifted.getUTCDate()).padStart(2, '0')
+    const hh = shifted.getUTCHours()
+    const mi = Math.floor(shifted.getUTCMinutes() / 10) * 10
+    candidates.push({
+      baseDate: `${y}${mo}${da}`,
+      baseTime: String(hh).padStart(2, '0') + String(mi).padStart(2, '0'),
+    })
+  }
+
+  const tryCandidate = async (cand: { baseDate: string; baseTime: string }) => {
+    const params = new URLSearchParams({
+      serviceKey: kmaKey(),
+      pageNo: '1',
+      numOfRows: '900',
+      dataType: 'JSON',
+      base_date: cand.baseDate,
+      base_time: cand.baseTime,
+      nx: String(nx),
+      ny: String(ny),
+    })
+    const url = `${KMA_ULTRA_BASE}/getUltraSrtFcst?${params}`
+    const res = await safeFetch(url, { next: { revalidate: 0 } })
+    if (!res.ok) throw new Error('not ok')
+    const json = (await res.json()) as unknown
+    const items = extractItems(json)
+    if (!items.length) throw new Error('empty')
+
+    const grouped = new Map<string, UltraSrtFcstSlot>()
+    for (const raw of items) {
+      const p = FcstItemSchema.safeParse(raw)
+      if (!p.success) continue
+      const key = `${p.data.fcstDate}-${p.data.fcstTime}`
+      const cur = grouped.get(key) ?? { fcstDate: p.data.fcstDate, fcstTime: p.data.fcstTime }
+      const writable = cur as unknown as Record<string, string>
+      writable[p.data.category] = p.data.fcstValue
+      grouped.set(key, cur)
+    }
+    if (grouped.size === 0) throw new Error('no slots')
+
+    const slots = [...grouped.values()]
+      .sort((a, b) => (a.fcstDate + a.fcstTime).localeCompare(b.fcstDate + b.fcstTime))
+      .slice(0, hours)
+    return { slots, baseDate: cand.baseDate, baseTime: cand.baseTime }
+  }
+
+  const BATCH = 3
+  for (let i = 0; i < candidates.length; i += BATCH) {
+    const batch = candidates.slice(i, i + BATCH)
+    try {
+      return await Promise.any(batch.map(tryCandidate))
+    } catch {
+      // 다음 배치
+    }
+  }
+  return null
+}

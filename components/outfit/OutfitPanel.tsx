@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react'
 import { ActivitySelector } from './ActivitySelector'
 import { GenderToggle } from './GenderToggle'
 import { OutfitResult } from './OutfitResult'
@@ -44,6 +44,8 @@ interface Props {
   activityStartHourMin: number
   /** 상단 날씨 카드·스트립과 동기화 */
   onActivityHoursChange?: (startHour: number, endHour: number) => void
+  /** 모바일 탭: 긴 블록은 바텀시트로 분리 */
+  variant?: 'default' | 'mobileSheet'
 }
 
 type SensitivityLevel = -2 | 0 | 2
@@ -101,6 +103,52 @@ function activityStartFloor(periodStart: number, isNow: boolean, kstHour: number
   return isNow ? (kstHour + 1) % 24 : periodStart
 }
 
+function MobileBottomSheet({
+  title,
+  children,
+  onClose,
+}: {
+  title: string
+  children: ReactNode
+  onClose: () => void
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="outfit-sheet-title"
+    >
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+      <div
+        className="relative w-full sm:max-w-md max-h-[88dvh] overflow-hidden rounded-t-2xl sm:rounded-2xl flex flex-col"
+        style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div
+          className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0"
+          style={{ borderColor: 'var(--border)', background: 'var(--card)' }}
+        >
+          <p id="outfit-sheet-title" className="text-sm font-bold" style={{ color: 'var(--primary)' }}>
+            {title}
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 rounded-full text-sm leading-none"
+            style={{ color: 'var(--muted)', background: 'var(--surface)' }}
+            aria-label="닫기"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="overflow-y-auto p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">{children}</div>
+      </div>
+    </div>
+  )
+}
+
 export function OutfitPanel({
   weather,
   hourly = [],
@@ -117,7 +165,13 @@ export function OutfitPanel({
   onScheduleYmdChange,
   activityStartHourMin,
   onActivityHoursChange,
+  variant = 'default',
 }: Props) {
+  const isMobileSheet = variant === 'mobileSheet'
+  const [sheetSettings, setSheetSettings] = useState(false)
+  const [sheetAi, setSheetAi] = useState(false)
+  const [sheetChecklist, setSheetChecklist] = useState(false)
+
   const [activity, setActivity] = useState<ActivityType>('urban_walk')
   /** SSR·첫 클라이언트 페인트는 서버와 동일한 기본값 → hydration 일치 후 localStorage 복원 */
   const [gender, setGender] = useState<GenderType>('male')
@@ -232,28 +286,8 @@ export function OutfitPanel({
     return { label, minTemp, maxTemp }
   }, [hourly, scheduleYmd, startHour, endHour])
 
-  return (
-    <div className="glass-card p-4 sm:p-6 space-y-4 sm:space-y-5 min-w-0 max-w-full overflow-x-hidden">
-      <h2 className="text-base font-bold" style={{ color: 'var(--primary)' }}>
-        복장 추천 설정
-      </h2>
-
-      <ActivitySelector
-        value={activity}
-        onChange={handleActivity}
-        scheduleYmd={scheduleYmd}
-        scheduleYmdMin={scheduleYmdMin}
-        scheduleYmdMax={scheduleYmdMax}
-        onScheduleYmdChange={onScheduleYmdChange}
-        startHour={startHour}
-        startHourMin={startHourMin}
-        endHour={endHour}
-        onStartHourChange={handleStartHour}
-        onEndHourChange={handleEndHour}
-      />
-
-      <div className="border-t" style={{ borderColor: 'var(--border)' }} />
-
+  const genderSensitivityBlock = (
+    <>
       <div className="flex items-end gap-3">
         <div className="flex-1 min-w-0">
           <GenderToggle value={gender} onChange={handleGender} />
@@ -284,6 +318,53 @@ export function OutfitPanel({
           체감온도를 {Math.abs(sensitivity)}°C {sensitivity < 0 ? '낮게' : '높게'} 적용해 복장을 추천합니다.
         </p>
       )}
+    </>
+  )
+
+  return (
+    <div
+      className={`glass-card min-w-0 max-w-full overflow-x-hidden ${
+        isMobileSheet ? 'p-3 space-y-3' : 'p-4 sm:p-6 space-y-4 sm:space-y-5'
+      }`}
+    >
+      <h2 className={`font-bold ${isMobileSheet ? 'text-sm' : 'text-base'}`} style={{ color: 'var(--primary)' }}>
+        {isMobileSheet ? '👔 외출 복장' : '복장 추천 설정'}
+      </h2>
+
+      <ActivitySelector
+        value={activity}
+        onChange={handleActivity}
+        scheduleYmd={scheduleYmd}
+        scheduleYmdMin={scheduleYmdMin}
+        scheduleYmdMax={scheduleYmdMax}
+        onScheduleYmdChange={onScheduleYmdChange}
+        startHour={startHour}
+        startHourMin={startHourMin}
+        endHour={endHour}
+        onStartHourChange={handleStartHour}
+        onEndHourChange={handleEndHour}
+      />
+
+      {isMobileSheet ? (
+        <button
+          type="button"
+          onClick={() => setSheetSettings(true)}
+          className="w-full text-left text-xs font-semibold py-2.5 px-3 rounded-xl transition-colors active:scale-[0.99]"
+          style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            color: 'var(--text)',
+          }}
+        >
+          <span className="text-[10px] block mb-0.5" style={{ color: 'var(--muted)' }}>세부 옵션</span>
+          성별 · 체감 민감도 ({SENSITIVITY_LABEL_MAP[sensitivity]})
+        </button>
+      ) : (
+        <>
+          <div className="border-t" style={{ borderColor: 'var(--border)' }} />
+          {genderSensitivityBlock}
+        </>
+      )}
 
       {!weather && (
         <p className="text-sm text-center py-4" style={{ color: 'var(--muted)' }}>
@@ -294,7 +375,7 @@ export function OutfitPanel({
       {result && weather && (
         <>
           <div className="border-t" style={{ borderColor: 'var(--border)' }} />
-          <p className="text-[11px] font-semibold pt-1" style={{ color: 'var(--muted)' }}>
+          <p className={`font-semibold pt-1 ${isMobileSheet ? 'text-[10px]' : 'text-[11px]'}`} style={{ color: 'var(--muted)' }}>
             가이드라인·룰 기반 추천
           </p>
           <OutfitResult
@@ -312,6 +393,69 @@ export function OutfitPanel({
                 : undefined
             }
           />
+          {isMobileSheet ? (
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setSheetAi(true)}
+                className="text-xs font-semibold py-3 px-2 rounded-xl transition-colors active:scale-[0.98]"
+                style={{
+                  background: 'rgba(91,141,238,0.12)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--humidity)',
+                }}
+              >
+                ✨ AI 코멘트
+              </button>
+              <button
+                type="button"
+                onClick={() => setSheetChecklist(true)}
+                className="text-xs font-semibold py-3 px-2 rounded-xl transition-colors active:scale-[0.98]"
+                style={{
+                  background: 'rgba(34,197,94,0.10)',
+                  border: '1px solid var(--border)',
+                  color: '#15803d',
+                }}
+              >
+                ✅ 오늘 체크
+              </button>
+            </div>
+          ) : (
+            <OutfitLlmSuggest
+              weather={weather}
+              dust={dust}
+              activity={activity}
+              gender={gender}
+              terrain={terrain}
+              hour={startHour}
+              durationHours={selectedDuration}
+              result={result}
+              feelsLikeSensitivity={sensitivity}
+            />
+          )}
+        </>
+      )}
+
+      {weather && !isMobileSheet && (
+        <>
+          <div className="border-t" style={{ borderColor: 'var(--border)' }} />
+          <OutfitDayChecklist
+            weather={weather}
+            dust={dust ?? null}
+            alerts={alerts}
+            durationHours={selectedDuration}
+            sensitivity={sensitivity}
+          />
+        </>
+      )}
+
+      {isMobileSheet && sheetSettings && (
+        <MobileBottomSheet title="성별 · 체감 민감도" onClose={() => setSheetSettings(false)}>
+          {genderSensitivityBlock}
+        </MobileBottomSheet>
+      )}
+      {isMobileSheet && sheetAi && result && weather && (
+        <MobileBottomSheet title="AI 복장 코멘트" onClose={() => setSheetAi(false)}>
           <OutfitLlmSuggest
             weather={weather}
             dust={dust}
@@ -323,12 +467,10 @@ export function OutfitPanel({
             result={result}
             feelsLikeSensitivity={sensitivity}
           />
-        </>
+        </MobileBottomSheet>
       )}
-
-      {weather && (
-        <>
-          <div className="border-t" style={{ borderColor: 'var(--border)' }} />
+      {isMobileSheet && sheetChecklist && weather && (
+        <MobileBottomSheet title="오늘 외출 체크리스트" onClose={() => setSheetChecklist(false)}>
           <OutfitDayChecklist
             weather={weather}
             dust={dust ?? null}
@@ -336,7 +478,7 @@ export function OutfitPanel({
             durationHours={selectedDuration}
             sensitivity={sensitivity}
           />
-        </>
+        </MobileBottomSheet>
       )}
     </div>
   )

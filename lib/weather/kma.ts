@@ -84,18 +84,75 @@ export async function fetchVilageForecast(nx: number, ny: number): Promise<{
   const items = json?.response?.body?.items?.item
   if (!Array.isArray(items)) throw new Error('KMA API: unexpected response format')
 
+  const p = parseVilageFcst(items, nx, ny)
+  return { current: p.current, hourly: p.hourly }
+}
+
+/** 단기예보 + 원시 맵( TMN/TMX·시간대별 VEC/POP 병합용 ) */
+export async function fetchVilageForecastWithMap(nx: number, ny: number): Promise<{
+  current: CurrentWeather
+  hourly: HourlyForecast[]
+  map: FcstMap
+  sortedKeys: string[]
+}> {
+  const now = kstNow()
+  const { baseDate, baseTime } = getBaseDateTime(now)
+
+  const params = new URLSearchParams({
+    serviceKey: kmaKey(),
+    pageNo: '1',
+    numOfRows: '1000',
+    dataType: 'JSON',
+    base_date: baseDate,
+    base_time: baseTime,
+    nx: String(nx),
+    ny: String(ny),
+  })
+
+  const url = `${KMA_BASE}/getVilageFcst?${params}`
+  const res = await safeFetch(url, { next: { revalidate: 0 } })
+  if (!res.ok) throw new Error(`KMA API error: ${res.status}`)
+  const json = await res.json()
+
+  const items = json?.response?.body?.items?.item
+  if (!Array.isArray(items)) throw new Error('KMA API: unexpected response format')
+
   return parseVilageFcst(items, nx, ny)
 }
 
-interface FcstMap {
+export interface FcstMap {
   [dateTime: string]: Record<string, string>
+}
+
+/** 단기예보 맵에서 해당 일의 TMN/TMX(일 최저·최고) 추출 */
+export function extractTmnTmxForDay(map: FcstMap, dayYmd: string): { tmn: number | null; tmx: number | null } {
+  let tmn: number | null = null
+  let tmx: number | null = null
+  for (const [k, cats] of Object.entries(map)) {
+    if (!k.startsWith(dayYmd)) continue
+    if (cats.TMN) {
+      const v = parseFloat(cats.TMN)
+      if (Number.isFinite(v) && v > -500) tmn = v
+    }
+    if (cats.TMX) {
+      const v = parseFloat(cats.TMX)
+      if (Number.isFinite(v) && v > -500) tmx = v
+    }
+  }
+  return { tmn, tmx }
+}
+
+/** fcstDate(yyyymmdd) + 시(0–23)에 해당하는 단기예보 슬롯 */
+export function vilageSlotAtHour(map: FcstMap, fcstYmd: string, hour: number): Record<string, string> | null {
+  const key = `${fcstYmd}${String(hour).padStart(2, '0')}00`
+  return map[key] ?? null
 }
 
 function parseVilageFcst(
   items: unknown[],
   nx: number,
   ny: number
-): { current: CurrentWeather; hourly: HourlyForecast[] } {
+): { current: CurrentWeather; hourly: HourlyForecast[]; map: FcstMap; sortedKeys: string[] } {
   const map: FcstMap = {}
 
   for (const raw of items) {
@@ -170,5 +227,5 @@ function parseVilageFcst(
     }
   })
 
-  return { current, hourly }
+  return { current, hourly, map, sortedKeys }
 }

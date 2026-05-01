@@ -3,18 +3,39 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 
+type TabKey = 'current' | 'detail' | 'outfit' | 'spot'
+
+interface TabMeta {
+  key: TabKey
+  icon: string
+  label: string
+  /** screen reader 전용 보충 라벨 */
+  srLabel?: string
+}
+
+const TABS: readonly TabMeta[] = [
+  { key: 'current', icon: '🌤', label: '현재 날씨' },
+  { key: 'detail',  icon: '📊', label: '세부 날씨' },
+  { key: 'outfit',  icon: '👔', label: '외출 옷' },
+  { key: 'spot',    icon: '⛳', label: '골프 라운드' },
+] as const
+
 interface Props {
   locationSearch: ReactNode
   gpsLoading: boolean
   gpsError: string | null
   onGps: () => void
-  currentPlaceName?: string
-  currentDongName?: string
+  /** 검색·GPS로 확정된 조회 지역 — 모든 탭에서 상단에 한 줄로 표시 */
+  locationSummaryLine: string
   recentChips: ReactNode
-  weatherCard?: ReactNode
-  periodPicker?: ReactNode
+  /** "현재 날씨" 탭 콘텐츠 (기존 WeatherCard 등) */
+  currentContent: ReactNode
+  /** "세부 날씨" 탭 콘텐츠 (시간별·하이라이트·주간) */
   weatherContent: ReactNode
+  /** "외출 옷" 탭 콘텐츠 (시간대 피커 + OutfitPanel) */
   outfitContent: ReactNode
+  /** "시설 초단기" 탭 콘텐츠 (SpotPanel) */
+  spotContent: ReactNode
 }
 
 export function MobileLayout({
@@ -22,19 +43,18 @@ export function MobileLayout({
   gpsLoading,
   gpsError,
   onGps,
-  currentPlaceName,
-  currentDongName,
+  locationSummaryLine,
   recentChips,
-  weatherCard,
-  periodPicker,
+  currentContent,
   weatherContent,
   outfitContent,
+  spotContent,
 }: Props) {
-  const [tab, setTab] = useState<'weather' | 'outfit'>('outfit')
+  const [tab, setTab] = useState<TabKey>('current')
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--background)' }}>
-      {/* ── Sticky header ── */}
+      {/* ── Sticky header (위치 검색 + GPS + 최근/주변 칩) ── */}
       <div
         className="sticky top-0 z-40 px-3 pt-3 pb-2"
         style={{
@@ -46,24 +66,6 @@ export function MobileLayout({
         <div className="flex gap-2 items-end">
           <div className="flex-1 min-w-0">{locationSearch}</div>
           <div className="flex flex-col items-center justify-end gap-1 pb-0.5 flex-shrink-0">
-            {currentPlaceName && (
-              <p
-                className="text-[10px] max-lg:text-[11px] leading-none max-w-[96px] truncate max-lg:tracking-wide"
-                style={{ color: 'var(--humidity)' }}
-                title={`조회 장소: ${currentPlaceName}`}
-              >
-                {currentPlaceName}
-              </p>
-            )}
-            {currentDongName && (
-              <p
-                className="text-[10px] max-lg:text-[11px] leading-none max-w-[70px] truncate max-lg:tracking-wide"
-                style={{ color: 'var(--muted)' }}
-                title={`현재 조회 위치: ${currentDongName}`}
-              >
-                {currentDongName}
-              </p>
-            )}
             <button
               onClick={onGps}
               disabled={gpsLoading}
@@ -85,23 +87,56 @@ export function MobileLayout({
           <p className="text-xs mt-1 px-1" style={{ color: 'var(--danger)' }}>{gpsError}</p>
         )}
         <div className="mt-2">{recentChips}</div>
+        <div
+          className="mt-2 px-1 py-1.5 rounded-xl"
+          style={{
+            background: 'rgba(91,141,238,0.08)',
+            border: '1px solid var(--border)',
+          }}
+        >
+          <p
+            className="text-xs font-semibold leading-snug truncate"
+            style={{ color: 'var(--text)' }}
+            title={locationSummaryLine}
+          >
+            <span aria-hidden>📍 </span>
+            <span className="font-medium" style={{ color: 'var(--muted)' }}>조회 지역 </span>
+            {locationSummaryLine}
+          </p>
+        </div>
       </div>
 
-      {/* ── 날씨 카드: 탭 위 고정 ── */}
-      {weatherCard != null && <div className="px-3 pt-3">{weatherCard}</div>}
-
-      {/* ── Tab selector ── */}
-      <div
-        className="flex mx-3 mt-3 rounded-2xl p-1 gap-1"
-        style={{ background: 'rgba(255,255,255,0.75)', border: '1px solid var(--border)' }}
-        role="tablist"
+      {/* ── Tab content ── */}
+      <main
+        id="mobile-tabpanel"
+        role="tabpanel"
+        aria-labelledby={`mobile-tab-${tab}`}
+        className="flex-1 px-3 pt-3 space-y-3"
+        // 하단 고정 탭바와 겹치지 않도록 충분한 padding-bottom
+        // 64px(탭바) + 12px(여유) + safe-area
+        style={{ paddingBottom: 'calc(76px + env(safe-area-inset-bottom))' }}
       >
-        {(
-          [
-            { key: 'outfit', emoji: '👔', label: '외출 옷 추천' },
-            { key: 'weather', emoji: '🌤', label: '세부 날씨' },
-          ] as const
-        ).map((t) => {
+        {tab === 'current' && currentContent}
+        {tab === 'detail'  && weatherContent}
+        {tab === 'outfit'  && outfitContent}
+        {tab === 'spot'    && spotContent}
+      </main>
+
+      {/* ── Bottom Tab Bar (fixed) ── */}
+      <nav
+        role="tablist"
+        aria-label="섹션 전환"
+        className="fixed bottom-0 inset-x-0 z-50 flex"
+        style={{
+          background: 'rgba(255,255,255,0.92)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          borderTop: '1px solid var(--border)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+          boxShadow: '0 -2px 10px rgba(0,0,0,0.05)',
+        }}
+      >
+        {TABS.map((t) => {
           const active = tab === t.key
           return (
             <button
@@ -111,34 +146,28 @@ export function MobileLayout({
               aria-selected={active}
               aria-controls="mobile-tabpanel"
               onClick={() => setTab(t.key)}
-              className="flex-1 flex items-center justify-center gap-1.5 max-lg:gap-2 py-2.5 rounded-xl transition-all text-sm max-lg:text-[15px] font-semibold max-lg:tracking-tight"
+              className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors active:scale-95"
               style={{
-                background: active ? 'white' : 'transparent',
                 color: active ? 'var(--primary)' : 'var(--muted)',
-                boxShadow: active ? '0 2px 10px rgba(0,0,0,0.09)' : 'none',
+                fontWeight: active ? 700 : 500,
+                background: 'transparent',
+                minHeight: 60,
               }}
             >
-              <span>{t.emoji}</span>
-              <span>{t.label}</span>
+              <span className="text-lg leading-none" aria-hidden>{t.icon}</span>
+              <span className="text-[11px] leading-tight">{t.label}</span>
+              <span
+                className="block h-0.5 mt-0.5 rounded-full transition-all"
+                style={{
+                  width: active ? 22 : 0,
+                  background: active ? 'var(--primary)' : 'transparent',
+                }}
+                aria-hidden
+              />
             </button>
           )
         })}
-      </div>
-
-      {/* ── Tab content ── */}
-      <div
-        id="mobile-tabpanel"
-        role="tabpanel"
-        aria-labelledby={`mobile-tab-${tab}`}
-        className="flex-1 px-3 pt-3 pb-10 space-y-3"
-      >
-        {tab === 'weather' ? weatherContent : (
-          <>
-            {periodPicker}
-            {outfitContent}
-          </>
-        )}
-      </div>
+      </nav>
     </div>
   )
 }

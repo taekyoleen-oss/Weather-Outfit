@@ -17,6 +17,7 @@ import { HighlightsGrid } from '@/components/weather/HighlightsGrid'
 import { TimePeriodPicker } from '@/components/weather/TimePeriodPicker'
 import { OutfitPanel } from '@/components/outfit/OutfitPanel'
 import { NearbyWeatherChips } from '@/components/weather/NearbyWeatherChips'
+import { SpotPanel } from '@/components/spot/SpotPanel'
 import { useAutoLocation } from '@/lib/hooks/useAutoLocation'
 import { useWeather } from '@/lib/hooks/useWeather'
 import { useWeeklyForecast } from '@/lib/hooks/useWeeklyForecast'
@@ -494,25 +495,31 @@ export default function HomePage() {
       futureDaily={weeklyDisplayDaily.slice(0, 2)}
     />
   )
-  const outfitPanel = (
-    <OutfitPanel
-      weather={displayWeather}
-      hourly={weatherData?.hourly ?? []}
-      dust={dust}
-      alerts={alerts}
-      terrain={location.terrain ?? 'urban'}
-      outfitPeriodStartHour={presetChipPeriod.start}
-      outfitIsNowPeriod={outfitIsNowPeriod}
-      outfitCurrentKstHour={hour}
-      outfitScheduleSyncKey={outfitScheduleSyncKey}
-      scheduleYmd={scheduleYmd}
-      scheduleYmdMin={forecastYmdBounds.min}
-      scheduleYmdMax={forecastYmdBounds.max}
-      onScheduleYmdChange={setScheduleYmd}
-      activityStartHourMin={outfitIsNowPeriod ? (hour + 1) % 24 : 0}
-      onActivityHoursChange={(s, e) => setWxActivityHours({ start: s, end: e })}
-    />
-  )
+  const outfitPanelProps = {
+    weather: displayWeather,
+    hourly: weatherData?.hourly ?? [],
+    dust,
+    alerts,
+    terrain: location.terrain ?? 'urban',
+    outfitPeriodStartHour: presetChipPeriod.start,
+    outfitIsNowPeriod,
+    outfitCurrentKstHour: hour,
+    outfitScheduleSyncKey,
+    scheduleYmd,
+    scheduleYmdMin: forecastYmdBounds.min,
+    scheduleYmdMax: forecastYmdBounds.max,
+    onScheduleYmdChange: setScheduleYmd,
+    activityStartHourMin: outfitIsNowPeriod ? (hour + 1) % 24 : 0,
+    onActivityHoursChange: (s: number, e: number) => setWxActivityHours({ start: s, end: e }),
+  }
+
+  const outfitPanel = <OutfitPanel {...outfitPanelProps} variant="default" />
+  const outfitPanelMobile = <OutfitPanel {...outfitPanelProps} variant="mobileSheet" />
+
+  const locationSummaryLine =
+    location.address?.trim() ||
+    location.name?.trim() ||
+    '위치를 검색하거나 GPS로 설정해 주세요'
 
   return (
     <>
@@ -523,11 +530,9 @@ export default function HomePage() {
           gpsLoading={gpsLoading}
           gpsError={gpsError}
           onGps={requestGps}
-          currentPlaceName={currentPlaceName}
-          currentDongName={currentDongName}
+          locationSummaryLine={locationSummaryLine}
           recentChips={<>{recentChips}{nearbyChips}</>}
-          weatherCard={weatherCard}
-          periodPicker={timePeriodPicker}
+          currentContent={weatherCard}
           weatherContent={
             <>
               {hourlyStrip}
@@ -535,7 +540,13 @@ export default function HomePage() {
               <WeeklyForecastInline key="weekly-inline-mobile" {...weeklyProps} />
             </>
           }
-          outfitContent={outfitPanel}
+          outfitContent={
+            <>
+              {timePeriodPicker}
+              {outfitPanelMobile}
+            </>
+          }
+          spotContent={<SpotPanel />}
         />
       </div>
 
@@ -579,6 +590,8 @@ export default function HomePage() {
               {timePeriodPicker}
               {weatherCard}
               {highlightsGrid}
+              {/* 좌측 컬럼 하단: 시설(골프장) 초단기 날씨 — PC에서도 노출 */}
+              <SpotPanel compact />
             </>
           }
           right={
