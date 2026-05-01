@@ -154,7 +154,7 @@ export function recommendOutfit(input: OutfitInput): OutfitResult {
   if (input.uvIndex >= 6 && !['beach', 'ski'].includes(input.activity)) {
     pushCorr({
       id: 'corr-uv-sleeves',
-      name: '긴팔 겉옷 또는 UV 팔토시',
+      name: '긴팔 겉옷',
       icon: '👕',
       category: 'top',
       required: input.uvIndex >= 8,
@@ -179,7 +179,7 @@ export function recommendOutfit(input: OutfitInput): OutfitResult {
   if (input.windSpeed >= 5 && !skipFiveMWindOuter && ['warm', 'mild', 'cool', 'cold'].includes(zone)) {
     pushCorr({
       id: 'corr-wind-fives',
-      name: '얇은 바람막이 (방풍)',
+      name: '얇은 바람막이',
       icon: '💨',
       category: 'outer',
       required: false,
@@ -221,12 +221,12 @@ export function recommendOutfit(input: OutfitInput): OutfitResult {
       // 낙뢰 위험 시 우산보다 비옷 권장 (기상청 낙뢰 행동요령)
       const lightningRisk = input.ptyCode === '4' || input.precipitation >= 5
       if (lightningRisk) {
-        allItems.push({ id: 'rain-coat', name: '비옷 / 레인자켓 (낙뢰 시 우산 대신)', icon: '🌂', category: 'rain', required: true, condition: '낙뢰 위험 시 우산 사용 자제' })
+        allItems.push({ id: 'rain-coat', name: '비옷 (낙뢰 시)', icon: '🌂', category: 'rain', required: true, condition: '낙뢰 위험 시 우산 사용 자제' })
       } else {
         allItems.push({ id: 'rain-umbrella', name: '우산', icon: '☂️', category: 'rain', required: true })
         allItems.push({ id: 'rain-coat', name: '우의 / 레인자켓', icon: '🌂', category: 'rain', required: false })
       }
-      allItems.push({ id: 'rain-shoes', name: '미끄럼 적은 방수 신발', icon: '🥾', category: 'foot', required: false, condition: '젖은 노면 안전' })
+      allItems.push({ id: 'rain-shoes', name: '방수 신발', icon: '🥾', category: 'foot', required: false, condition: '젖은 노면 안전' })
     } else if (input.ptyCode === '3' || input.ptyCode === '2') {
       allItems.push({ id: 'rain-boots', name: '방수 신발', icon: '🥾', category: 'foot', required: true })
     }
@@ -235,10 +235,9 @@ export function recommendOutfit(input: OutfitInput): OutfitResult {
   // Mask items — 자료 기준: PM10 81↑(나쁨)=KF80, 매우나쁨=KF94
   const dustAlert = input.dustGrade === '3' || input.dustGrade === '4'
   if (dustAlert) {
-    const maskLevel = input.dustGrade === '4' ? 'KF94' : 'KF80'
     allItems.push({
       id: 'mask-dust',
-      name: `${maskLevel} 보건용 마스크`,
+      name: '보건용 마스크',
       icon: '😷',
       category: 'mask',
       required: input.dustGrade === '4',
@@ -253,7 +252,7 @@ export function recommendOutfit(input: OutfitInput): OutfitResult {
   if (uvAlert && input.activity !== 'beach') {
     allItems.push({
       id: 'acc-suncream',
-      name: 'SPF50+ 자외선 차단제',
+      name: '선크림',
       icon: '🧴',
       category: 'acc',
       required: input.uvIndex >= 8,

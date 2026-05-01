@@ -80,6 +80,32 @@ function compactAlertSummary(alert: WeatherAlert | null): string {
   return '특보'
 }
 
+/** 동일 요약끼리 건수 합산 후 한 줄. 유형 3개↑는 앞 2개만 + 「등」, 원본 특보가 3건↑이면 끝에 「등」 */
+function formatAlertsSingleLine(alerts: WeatherAlert[]): string {
+  if (alerts.length === 0) return ''
+  const summaries = alerts.map((a) => compactAlertSummary(a))
+  const counts = new Map<string, number>()
+  for (const s of summaries) {
+    counts.set(s, (counts.get(s) ?? 0) + 1)
+  }
+  const entries = Array.from(counts.entries())
+  const segments = entries.map(([label, n]) => (n > 1 ? `${label} ${n}건` : label))
+
+  let line: string
+  if (segments.length > 2) {
+    line = `${segments[0]} · ${segments[1]} 등`
+  } else {
+    line = segments.join(' · ')
+  }
+
+  const alreadyHasEtc = line.endsWith(' 등')
+  if (alerts.length > 2 && !alreadyHasEtc) {
+    line += ' 등'
+  }
+
+  return line
+}
+
 // ─── 기상 지수 안내 데이터 ─────────────────────────────────────────────────────
 // 근거: weather-outdoor-clothing-guide.md 다. 공식 위험 기준
 
@@ -254,8 +280,7 @@ export function WeatherCard({
   const o3Color = o3GradeColor(dust?.o3Grade)
   const o3Value = dust?.o3Value != null ? `${dust.o3Value.toFixed(3)} ppm` : undefined
   const alertCount = alerts?.length ?? 0
-  const latestAlert = alertCount > 0 ? alerts![0] : null
-  const alertSummary = compactAlertSummary(latestAlert)
+  const alertLine = alertCount > 0 && alerts ? formatAlertsSingleLine(alerts) : ''
 
   const heatIdx = computeHeatIndex(weather.temperature, weather.humidity)
   const heatIdxDiff = heatIdx != null ? heatIdx - weather.temperature : null
@@ -479,9 +504,20 @@ export function WeatherCard({
             <p className="text-[10px] font-semibold leading-none" style={{ color: alertCount > 0 ? 'var(--danger)' : mutedColor }}>
               기상특보 {alertCount > 0 ? `${alertCount}건` : '없음'}
             </p>
-            <p className="text-[10px] mt-0.5 leading-none line-clamp-1" style={{ color: mutedColor }}>
-              {alertSummary}
-            </p>
+            {alertCount > 0 ? (
+              <p
+                className="mt-0.5 text-[10px] leading-snug line-clamp-1 break-words min-w-0"
+                style={{ color: mutedColor }}
+                title={alertLine}
+                aria-label={`발효 특보 ${alertCount}건: ${alertLine}`}
+              >
+                {alertLine}
+              </p>
+            ) : (
+              <p className="text-[10px] mt-0.5 leading-none" style={{ color: mutedColor }}>
+                {compactAlertSummary(null)}
+              </p>
+            )}
             {alertCount > 0 ? (
               <a
                 href={KMA_WEATHER_WARN_PAGE}

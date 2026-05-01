@@ -41,7 +41,7 @@ export function getMicroclimateItems(
       if (baseZone === 'hot' || baseZone === 'warm') {
         items.push({
           id: 'mc-river-windbreaker',
-          name: '얇은 바람막이 (강바람 대비)',
+          name: '얇은 바람막이',
           icon: '💨',
           category: 'outer',
           required: true,
@@ -67,7 +67,7 @@ export function getMicroclimateItems(
       if (baseZone === 'hot' || baseZone === 'warm') {
         items.push({
           id: 'mc-golf-armsleeve',
-          name: 'UV 차단 팔토시',
+          name: '팔토시',
           icon: '🧴',
           category: 'acc',
           required: false,
@@ -110,7 +110,7 @@ export function getMicroclimateItems(
       })
       items.push({
         id: 'mc-beach-suncream',
-        name: 'SPF50+ PA++++ 선크림',
+        name: '선크림',
         icon: '🧴',
         category: 'acc',
         required: true,
@@ -135,7 +135,7 @@ export function getMicroclimateItems(
       if (baseZone === 'hot' || baseZone === 'warm' || baseZone === 'mild') {
         items.push({
           id: 'mc-hiking-windbreaker',
-          name: '경량 바람막이 (배낭에 보관)',
+          name: '경량 바람막이',
           icon: '🏔️',
           category: 'outer',
           required: true,
@@ -144,7 +144,7 @@ export function getMicroclimateItems(
         })
         items.push({
           id: 'mc-hiking-midlayer',
-          name: '얇은 플리스 / 경량 다운 (배낭에)',
+          name: '얇은 플리스 / 경량 다운',
           icon: '🎒',
           category: 'mid',
           required: false,
@@ -211,20 +211,20 @@ export function getBaseItems(
   // TOP layer — 가이드 라.2: 28℃+ 반팔·얇은 긴팔 / 23~27℃ 얇은 반팔·긴팔·셔츠
   if (zone === 'hot') {
     if (gender === 'male') {
-      items.push({ id: 'top-tshirt', name: '밝은색 기능성 반팔 또는 얇은 긴팔', icon: '👕', category: 'top', required: true })
+      items.push({ id: 'top-tshirt', name: '반팔 또는 얇은 긴팔', icon: '👕', category: 'top', required: true })
     } else {
-      items.push({ id: 'top-blouse', name: '반팔 또는 얇은 긴팔 / UV 가디건', icon: '👚', category: 'top', required: true })
+      items.push({ id: 'top-blouse', name: '반팔 또는 얇은 긴팔', icon: '👚', category: 'top', required: true })
     }
     // 골프·해변·스키는 활동 전용 모자·선글라스가 별도로 있음
     if (activity !== 'golf' && activity !== 'beach' && activity !== 'ski') {
       items.push({ id: 'acc-hot-hat', name: '모자', icon: '🧢', category: 'acc', required: true })
-      items.push({ id: 'acc-hot-sunglasses', name: 'UV 차단 선글라스', icon: '🕶️', category: 'acc', required: true })
+      items.push({ id: 'acc-hot-sunglasses', name: '선글라스', icon: '🕶️', category: 'acc', required: true })
     }
   } else if (zone === 'warm') {
     if (gender === 'male') {
-      items.push({ id: 'top-shirt-light', name: '얇은 반팔·긴팔 또는 카라 셔츠', icon: '👕', category: 'top', required: true })
+      items.push({ id: 'top-shirt-light', name: '얇은 반팔·긴팔 / 셔츠', icon: '👕', category: 'top', required: true })
     } else {
-      items.push({ id: 'top-blouse-warm', name: '얇은 반팔·긴팔 또는 블라우스', icon: '👚', category: 'top', required: true })
+      items.push({ id: 'top-blouse-warm', name: '반팔·긴팔 / 블라우스', icon: '👚', category: 'top', required: true })
     }
   } else if (zone === 'mild') {
     if (gender === 'male') {
@@ -234,9 +234,9 @@ export function getBaseItems(
     }
   } else if (zone === 'cool') {
     if (gender === 'male') {
-      items.push({ id: 'top-shirt', name: '니트·맨투맨 또는 두꺼운 긴팔', icon: '👕', category: 'top', required: true })
+      items.push({ id: 'top-shirt', name: '스웨터 / 두꺼운 긴팔', icon: '👕', category: 'top', required: true })
     } else {
-      items.push({ id: 'top-knit', name: '니트·맨투맨 / 두꺼운 긴팔', icon: '👚', category: 'top', required: true })
+      items.push({ id: 'top-knit', name: '스웨터 / 두꺼운 긴팔', icon: '👚', category: 'top', required: true })
     }
   } else {
     // cold / freezing
@@ -264,7 +264,7 @@ export function getBaseItems(
     if (gender === 'male') {
       items.push({ id: 'mid-sweater', name: '두꺼운 니트 / 플리스', icon: '🧥', category: 'mid', required: true })
     } else {
-      items.push({ id: 'mid-sweater-f', name: '두꺼운 니트 / 울 가디건', icon: '🧥', category: 'mid', required: true })
+      items.push({ id: 'mid-sweater-f', name: '두꺼운 니트', icon: '🧥', category: 'mid', required: true })
     }
   }
 
@@ -277,9 +277,9 @@ export function getBaseItems(
     }
   } else if (zone === 'cold') {
     if (gender === 'male') {
-      items.push({ id: 'outer-coat', name: '경량 패딩 / 코트 / 플리스 겉옷', icon: '🧥', category: 'outer', required: true })
+      items.push({ id: 'outer-coat', name: '경량 패딩 / 코트 / 플리스', icon: '🧥', category: 'outer', required: true })
     } else {
-      items.push({ id: 'outer-coat-f', name: '경량 패딩 / 코트 / 플리스 겉옷', icon: '🧥', category: 'outer', required: true })
+      items.push({ id: 'outer-coat-f', name: '경량 패딩 / 코트 / 플리스', icon: '🧥', category: 'outer', required: true })
     }
   } else if (zone === 'freezing') {
     const subzero = feelsLike !== undefined && feelsLike < 0
@@ -296,38 +296,38 @@ export function getBaseItems(
   // BOTTOM
   if (zone === 'hot') {
     if (gender === 'female') {
-      items.push({ id: 'bottom-skirt-mini', name: '통기성 팬츠·큐롯 / 린넨 쇼츠', icon: '👖', category: 'bottom', required: true })
+      items.push({ id: 'bottom-skirt-mini', name: '통기성 팬츠·큐롯 / 여름 하의', icon: '👖', category: 'bottom', required: true })
       items.push({ id: 'bottom-dress', name: '원피스 (선택)', icon: '👗', category: 'bottom', required: false, condition: '원피스로 대체 가능' })
     } else {
-      items.push({ id: 'bottom-shorts-m', name: '통기성 반바지 / 경량 팬츠', icon: '🩳', category: 'bottom', required: true })
+      items.push({ id: 'bottom-shorts-m', name: '반바지 / 경량 팬츠', icon: '🩳', category: 'bottom', required: true })
     }
   } else if (zone === 'warm') {
     if (gender === 'female') {
-      items.push({ id: 'bottom-linen-pants-f', name: '통기성 긴바지·레깅스 / 반바지', icon: '👖', category: 'bottom', required: true })
+      items.push({ id: 'bottom-linen-pants-f', name: '통기성 긴바지 / 반바지', icon: '👖', category: 'bottom', required: true })
       items.push({ id: 'bottom-midi-skirt', name: '미디스커트 (선택)', icon: '👗', category: 'bottom', required: false, condition: '스커트로 대체 가능' })
     } else {
       items.push({ id: 'bottom-shorts-m', name: '통기성 긴바지 또는 반바지', icon: '🩳', category: 'bottom', required: true })
     }
   } else if (zone === 'mild') {
     if (gender === 'female') {
-      items.push({ id: 'bottom-wide-pants', name: '와이드 팬츠 / 청바지', icon: '👖', category: 'bottom', required: true })
+      items.push({ id: 'bottom-wide-pants', name: '긴바지 / 청바지', icon: '👖', category: 'bottom', required: true })
       items.push({ id: 'bottom-midi-skirt-mild', name: '미디스커트 + 스타킹 (선택)', icon: '👗', category: 'bottom', required: false, condition: '스커트 착용 시 스타킹 필수' })
     } else {
-      items.push({ id: 'bottom-pants', name: '면 팬츠 / 청바지', icon: '👖', category: 'bottom', required: true })
+      items.push({ id: 'bottom-pants', name: '면바지 / 청바지', icon: '👖', category: 'bottom', required: true })
     }
   } else if (zone === 'cool') {
     if (gender === 'female') {
-      items.push({ id: 'bottom-slacks-f', name: '슬랙스 / 두꺼운 청바지', icon: '👖', category: 'bottom', required: true })
+      items.push({ id: 'bottom-slacks-f', name: '면바지 / 두꺼운 청바지', icon: '👖', category: 'bottom', required: true })
       items.push({ id: 'bottom-long-skirt', name: '롱스커트 + 두꺼운 타이츠 (선택)', icon: '👗', category: 'bottom', required: false, condition: '스커트 착용 시 타이츠 필수' })
     } else {
-      items.push({ id: 'bottom-slacks-m', name: '청바지 / 슬랙스', icon: '👖', category: 'bottom', required: true })
+      items.push({ id: 'bottom-slacks-m', name: '청바지 / 면바지', icon: '👖', category: 'bottom', required: true })
     }
   } else {
     // cold / freezing
     if (gender === 'female') {
-      items.push({ id: 'bottom-warm-pants-f', name: '기모 바지 / 두꺼운 슬랙스', icon: '👖', category: 'bottom', required: true })
+      items.push({ id: 'bottom-warm-pants-f', name: '두꺼운 바지', icon: '👖', category: 'bottom', required: true })
     } else {
-      items.push({ id: 'bottom-warm-pants', name: '두꺼운 팬츠 / 기모 바지', icon: '👖', category: 'bottom', required: true })
+      items.push({ id: 'bottom-warm-pants', name: '두꺼운 바지', icon: '👖', category: 'bottom', required: true })
     }
   }
 
@@ -345,7 +345,7 @@ function getShoes(activity: ActivityType, zone: TempZone, gender: GenderType = '
   if (activity === 'beach') return { id: 'foot-sandal', name: '샌들 / 아쿠아슈즈', icon: '🩴', category: 'foot', required: true }
   if (activity === 'ski') return { id: 'foot-boots', name: '방한 부츠', icon: '🥾', category: 'foot', required: true }
   if (zone === 'cold' || zone === 'freezing') {
-    if (gender === 'female') return { id: 'foot-boots-f', name: '방한 부츠 / 앵클 부츠', icon: '🥾', category: 'foot', required: true }
+    if (gender === 'female') return { id: 'foot-boots-f', name: '방한 부츠', icon: '🥾', category: 'foot', required: true }
     return { id: 'foot-boots', name: '방한 부츠', icon: '🥾', category: 'foot', required: true }
   }
   if (zone === 'cool') {
@@ -380,7 +380,7 @@ export function getActivityItems(activity: ActivityType, zone: TempZone, gender:
   switch (activity) {
     case 'golf':
       items.push({ id: 'acc-golf-hat', name: '골프 모자', icon: '🧢', category: 'acc', required: true, activityTag })
-      if (gender === 'female') items.push({ id: 'top-golf-skirt', name: '골프 스커트 / 팬츠', icon: '🩺', category: 'bottom', required: false, activityTag })
+      if (gender === 'female') items.push({ id: 'top-golf-skirt', name: '골프 스커트 / 바지', icon: '🩺', category: 'bottom', required: false, activityTag })
       break
     case 'hiking':
       items.push({ id: 'acc-buff', name: '버프 / 등산 모자', icon: '🧢', category: 'acc', required: false, activityTag })
@@ -391,7 +391,7 @@ export function getActivityItems(activity: ActivityType, zone: TempZone, gender:
       break
     case 'running':
     case 'cycling':
-      items.push({ id: 'acc-headband', name: '헤드밴드 / 스포츠 모자', icon: '🎽', category: 'acc', required: false, activityTag })
+      items.push({ id: 'acc-headband', name: '스포츠 모자', icon: '🎽', category: 'acc', required: false, activityTag })
       if (zone === 'cold' || zone === 'freezing') {
         items.push({ id: 'acc-gloves-sport', name: '얇은 장갑', icon: '🧤', category: 'acc', required: true, activityTag })
       }
@@ -401,9 +401,9 @@ export function getActivityItems(activity: ActivityType, zone: TempZone, gender:
       break
     case 'ski':
       items.push({ id: 'top-ski-inner', name: '기능성 내의 (상하)', icon: '🎿', category: 'base', required: true, activityTag })
-      items.push({ id: 'outer-ski-jacket', name: '스키 재킷 (방수·방풍)', icon: '🎿', category: 'outer', required: true, activityTag })
-      items.push({ id: 'bottom-ski-pants', name: '스키 팬츠', icon: '🎿', category: 'bottom', required: true, activityTag })
-      items.push({ id: 'acc-ski-gloves', name: '스키 장갑 (방수)', icon: '🧤', category: 'acc', required: true, activityTag })
+      items.push({ id: 'outer-ski-jacket', name: '스키 재킷', icon: '🎿', category: 'outer', required: true, activityTag })
+      items.push({ id: 'bottom-ski-pants', name: '스키 바지', icon: '🎿', category: 'bottom', required: true, activityTag })
+      items.push({ id: 'acc-ski-gloves', name: '스키 장갑', icon: '🧤', category: 'acc', required: true, activityTag })
       break
   }
 
@@ -437,7 +437,7 @@ export function getActivityItems(activity: ActivityType, zone: TempZone, gender:
     } else {
       items.push({ id: 'acc-hat-sun', name: '모자', icon: '👒', category: 'acc', required: false, condition: 'UV 3 이상 권장' })
     }
-    items.push({ id: 'acc-sunglasses-warm', name: 'UV 차단 선글라스', icon: '🕶️', category: 'acc', required: false, condition: '자외선 높을 때' })
+    items.push({ id: 'acc-sunglasses-warm', name: '선글라스', icon: '🕶️', category: 'acc', required: false, condition: '자외선 높을 때' })
   }
 
   return items
