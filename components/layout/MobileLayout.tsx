@@ -14,7 +14,7 @@ interface TabMeta {
 }
 
 const TABS: readonly TabMeta[] = [
-  { key: 'current', icon: '🌤', label: '현재 날씨' },
+  { key: 'current', icon: '🌤', label: '날씨 / 위치' },
   { key: 'detail',  icon: '📊', label: '세부 날씨' },
   { key: 'outfit',  icon: '👔', label: '외출 옷' },
   { key: 'spot',    icon: '⛳', label: '골프 라운드' },
@@ -63,30 +63,34 @@ export function MobileLayout({
           boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
         }}
       >
-        <div className="flex gap-2 items-end">
-          <div className="flex-1 min-w-0">{locationSearch}</div>
-          <div className="flex flex-col items-center justify-end gap-1 pb-0.5 flex-shrink-0">
-            <button
-              onClick={onGps}
-              disabled={gpsLoading}
-              className="glass-card flex items-center justify-center transition-all active:scale-95"
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 12,
-                fontSize: 20,
-                color: gpsLoading ? 'var(--muted)' : 'var(--humidity)',
-              }}
-              aria-label="내 위치로 설정"
-            >
-              {gpsLoading ? '⟳' : '📍'}
-            </button>
-          </div>
-        </div>
-        {gpsError && (
-          <p className="text-xs mt-1 px-1" style={{ color: 'var(--danger)' }}>{gpsError}</p>
+        {tab === 'current' && (
+          <>
+            <div className="flex gap-2 items-end">
+              <div className="flex-1 min-w-0">{locationSearch}</div>
+              <div className="flex flex-col items-center justify-end gap-1 pb-0.5 flex-shrink-0">
+                <button
+                  onClick={onGps}
+                  disabled={gpsLoading}
+                  className="glass-card flex items-center justify-center transition-all active:scale-95"
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 12,
+                    fontSize: 20,
+                    color: gpsLoading ? 'var(--muted)' : 'var(--humidity)',
+                  }}
+                  aria-label="내 위치로 설정"
+                >
+                  {gpsLoading ? '⟳' : '📍'}
+                </button>
+              </div>
+            </div>
+            {gpsError && (
+              <p className="text-xs mt-1 px-1" style={{ color: 'var(--danger)' }}>{gpsError}</p>
+            )}
+            <div className="mt-2">{recentChips}</div>
+          </>
         )}
-        <div className="mt-2">{recentChips}</div>
         <div
           className="mt-2 px-1 py-1.5 rounded-xl"
           style={{

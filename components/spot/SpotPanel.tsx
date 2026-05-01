@@ -10,6 +10,7 @@ import { GolfOutfitCard, type OutfitSummary } from './GolfOutfitCard'
 import { GolfRiskAlerts } from './GolfRiskAlerts'
 import type { LocationInfo } from '@/types/location'
 import type { GolfScore } from '@/lib/spot/golfScore'
+import { findNearestGolfCourse } from '@/lib/location/golfCourses'
 
 interface LivingIdxOut {
   value: number
@@ -47,25 +48,24 @@ interface SpotApiResponse {
 
 interface Props {
   initialSpot?: LocationInfo | null
+  anchorLocation?: LocationInfo | null
   compact?: boolean
   showHeader?: boolean
 }
 
 function LivingIndicesRow({ indices, compact }: { indices: SpotApiResponse['indices']; compact: boolean }) {
-  const parts: string[] = []
-  if (indices.uv && Number.isFinite(indices.uv.value)) {
-    parts.push(`자외선 ${indices.uv.value}${indices.uv.grade ? ` (${indices.uv.grade})` : ''}`)
-  }
-  if (indices.senTa && Number.isFinite(indices.senTa.value)) {
-    parts.push(`여름체감 ${indices.senTa.value}`)
-  }
-  if (indices.wct && Number.isFinite(indices.wct.value)) {
-    parts.push(`겨울체감 ${indices.wct.value}`)
-  }
-  if (indices.airDiffusion && Number.isFinite(indices.airDiffusion.value)) {
-    parts.push(`대기정체 ${indices.airDiffusion.value}`)
-  }
-  if (!parts.length) return null
+  const uv =
+    indices.uv && Number.isFinite(indices.uv.value)
+      ? `${indices.uv.value}${indices.uv.grade ? ` (${indices.uv.grade})` : ''}`
+      : '--'
+  const senTa = indices.senTa && Number.isFinite(indices.senTa.value) ? String(indices.senTa.value) : '--'
+  const wct = indices.wct && Number.isFinite(indices.wct.value) ? String(indices.wct.value) : '--'
+  const air =
+    indices.airDiffusion && Number.isFinite(indices.airDiffusion.value)
+      ? String(indices.airDiffusion.value)
+      : '--'
+
+  const parts = [`자외선 ${uv}`, `여름체감 ${senTa}`, `겨울체감 ${wct}`, `대기정체 ${air}`]
   return (
     <div
       className={`rounded-xl ${compact ? 'px-2.5 py-2' : 'px-3 py-2.5'}`}
@@ -81,12 +81,24 @@ function LivingIndicesRow({ indices, compact }: { indices: SpotApiResponse['indi
   )
 }
 
-export function SpotPanel({ initialSpot = null, compact = false, showHeader = true }: Props) {
+export function SpotPanel({
+  initialSpot = null,
+  anchorLocation = null,
+  compact = false,
+  showHeader = true,
+}: Props) {
   const [spot, setSpot] = useState<LocationInfo | null>(initialSpot ?? null)
   const [data, setData] = useState<SpotApiResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+
+  useEffect(() => {
+    if (spot) return
+    if (!anchorLocation) return
+    const nearest = findNearestGolfCourse(anchorLocation.lat, anchorLocation.lon)
+    if (nearest) setSpot(nearest)
+  }, [anchorLocation, spot])
 
   useEffect(() => {
     if (!spot) return

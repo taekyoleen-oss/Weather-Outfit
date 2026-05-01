@@ -546,7 +546,7 @@ export default function HomePage() {
               {outfitPanelMobile}
             </>
           }
-          spotContent={<SpotPanel />}
+          spotContent={<SpotPanel anchorLocation={location} />}
         />
       </div>
 
@@ -591,7 +591,7 @@ export default function HomePage() {
               {weatherCard}
               {highlightsGrid}
               {/* 좌측 컬럼 하단: 시설(골프장) 초단기 날씨 — PC에서도 노출 */}
-              <SpotPanel compact />
+              <SpotPanel compact anchorLocation={location} />
             </>
           }
           right={

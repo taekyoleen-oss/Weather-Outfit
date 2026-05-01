@@ -299,3 +299,29 @@ export function searchGolfCourses(query: string, limit = 5): LocationInfo[] {
     .slice(0, limit)
     .map(({ loc }) => loc)
 }
+
+function haversineKm(aLat: number, aLon: number, bLat: number, bLon: number): number {
+  const toRad = (d: number) => (d * Math.PI) / 180
+  const dLat = toRad(bLat - aLat)
+  const dLon = toRad(bLon - aLon)
+  const lat1 = toRad(aLat)
+  const lat2 = toRad(bLat)
+  const s1 = Math.sin(dLat / 2)
+  const s2 = Math.sin(dLon / 2)
+  const h = s1 * s1 + Math.cos(lat1) * Math.cos(lat2) * s2 * s2
+  return 6371 * (2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h)))
+}
+
+export function findNearestGolfCourse(lat: number, lon: number): LocationInfo | null {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || GOLF_COURSES.length === 0) return null
+  let best: LocationInfo | null = null
+  let bestDist = Number.POSITIVE_INFINITY
+  for (const c of GOLF_COURSES) {
+    const d = haversineKm(lat, lon, c.lat, c.lon)
+    if (d < bestDist) {
+      bestDist = d
+      best = c
+    }
+  }
+  return best
+}
