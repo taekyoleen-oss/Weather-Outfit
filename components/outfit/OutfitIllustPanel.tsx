@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import type { CSSProperties } from 'react'
 import type { OutfitItem, OutfitResult, OutfitWeatherSnapshot, GenderType } from '@/types/outfit'
 import { CATEGORY_ORDER, CATEGORY_LABELS, type OutfitCategoryKey } from '@/lib/outfit/categories'
 import { outfitAccessorySrc, type OutfitAccessoryKey } from '@/lib/outfit/accessoryIllust'
@@ -18,6 +19,17 @@ const BLANK_CATS = new Set(['rain', 'acc', 'mask'])
 
 /** 텍스트 칩(`itemChip`)과 동일한 pill 래퍼 안에 넣을 때 */
 const ILLUST_ACC_IN_CHIP_CLASS = 'h-5 w-5 shrink-0 object-contain sm:h-5 sm:w-5'
+
+const ITEM_CHIP_CLASS =
+  'inline-flex max-w-full min-w-0 items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full sm:text-[11px]'
+
+function itemChipShellStyle(required: boolean): CSSProperties {
+  return {
+    background: required ? 'rgba(239,68,68,0.07)' : 'rgba(100,116,139,0.08)',
+    color: required ? 'var(--danger)' : 'var(--text)',
+    border: `1px solid ${required ? 'rgba(239,68,68,0.2)' : 'var(--border)'}`,
+  }
+}
 
 /** 그림만 있을 때 호버·접근성용 설명 (브라우저 기본 툴팁) */
 function itemIllustTooltip(item: OutfitItem): string {
@@ -39,11 +51,9 @@ function itemChip(item: OutfitItem, idx: number) {
   return (
     <span
       key={item.id}
-      className="inline-flex max-w-full min-w-0 items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full sm:text-[11px]"
+      className={ITEM_CHIP_CLASS}
       style={{
-        background: item.required ? 'rgba(239,68,68,0.07)' : 'rgba(100,116,139,0.08)',
-        color: item.required ? 'var(--danger)' : 'var(--text)',
-        border: `1px solid ${item.required ? 'rgba(239,68,68,0.2)' : 'var(--border)'}`,
+        ...itemChipShellStyle(item.required),
         marginLeft: idx === 0 ? 0 : 4,
       }}
     >

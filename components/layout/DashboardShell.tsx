@@ -27,8 +27,9 @@ function loadStoredZoom(): number {
   }
 }
 
-const supportsCssZoom =
-  typeof CSS !== 'undefined' && typeof CSS.supports === 'function' && CSS.supports('zoom', '1')
+function detectCssZoomSupport(): boolean {
+  return typeof CSS !== 'undefined' && typeof CSS.supports === 'function' && CSS.supports('zoom', '1')
+}
 
 export function DashboardShell({ left, right }: Props) {
   const rootRef = useRef<HTMLDivElement>(null)
@@ -38,6 +39,12 @@ export function DashboardShell({ left, right }: Props) {
   const [userZoom, setUserZoom] = useState(1)
   const [fitPct, setFitPct] = useState(100)
   const [appliedPct, setAppliedPct] = useState(100)
+  /** SSR·첫 페인트는 false로 서버 HTML과 맞추고, 마운트 후 브라우저에서만 true 가능 */
+  const [supportsCssZoom, setSupportsCssZoom] = useState(false)
+
+  useEffect(() => {
+    setSupportsCssZoom(detectCssZoomSupport())
+  }, [])
 
   useEffect(() => {
     const z = loadStoredZoom()
@@ -57,7 +64,7 @@ export function DashboardShell({ left, right }: Props) {
     )
     el.style.zoom = String(combined)
     setAppliedPct(Math.round(combined * 100))
-  }, [])
+  }, [supportsCssZoom])
 
   const measureViewportFitOnly = useCallback(() => {
     // rAF으로 쓰로틀: 같은 프레임 내 중복 측정 방지 및 강제 리플로우 최소화
@@ -81,7 +88,7 @@ export function DashboardShell({ left, right }: Props) {
         applyCombinedZoom()
       })
     })
-  }, [applyCombinedZoom])
+  }, [supportsCssZoom, applyCombinedZoom])
 
   // left/right 제거: ResizeObserver가 콘텐츠 크기 변화를 감지하므로 불필요한 재측정 방지
   useLayoutEffect(() => {
