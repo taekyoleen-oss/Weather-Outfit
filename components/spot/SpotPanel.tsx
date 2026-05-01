@@ -5,16 +5,10 @@ import { LocationSearchBar } from '@/components/weather/LocationSearchBar'
 import { GolfHourlyTimeline } from './GolfHourlyTimeline'
 import type { GolfHourlyRow } from './GolfHourlyTimeline'
 import { FairwayWindCard } from './FairwayWindCard'
-import { GolfOutfitCard, type OutfitSummary } from './GolfOutfitCard'
 import { GolfRiskAlerts } from './GolfRiskAlerts'
 import type { LocationInfo } from '@/types/location'
 import type { GolfScore } from '@/lib/spot/golfScore'
 import { latLonToGrid } from '@/lib/location/geoConvert'
-
-interface LivingIdxOut {
-  value: number
-  grade?: string
-}
 
 interface SpotApiResponse {
   spot: { name: string; address?: string; lat: number; lon: number; nx: number; ny: number }
@@ -49,15 +43,8 @@ interface SpotApiResponse {
     level: 'low' | 'moderate' | 'high' | 'very_high'
   }[]
   alerts: { type: string; level: string; message: string; isLightningRelated: boolean }[]
-  indices: {
-    uv: LivingIdxOut | null
-    senTa: LivingIdxOut | null
-    wct: LivingIdxOut | null
-    airDiffusion: LivingIdxOut | null
-  }
   scoreNow: GolfScore
   bestTeeHours: number[]
-  outfit: OutfitSummary | null
   fetchedAt: number
   error?: string
 }
@@ -85,7 +72,6 @@ interface Props {
   initialSpot?: LocationInfo | null
   anchorLocation?: LocationInfo | null
   compact?: boolean
-  showHeader?: boolean
 }
 
 const MOUNTAIN_CHOICES: LocationInfo[] = [
@@ -96,39 +82,10 @@ const MOUNTAIN_CHOICES: LocationInfo[] = [
   { name: '치악산', address: '강원 원주시', lat: 37.3651, lon: 128.0531, ...latLonToGrid({ lat: 37.3651, lon: 128.0531 }), terrain: 'mountain' },
 ]
 
-function LivingIndicesRow({ indices, compact }: { indices: SpotApiResponse['indices']; compact: boolean }) {
-  const uv =
-    indices.uv && Number.isFinite(indices.uv.value)
-      ? `${indices.uv.value}${indices.uv.grade ? ` (${indices.uv.grade})` : ''}`
-      : '--'
-  const senTa = indices.senTa && Number.isFinite(indices.senTa.value) ? String(indices.senTa.value) : '--'
-  const wct = indices.wct && Number.isFinite(indices.wct.value) ? String(indices.wct.value) : '--'
-  const air =
-    indices.airDiffusion && Number.isFinite(indices.airDiffusion.value)
-      ? String(indices.airDiffusion.value)
-      : '--'
-
-  const parts = [`자외선 ${uv}`, `여름체감 ${senTa}`, `겨울체감 ${wct}`, `대기정체 ${air}`]
-  return (
-    <div
-      className={`rounded-xl ${compact ? 'px-2.5 py-2' : 'px-3 py-2.5'}`}
-      style={{ background: 'rgba(91,141,238,0.06)', border: '1px solid var(--border)' }}
-    >
-      <p className="text-[10px] font-semibold mb-1" style={{ color: 'var(--muted)' }}>
-        기상청 생활기상지수 (해당 지역 근사)
-      </p>
-      <p className={`${compact ? 'text-[10px]' : 'text-xs'} leading-relaxed`} style={{ color: 'var(--text)' }}>
-        {parts.join(' · ')}
-      </p>
-    </div>
-  )
-}
-
 export function SpotPanel({
   initialSpot = null,
   anchorLocation = null,
   compact = false,
-  showHeader = true,
 }: Props) {
   const [spot, setSpot] = useState<LocationInfo | null>(initialSpot ?? null)
   const [data, setData] = useState<SpotApiResponse | null>(null)
@@ -172,19 +129,27 @@ export function SpotPanel({
   }, [spot])
 
   return (
-    <section className={compact ? 'space-y-2.5' : 'space-y-3'} aria-label="골프 라운드 날씨">
-      {showHeader && (
-        <div className="flex items-baseline justify-between gap-2 px-1">
-          <h2 className={`font-bold ${compact ? 'text-sm' : 'text-base'}`} style={{ color: 'var(--primary)' }}>
-            골프·라운드
-          </h2>
-          <span className="text-[10px]" style={{ color: 'var(--muted)' }}>
-            KMA 초단기·단기·지수
-          </span>
+    <section className={compact ? 'space-y-2.5' : 'space-y-3'} aria-label="단기 예측 날씨">
+      <LocationSearchBar onSelect={setSpot} />
+      {spot && (
+        <div
+          className={`rounded-xl ${compact ? 'p-2.5' : 'p-3'}`}
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+        >
+          <p className="text-[10px] font-semibold mb-1" style={{ color: 'var(--muted)' }}>
+            4번째 탭 기준 위치
+          </p>
+          <p className="text-xs font-semibold" style={{ color: 'var(--text)' }}>
+            장소: {spot.name}
+          </p>
+          <p className="text-[11px] mt-1" style={{ color: 'var(--muted)' }}>
+            주소: {spot.address ?? '주소 정보 없음'}
+          </p>
+          <p className="text-[10px] mt-1" style={{ color: 'var(--muted)' }}>
+            좌표: {spot.lat.toFixed(4)}, {spot.lon.toFixed(4)} · 격자: {spot.nx}, {spot.ny}
+          </p>
         </div>
       )}
-
-      <LocationSearchBar onSelect={setSpot} />
       <div
         className={`rounded-xl ${compact ? 'p-2.5' : 'p-3'}`}
         style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
@@ -209,26 +174,6 @@ export function SpotPanel({
           장소명 검색에서도 산 이름(예: 북한산, 설악산)으로 조회할 수 있습니다.
         </p>
       </div>
-
-      {spot && (
-        <div
-          className={`rounded-xl ${compact ? 'p-2.5' : 'p-3'}`}
-          style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
-        >
-          <p className="text-[10px] font-semibold mb-1" style={{ color: 'var(--muted)' }}>
-            4번째 탭 기준 위치
-          </p>
-          <p className="text-xs font-semibold" style={{ color: 'var(--text)' }}>
-            장소: {spot.name}
-          </p>
-          <p className="text-[11px] mt-1" style={{ color: 'var(--muted)' }}>
-            주소: {spot.address ?? '주소 정보 없음'}
-          </p>
-          <p className="text-[10px] mt-1" style={{ color: 'var(--muted)' }}>
-            좌표: {spot.lat.toFixed(4)}, {spot.lon.toFixed(4)} · 격자: {spot.nx}, {spot.ny}
-          </p>
-        </div>
-      )}
 
       {!spot && !loading && (
         <div
@@ -267,6 +212,7 @@ export function SpotPanel({
 
       {!loading && !error && spot && data && (
         <>
+          <GolfHourlyTimeline hourly={data.hourly} compact={compact} />
           {data.observed && (
             <FairwayWindCard
               windSpeedMs={data.observed.windSpeed}
@@ -276,7 +222,6 @@ export function SpotPanel({
               compact={compact}
             />
           )}
-          <GolfHourlyTimeline hourly={data.hourly} compact={compact} />
           <div
             className={`rounded-2xl ${compact ? 'p-3' : 'p-4'}`}
             style={{ background: 'var(--card, #fff)', border: '1px solid var(--border)' }}
@@ -347,8 +292,6 @@ export function SpotPanel({
               ))}
             </div>
           </div>
-          <LivingIndicesRow indices={data.indices} compact={compact} />
-          {data.outfit && <GolfOutfitCard outfit={data.outfit} compact={compact} />}
           <GolfRiskAlerts alerts={data.alerts} compact={compact} />
         </>
       )}

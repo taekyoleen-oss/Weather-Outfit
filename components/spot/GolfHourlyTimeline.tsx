@@ -1,6 +1,5 @@
 'use client'
 
-import type { GolfScore } from '@/lib/spot/golfScore'
 import { formatTemp1 } from '@/lib/utils/formatWeather'
 import type { PtyCode, SkyCode } from '@/types/weather'
 
@@ -13,19 +12,12 @@ export interface GolfHourlyRow {
   pop: number
   windSpeed: number
   feelsLikeC: number
-  score: GolfScore
+  score: { score: number; grade: string }
 }
 
 interface Props {
   hourly: GolfHourlyRow[]
   compact?: boolean
-}
-
-const BAR: Record<GolfScore['grade'], string> = {
-  good: '#16a34a',
-  fair: '#5B8DEE',
-  caution: '#F59E0B',
-  avoid: '#DC2626',
 }
 
 function shortWeatherLabel(h: GolfHourlyRow): { icon: string; text: string } {
@@ -54,8 +46,6 @@ export function GolfHourlyTimeline({ hourly, compact = false }: Props) {
       </p>
       <div className={`flex gap-1.5 overflow-x-auto pb-1 ${compact ? '' : 'snap-x'}`}>
         {hourly.map((h, i) => {
-          const c = BAR[h.score.grade]
-          const w = Math.max(7, Math.round((h.score.score / 100) * 16))
           const wx = shortWeatherLabel(h)
           return (
             <div
@@ -85,11 +75,6 @@ export function GolfHourlyTimeline({ hourly, compact = false }: Props) {
               <span className="text-[9px]" style={{ color: 'var(--muted)' }}>
                 {h.windSpeed.toFixed(1)}m/s
               </span>
-              <div
-                className="mt-1 rounded-full"
-                style={{ width: w, height: w, background: c, minHeight: 8, minWidth: 8 }}
-                title={`${h.score.score}점`}
-              />
             </div>
           )
         })}
