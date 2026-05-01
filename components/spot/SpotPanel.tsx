@@ -1,8 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { SpotSearchBar } from './SpotSearchBar'
-import { GolfScoreHero } from './GolfScoreHero'
+import { LocationSearchBar } from '@/components/weather/LocationSearchBar'
 import { GolfHourlyTimeline } from './GolfHourlyTimeline'
 import type { GolfHourlyRow } from './GolfHourlyTimeline'
 import { FairwayWindCard } from './FairwayWindCard'
@@ -10,7 +9,6 @@ import { GolfOutfitCard, type OutfitSummary } from './GolfOutfitCard'
 import { GolfRiskAlerts } from './GolfRiskAlerts'
 import type { LocationInfo } from '@/types/location'
 import type { GolfScore } from '@/lib/spot/golfScore'
-import { findNearestGolfCourse } from '@/lib/location/golfCourses'
 
 interface LivingIdxOut {
   value: number
@@ -96,8 +94,7 @@ export function SpotPanel({
   useEffect(() => {
     if (spot) return
     if (!anchorLocation) return
-    const nearest = findNearestGolfCourse(anchorLocation.lat, anchorLocation.lon)
-    if (nearest) setSpot(nearest)
+    setSpot(anchorLocation)
   }, [anchorLocation, spot])
 
   useEffect(() => {
@@ -142,7 +139,7 @@ export function SpotPanel({
         </div>
       )}
 
-      <SpotSearchBar onSelect={setSpot} compact={compact} />
+      <LocationSearchBar onSelect={setSpot} />
 
       {!spot && !loading && (
         <div
@@ -153,9 +150,9 @@ export function SpotPanel({
             color: 'var(--muted)',
           }}
         >
-          골프장을 검색하면 <b>라운드 적합도</b>, 시간대별 점수, 바람, 복장, 기상특보를
+          장소를 검색하면 <b>라운드 적합도</b>, 시간대별 점수, 바람, 복장, 기상특보를
           <br />
-          기상청 API 기반으로 보여 드립니다. (미세먼지·UV 일반 카드는 &quot;현재/세부 날씨&quot; 탭)
+          기상청 API 기반으로 보여 드립니다. (골프장 외 장소도 조회 가능)
         </div>
       )}
 
@@ -181,21 +178,16 @@ export function SpotPanel({
 
       {!loading && !error && spot && data && (
         <>
-          <GolfScoreHero
-            score={data.scoreNow}
-            tmnToday={data.tmnToday}
-            tmxToday={data.tmxToday}
-            bestTeeHours={data.bestTeeHours}
-            compact={compact}
-          />
-          <GolfHourlyTimeline hourly={data.hourly} compact={compact} />
           {data.observed && (
             <FairwayWindCard
               windSpeedMs={data.observed.windSpeed}
               vecDeg={data.observed.windDirection}
+              score={data.scoreNow}
+              bestTeeHours={data.bestTeeHours}
               compact={compact}
             />
           )}
+          <GolfHourlyTimeline hourly={data.hourly} compact={compact} />
           <LivingIndicesRow indices={data.indices} compact={compact} />
           {data.outfit && <GolfOutfitCard outfit={data.outfit} compact={compact} />}
           <GolfRiskAlerts alerts={data.alerts} compact={compact} />

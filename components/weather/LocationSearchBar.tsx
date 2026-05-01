@@ -8,7 +8,7 @@ interface Props {
   onSelect: (loc: LocationInfo) => void
 }
 
-type SearchMode = 'place' | 'address' | 'golf'
+type SearchMode = 'place' | 'address'
 
 export function LocationSearchBar({ onSelect }: Props) {
   const [mode, setMode] = useState<SearchMode>('place')
@@ -43,14 +43,6 @@ export function LocationSearchBar({ onSelect }: Props) {
         return
       }
 
-      if (m === 'golf') {
-        const hits = searchGolfCourses(q, 6)
-        setResults(hits)
-        setOpen(hits.length > 0)
-        if (hits.length === 0) setError('검색된 골프장이 없습니다. 골프장 이름을 입력해 보세요.')
-        return
-      }
-
       timerRef.current = setTimeout(async () => {
         abortRef.current?.abort()
         const ac = new AbortController()
@@ -67,13 +59,28 @@ export function LocationSearchBar({ onSelect }: Props) {
             return
           }
           if (Array.isArray(data)) {
-            setResults(data)
+            const apiResults = data as LocationInfo[]
+            const golfMerged =
+              m === 'place'
+                ? [...searchGolfCourses(q, 5), ...apiResults]
+                : apiResults
+
+            const deduped: LocationInfo[] = []
+            const seen = new Set<string>()
+            for (const loc of golfMerged) {
+              const key = `${loc.name}|${loc.nx},${loc.ny}`
+              if (seen.has(key)) continue
+              seen.add(key)
+              deduped.push(loc)
+            }
+
+            setResults(deduped)
             setActiveIndex(-1)
-            if (data.length === 0) {
+            if (deduped.length === 0) {
               setError('검색 결과가 없습니다. 다른 키워드를 입력해 보세요.')
               setOpen(false)
-            } else if (data.length <= 5) {
-              setConfirmList(data)
+            } else if (deduped.length <= 5) {
+              setConfirmList(deduped)
               setConfirmOpen(true)
               setOpen(false)
             } else {
@@ -165,10 +172,8 @@ export function LocationSearchBar({ onSelect }: Props) {
 
   const placeholder =
     mode === 'place'
-      ? '장소명 검색 (예: 한강공원, 남산)'
-      : mode === 'address'
-      ? '주소 검색 (예: 강남구, 분당구 정자동)'
-      : '골프장 검색 (예: 나인브릿지, 레이크사이드)'
+      ? '장소명 검색 (예: 한강공원, 남산, 스카이72)'
+      : '주소 검색 (예: 강남구, 분당구 정자동)'
 
   const terrainIcon = (loc: LocationInfo) =>
     loc.terrain === 'mountain' ? '⛰️' :
@@ -184,7 +189,6 @@ export function LocationSearchBar({ onSelect }: Props) {
           [
             { key: 'place',   label: '📍 장소명' },
             { key: 'address', label: '🗺 주소' },
-            { key: 'golf',    label: '⛳ 골프장' },
           ] as const
         ).map((m) => (
           <button
@@ -194,12 +198,12 @@ export function LocationSearchBar({ onSelect }: Props) {
             style={{
               background:
                 mode === m.key
-                  ? m.key === 'golf' ? '#16a34a' : 'var(--humidity)'
-                  : m.key === 'golf' ? 'rgba(34,197,94,0.1)' : 'rgba(91,141,238,0.1)',
+                  ? 'var(--humidity)'
+                  : 'rgba(91,141,238,0.1)',
               color:
                 mode === m.key
                   ? 'white'
-                  : m.key === 'golf' ? '#16a34a' : 'var(--humidity)',
+                  : 'var(--humidity)',
               fontWeight: mode === m.key ? 600 : 400,
             }}
           >
@@ -262,7 +266,7 @@ export function LocationSearchBar({ onSelect }: Props) {
         </p>
       )}
 
-      {/* ── Compact dropdown (>5 results or golf) ── */}
+      {/* ── Compact dropdown (>5 results) ── */}
       {open && (
         <div
           className="absolute top-full left-0 right-0 mt-1.5 glass-card py-1.5 z-50"

@@ -2,11 +2,14 @@
 
 import type { GolfScore } from '@/lib/spot/golfScore'
 import { formatTemp1 } from '@/lib/utils/formatWeather'
+import type { PtyCode, SkyCode } from '@/types/weather'
 
 export interface GolfHourlyRow {
   fcstYmd: string
   fcstHour: number
   temperature: number
+  skyCode?: SkyCode
+  ptyCode?: PtyCode
   pop: number
   windSpeed: number
   feelsLikeC: number
@@ -25,6 +28,20 @@ const BAR: Record<GolfScore['grade'], string> = {
   avoid: '#DC2626',
 }
 
+function shortWeatherLabel(h: GolfHourlyRow): { icon: string; text: string } {
+  if (h.ptyCode && h.ptyCode !== '0') {
+    if (h.ptyCode === '1') return { icon: '🌧️', text: '비' }
+    if (h.ptyCode === '2') return { icon: '🌨️', text: '비/눈' }
+    if (h.ptyCode === '3') return { icon: '❄️', text: '눈' }
+    if (h.ptyCode === '4') return { icon: '🌦️', text: '소나기' }
+  }
+  if (h.skyCode === '1') return { icon: '☀️', text: '맑음' }
+  if (h.skyCode === '3') return { icon: '⛅', text: '구름' }
+  if (h.skyCode === '4') return { icon: '☁️', text: '흐림' }
+  if (h.pop >= 60) return { icon: '🌦️', text: '비 가능' }
+  return { icon: '🌤️', text: '대체로 맑음' }
+}
+
 export function GolfHourlyTimeline({ hourly, compact = false }: Props) {
   if (!hourly.length) return null
   return (
@@ -38,7 +55,8 @@ export function GolfHourlyTimeline({ hourly, compact = false }: Props) {
       <div className={`flex gap-1.5 overflow-x-auto pb-1 ${compact ? '' : 'snap-x'}`}>
         {hourly.map((h, i) => {
           const c = BAR[h.score.grade]
-          const w = Math.max(8, Math.round((h.score.score / 100) * 36))
+          const w = Math.max(7, Math.round((h.score.score / 100) * 16))
+          const wx = shortWeatherLabel(h)
           return (
             <div
               key={`${h.fcstYmd}-${h.fcstHour}-${i}`}
@@ -52,11 +70,12 @@ export function GolfHourlyTimeline({ hourly, compact = false }: Props) {
               <span className="text-[10px] font-bold" style={{ color: 'var(--muted)' }}>
                 {String(h.fcstHour).padStart(2, '0')}시
               </span>
-              <div
-                className="mt-1 rounded-full"
-                style={{ width: w, height: w, background: c, minHeight: 8, minWidth: 8 }}
-                title={`${h.score.score}점`}
-              />
+              <div className="mt-1 flex items-center gap-1">
+                <span className="text-sm leading-none" aria-hidden>{wx.icon}</span>
+                <span className="text-[10px] font-semibold leading-none" style={{ color: 'var(--text)' }}>
+                  {wx.text}
+                </span>
+              </div>
               <span className="text-xs font-bold mt-1" style={{ color: 'var(--text)' }}>
                 {formatTemp1(h.temperature)}°
               </span>
@@ -66,6 +85,11 @@ export function GolfHourlyTimeline({ hourly, compact = false }: Props) {
               <span className="text-[9px]" style={{ color: 'var(--muted)' }}>
                 {h.windSpeed.toFixed(1)}m/s
               </span>
+              <div
+                className="mt-1 rounded-full"
+                style={{ width: w, height: w, background: c, minHeight: 8, minWidth: 8 }}
+                title={`${h.score.score}점`}
+              />
             </div>
           )
         })}

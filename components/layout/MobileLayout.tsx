@@ -16,7 +16,7 @@ interface TabMeta {
 const TABS: readonly TabMeta[] = [
   { key: 'current', icon: '🌤', label: '날씨 / 위치' },
   { key: 'detail',  icon: '📊', label: '세부 날씨' },
-  { key: 'outfit',  icon: '👔', label: '외출 옷' },
+  { key: 'outfit',  icon: '👔', label: '외출옷 추천' },
   { key: 'spot',    icon: '⛳', label: '골프 라운드' },
 ] as const
 
