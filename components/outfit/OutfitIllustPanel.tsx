@@ -17,8 +17,11 @@ const PC_BAND_RIGHT: (OutfitCategoryKey | null)[] = ['acc', 'rain', 'base', 'bot
 
 const BLANK_CATS = new Set(['rain', 'acc', 'mask'])
 
-/** 텍스트 칩(`itemChip`)과 동일한 pill 래퍼 안에 넣을 때 */
+/** 일반 행: 텍스트 칩 옆 소형 PNG */
 const ILLUST_ACC_IN_CHIP_CLASS = 'h-5 w-5 shrink-0 object-contain sm:h-5 sm:w-5'
+/** 필수/선택 액세서리 행: 글자 없이 그림만(1.5×) */
+const ILLUST_ACC_VARIANT_ROW_CLASS = 'h-[30px] w-[30px] shrink-0 object-contain sm:h-[30px] sm:w-[30px]'
+const ACC_VARIANT_IMG_PX = 30
 
 const ITEM_CHIP_CLASS =
   'inline-flex max-w-full min-w-0 items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full sm:text-[11px]'
@@ -45,9 +48,29 @@ const WEATHER_ACCESSORY_TOOLTIP: Partial<Record<OutfitAccessoryKey, string>> = {
   gloves: '기온·체감 조건에 따른 장갑',
   scarf: '한랭·바람 조건에 따른 목도리',
   windbreaker: '강풍 등 날씨 조건에 따른 바람막이',
+  trekkingPole: '등산·트레킹 시 무릎 보호용 스틱',
 }
 
-function itemChip(item: OutfitItem, idx: number) {
+function itemChip(item: OutfitItem, idx: number, iconOnly?: boolean) {
+  const tooltip = itemIllustTooltip(item)
+  if (iconOnly) {
+    return (
+      <span
+        key={item.id}
+        className={ITEM_CHIP_CLASS}
+        style={{
+          ...itemChipShellStyle(item.required),
+          marginLeft: idx === 0 ? 0 : 4,
+        }}
+        title={tooltip}
+        aria-label={tooltip}
+      >
+        <span className="flex-shrink-0 text-[17px] sm:text-lg leading-none" aria-hidden>
+          {item.icon}
+        </span>
+      </span>
+    )
+  }
   return (
     <span
       key={item.id}
@@ -64,13 +87,15 @@ function itemChip(item: OutfitItem, idx: number) {
 }
 
 /** 액세서리 PNG: `acc` 이거나, 바람막이·윈드쉘 계열(`windbreaker` 키)은 아우터/미들에서도 동일 에셋 표시 */
-function itemChipsOrAccessoryImages(items: OutfitItem[], gender: GenderType) {
+function itemChipsOrAccessoryImages(items: OutfitItem[], gender: GenderType, accVariantRow: boolean) {
   return items.map((item, idx) => {
     const accKey = outfitItemToAccessoryKey(item, gender)
     const useAccessoryImage =
       accKey && (item.category === 'acc' || accKey === 'windbreaker')
     if (useAccessoryImage) {
       const tip = itemIllustTooltip(item)
+      const imgPx = accVariantRow ? ACC_VARIANT_IMG_PX : 20
+      const imgClass = accVariantRow ? ILLUST_ACC_VARIANT_ROW_CLASS : ILLUST_ACC_IN_CHIP_CLASS
       return (
         <span
           key={item.id}
@@ -80,21 +105,26 @@ function itemChipsOrAccessoryImages(items: OutfitItem[], gender: GenderType) {
             marginLeft: idx === 0 ? 0 : 4,
           }}
         >
-          <Image
-            src={outfitAccessorySrc(accKey)}
-            alt={tip}
-            title={tip}
-            aria-label={tip}
-            width={20}
-            height={20}
-            className={ILLUST_ACC_IN_CHIP_CLASS}
-            sizes="20px"
-            loading="lazy"
-          />
+          <span className="flex-shrink-0 inline-flex">
+            <Image
+              src={outfitAccessorySrc(accKey)}
+              alt={tip}
+              title={tip}
+              aria-label={tip}
+              width={imgPx}
+              height={imgPx}
+              className={imgClass}
+              sizes={`${imgPx}px`}
+              loading="lazy"
+            />
+          </span>
+          {!accVariantRow ? (
+            <span className="font-medium truncate min-w-0">{item.name}</span>
+          ) : null}
         </span>
       )
     }
-    return itemChip(item, idx)
+    return itemChip(item, idx, accVariantRow)
   })
 }
 
@@ -177,7 +207,7 @@ function CategoryBlock({
             : `flex-wrap gap-1.5 sm:gap-2 ${isRight ? 'justify-start' : 'justify-end'}`
         }`}
         style={{
-          minHeight: Math.max(22, accCount > 0 || hasAccessoryVisual ? 40 : 22),
+          minHeight: Math.max(22, isVariantAccRow ? 48 : accCount > 0 || hasAccessoryVisual ? 40 : 22),
           width: isVariantAccRow ? '150%' : undefined,
           transform: isVariantAccRow ? `translateX(${isRight ? '-30px' : '30px'})` : undefined,
         }}
@@ -186,9 +216,11 @@ function CategoryBlock({
         {showVariant ? (
           <span className="lg:hidden inline-flex shrink-0">{variantBadge}</span>
         ) : null}
-        {hasItems ? itemChipsOrAccessoryImages(items, gender) : null}
+        {hasItems ? itemChipsOrAccessoryImages(items, gender, isVariantAccRow) : null}
         {accessoryKeys?.map((key, idx) => {
           const tip = WEATHER_ACCESSORY_TOOLTIP[key] ?? ACCESSORY_ALT[key]
+          const imgPx = isVariantAccRow ? ACC_VARIANT_IMG_PX : 20
+          const imgClass = isVariantAccRow ? ILLUST_ACC_VARIANT_ROW_CLASS : ILLUST_ACC_IN_CHIP_CLASS
           return (
             <span
               key={key}
@@ -198,17 +230,22 @@ function CategoryBlock({
                 marginLeft: idx === 0 ? 0 : 4,
               }}
             >
-              <Image
-                src={outfitAccessorySrc(key)}
-                alt={tip}
-                title={tip}
-                aria-label={tip}
-                width={20}
-                height={20}
-                className={ILLUST_ACC_IN_CHIP_CLASS}
-                sizes="20px"
-                loading="lazy"
-              />
+              <span className="flex-shrink-0 inline-flex">
+                <Image
+                  src={outfitAccessorySrc(key)}
+                  alt={tip}
+                  title={tip}
+                  aria-label={tip}
+                  width={imgPx}
+                  height={imgPx}
+                  className={imgClass}
+                  sizes={`${imgPx}px`}
+                  loading="lazy"
+                />
+              </span>
+              {!isVariantAccRow ? (
+                <span className="font-medium truncate min-w-0">{ACCESSORY_ALT[key]}</span>
+              ) : null}
             </span>
           )
         })}

@@ -12,6 +12,8 @@ export const OUTFIT_ACCESSORY_ASSETS = {
   gloves: '/outfit/accessories/acc-gloves-v1.webp',
   scarf: '/outfit/accessories/acc-scarf-v1.webp',
   windbreaker: '/outfit/accessories/acc-windbreaker-v1.webp',
+  /** 등산·트레킹 전용 스틱 한 쌍 */
+  trekkingPole: '/outfit/accessories/acc-trekking-pole-v1.webp',
 } as const
 
 export type OutfitAccessoryKey = keyof typeof OUTFIT_ACCESSORY_ASSETS

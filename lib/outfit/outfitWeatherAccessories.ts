@@ -46,6 +46,12 @@ export function outfitItemCoversAccessoryIllust(items: OutfitItem[], key: Outfit
           (it.category === 'mid' || it.category === 'outer') &&
           (it.name.includes('바람막이') || it.name.includes('방풍') || it.name.includes('윈드') || /windbreaker|wind-/i.test(it.id)),
       )
+    case 'trekkingPole':
+      return items.some(
+        (it) =>
+          it.category === 'acc' &&
+          (it.name.includes('스틱') || it.name.includes('폴') || /stick|pole|trekking/i.test(it.id)),
+      )
     default:
       return false
   }
@@ -105,6 +111,18 @@ export function accessoriesByOutfitCategory(
   return stripAccessoryKeysAlreadyInItems(result.items, out)
 }
 
+/** 활동 기반 추가 악세사리 (날씨와 독립적으로 항상 제안) */
+export function accessoriesByActivity(
+  result: OutfitResult,
+  activity: string,
+): Partial<Record<OutfitCategoryKey, OutfitAccessoryKey[]>> {
+  const out: Partial<Record<OutfitCategoryKey, OutfitAccessoryKey[]>> = {}
+  if (activity === 'hiking') {
+    pushUnique(out, 'acc', 'trekkingPole')
+  }
+  return stripAccessoryKeysAlreadyInItems(result.items, out)
+}
+
 export const ACCESSORY_ALT: Record<OutfitAccessoryKey, string> = {
   umbrellaOpen: '우산',
   hatMale: '모자',
@@ -113,6 +131,7 @@ export const ACCESSORY_ALT: Record<OutfitAccessoryKey, string> = {
   gloves: '장갑',
   scarf: '목도리',
   windbreaker: '바람막이',
+  trekkingPole: '등산스틱',
 }
 
 /** 일러스트 탭: 칩 대신 `public/outfit/accessories` PNG로 쓸 수 있으면 키 반환 */
@@ -158,6 +177,12 @@ export function outfitItemToAccessoryKey(item: OutfitItem, gender: GenderType): 
       /windbreaker|wind-/i.test(item.id))
   ) {
     return 'windbreaker'
+  }
+  if (
+    item.category === 'acc' &&
+    (item.name.includes('스틱') || item.name.includes('폴') || /stick|pole|trekking/i.test(item.id))
+  ) {
+    return 'trekkingPole'
   }
   return null
 }
