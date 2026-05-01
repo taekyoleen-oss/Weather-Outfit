@@ -17,7 +17,9 @@ export async function GET(req: NextRequest) {
     const areaNo = await resolveAreaNoByCoords({ lat, lon, nx, ny })
     const key = `pollen:${areaNo}`
     const data = await kvSWR(key, TTL.dust, () => fetchPollen({ areaNo }))
-    return NextResponse.json(data)
+    const res = NextResponse.json(data)
+    res.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=300')
+    return res
   } catch (err) {
     console.error('Pollen API error:', err)
     return NextResponse.json({ error: '꽃가루 데이터를 불러오지 못했습니다.' }, { status: 500 })

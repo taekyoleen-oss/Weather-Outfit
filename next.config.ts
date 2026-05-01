@@ -5,16 +5,11 @@ const nextConfig: NextConfig = {
     dangerouslyAllowSVG: true,
     contentDispositionType: 'attachment',
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    formats: ['image/avif', 'image/webp'],
+    remotePatterns: [],
   },
-  async headers() {
-    return [
-      {
-        source: '/api/:path*',
-        headers: [
-          { key: 'Cache-Control', value: 'no-store' },
-        ],
-      },
-    ]
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'recharts'],
   },
 }
 

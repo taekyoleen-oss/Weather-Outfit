@@ -1,12 +1,16 @@
 import type { DailyForecast, SkyCode, PtyCode } from '@/types/weather'
 import { addCalendarDaysFromKstYmd, kstTodayYmd } from '@/lib/utils/timeOfDay'
+import { safeFetch } from '@/lib/utils/safeFetch'
 
 const KMA_BASE = 'http://apis.data.go.kr/1360000/MidFcstInfoService'
 
+let _kmaKey: string | null = null
 function kmaKey(): string {
-  const key = process.env.KMA_API_KEY
-  if (!key) throw new Error('KMA_API_KEY not set')
-  return key
+  if (_kmaKey !== null) return _kmaKey
+  const raw = process.env.KMA_API_KEY
+  if (!raw) throw new Error('KMA_API_KEY not set')
+  try { _kmaKey = decodeURIComponent(raw) } catch { _kmaKey = raw }
+  return _kmaKey
 }
 
 // KST = UTC+9; KMA API uses Korean Standard Time
@@ -67,33 +71,42 @@ function getMidTaCode(regId: string): string {
   return MAP[regId] ?? '11B10001'
 }
 
-// Map nx/ny approximate region to KMA mid-forecast region code
+// Map nx/ny approximate region to KMA mid-forecast region code.
+// 조건을 disjoint하게 정의해 첫 매칭 우선 규칙에서도 모든 도가 도달 가능하도록 함.
 export function getMidRegionCode(nx: number, ny: number): string {
-  // Seoul / Gyeonggi
-  if (nx >= 55 && nx <= 75 && ny >= 120 && ny <= 140) return '11B00000'
-  // Busan/Gyeongnam
-  if (nx >= 85 && nx <= 100 && ny >= 80 && ny <= 100) return '11H20000'
-  // Daegu/Gyeongbuk
-  if (nx >= 85 && nx <= 100 && ny >= 100 && ny <= 120) return '11H10000'
-  // Gwangju/Jeonnam
-  if (nx >= 55 && nx <= 75 && ny >= 75 && ny <= 100) return '11F20000'
-  // Jeonbuk
-  if (nx >= 55 && nx <= 75 && ny >= 100 && ny <= 120) return '11F10000'
-  // Chungnam
-  if (nx >= 55 && nx <= 75 && ny >= 115 && ny <= 130) return '11C20000'
-  // Chungbuk
-  if (nx >= 68 && nx <= 82 && ny >= 115 && ny <= 130) return '11C10000'
-  // Gangwon
-  if (nx >= 82 && nx <= 110 && ny >= 125 && ny <= 150) return '11D10000'
-  // Jeju
-  if (nx >= 50 && nx <= 60 && ny >= 55 && ny <= 65) return '11G00000'
+  // 제주: 최남단 독립 도서
+  if (nx >= 50 && nx <= 62 && ny >= 50 && ny <= 68) return '11G00000'
+  // 강원: 동부 + 높은 ny (nx≥80 이면서 ny≥128)
+  if (nx >= 80 && ny >= 128) return '11D10000'
+  // 부산/경남: 동남부 저지대 (nx≥83, ny≤100)
+  if (nx >= 83 && ny <= 100) return '11H20000'
+  // 대구/경북: 동부 중간 (nx≥80, ny 88-127) — 강원·경남 제외 후 나머지
+  if (nx >= 80 && ny >= 88 && ny <= 127) return '11H10000'
+  // 전남/광주: 서남부 (nx≤80, ny≤100)
+  if (nx <= 80 && ny <= 100) return '11F20000'
+  // 전북: 서부 중간 (nx≤78, ny 101-118)
+  if (nx <= 78 && ny >= 101 && ny <= 118) return '11F10000'
+  // 충북: 중부 (nx≥68, ny 112-132)
+  if (nx >= 68 && ny >= 112 && ny <= 132) return '11C10000'
+  // 충남: 서부 (nx<68, ny 112-132)
+  if (nx < 68 && ny >= 112 && ny <= 132) return '11C20000'
+  // 서울/경기: 기본값
   return '11B00000'
 }
 
 export async function fetchWeeklyForecast(nx: number, ny: number): Promise<DailyForecast[]> {
   const now = kstNow()
   const kstHour = now.getUTCHours()
-  const tmFc = formatDate(now) + (kstHour >= 18 ? '1800' : '0600')
+  let tmFc: string
+  if (kstHour >= 18) {
+    tmFc = formatDate(now) + '1800'
+  } else if (kstHour >= 6) {
+    tmFc = formatDate(now) + '0600'
+  } else {
+    // 06:00 발표 미완료 → 어제 18:00 폴백
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+    tmFc = formatDate(yesterday) + '1800'
+  }
   const regId = getMidRegionCode(nx, ny)
 
   const [landRes, tempRes] = await Promise.allSettled([
@@ -142,14 +155,14 @@ function parseItem<T>(json: unknown): T | null {
 
 async function fetchMidLand(regId: string, tmFc: string): Promise<Record<string, string>> {
   const params = new URLSearchParams({
-    serviceKey: decodeURIComponent(process.env.KMA_API_KEY ?? ''),
+    serviceKey: kmaKey(),
     pageNo: '1',
     numOfRows: '10',
     dataType: 'JSON',
     regId,
     tmFc,
   })
-  const res = await fetch(`${KMA_BASE}/getMidLandFcst?${params}`, { next: { revalidate: 0 } })
+  const res = await safeFetch(`${KMA_BASE}/getMidLandFcst?${params}`, { next: { revalidate: 0 } })
   if (!res.ok) throw new Error(`KMA mid-land API: ${res.status}`)
   const json = await res.json()
   const resultCode = (json?.response?.header?.resultCode as string) ?? 'unknown'
@@ -163,14 +176,14 @@ async function fetchMidLand(regId: string, tmFc: string): Promise<Record<string,
 async function fetchMidTemp(regId: string, tmFc: string): Promise<Record<string, number>> {
   const taRegId = getMidTaCode(regId)
   const params = new URLSearchParams({
-    serviceKey: decodeURIComponent(process.env.KMA_API_KEY ?? ''),
+    serviceKey: kmaKey(),
     pageNo: '1',
     numOfRows: '10',
     dataType: 'JSON',
     regId: taRegId,
     tmFc,
   })
-  const res = await fetch(`${KMA_BASE}/getMidTa?${params}`, { next: { revalidate: 0 } })
+  const res = await safeFetch(`${KMA_BASE}/getMidTa?${params}`, { next: { revalidate: 0 } })
   if (!res.ok) throw new Error(`KMA mid-temp API: ${res.status}`)
   const json = await res.json()
   const resultCode = (json?.response?.header?.resultCode as string) ?? 'unknown'

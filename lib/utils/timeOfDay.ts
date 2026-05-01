@@ -54,3 +54,16 @@ export function addCalendarDaysFromKstYmd(ymd: string, deltaDays: number): strin
   const nd = new Date(u)
   return `${nd.getUTCFullYear()}${String(nd.getUTCMonth() + 1).padStart(2, '0')}${String(nd.getUTCDate()).padStart(2, '0')}`
 }
+
+/** fromYmd → toYmd 일수 차이 (to가 미래면 양수). UTC 달력 기준. */
+export function diffCalendarDaysYmd(fromYmd: string, toYmd: string): number {
+  const y1 = parseInt(fromYmd.slice(0, 4), 10)
+  const m1 = parseInt(fromYmd.slice(4, 6), 10) - 1
+  const d1 = parseInt(fromYmd.slice(6, 8), 10)
+  const y2 = parseInt(toYmd.slice(0, 4), 10)
+  const m2 = parseInt(toYmd.slice(4, 6), 10) - 1
+  const d2 = parseInt(toYmd.slice(6, 8), 10)
+  const u1 = Date.UTC(y1, m1, d1)
+  const u2 = Date.UTC(y2, m2, d2)
+  return Math.round((u2 - u1) / 86400000)
+}

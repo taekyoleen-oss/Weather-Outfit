@@ -1,4 +1,5 @@
 import type { PollenData, PollenSpeciesRisk } from '@/types/weather'
+import { safeFetch } from '@/lib/utils/safeFetch'
 
 const BASE = 'https://apis.data.go.kr/1360000/HealthWthrIdxServiceV3'
 
@@ -70,7 +71,7 @@ async function fetchSpeciesRisk(args: {
 
   for (const areaCandidate of candidates) {
     const params = new URLSearchParams({
-      serviceKey: decodeURIComponent(serviceKey),
+      serviceKey: (() => { try { return decodeURIComponent(serviceKey) } catch { return serviceKey } })(),
       pageNo: '1',
       numOfRows: '10',
       dataType: 'JSON',
@@ -78,7 +79,7 @@ async function fetchSpeciesRisk(args: {
       time,
     })
     const url = `${BASE}/${SPECIES_ENDPOINT[species]}?${params}`
-    const res = await fetch(url, { next: { revalidate: 0 } })
+    const res = await safeFetch(url, { next: { revalidate: 0 } })
     if (!res.ok) continue
     const json = await res.json()
     const itemNode = json?.response?.body?.items?.item as

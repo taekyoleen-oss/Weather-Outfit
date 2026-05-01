@@ -17,6 +17,6 @@ const SLOT_BY_ZONE: Record<TempZone, string> = {
 
 export function outfitCharacterImageSrc(gender: GenderType, tempZone: TempZone): string {
   const slot = SLOT_BY_ZONE[tempZone]
-  const file = gender === 'female' ? `female-${slot}-v1.png` : `male-${slot}-v1.png`
+  const file = gender === 'female' ? `female-${slot}-v1.webp` : `male-${slot}-v1.webp`
   return `${CHAR_BASE}/${file}`
 }

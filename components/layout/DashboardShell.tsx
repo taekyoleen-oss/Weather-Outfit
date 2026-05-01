@@ -34,6 +34,7 @@ export function DashboardShell({ left, right }: Props) {
   const rootRef = useRef<HTMLDivElement>(null)
   const baseFitRef = useRef(1)
   const userZoomRef = useRef(1)
+  const rafRef = useRef<number | null>(null)
   const [userZoom, setUserZoom] = useState(1)
   const [fitPct, setFitPct] = useState(100)
   const [appliedPct, setAppliedPct] = useState(100)
@@ -59,24 +60,33 @@ export function DashboardShell({ left, right }: Props) {
   }, [])
 
   const measureViewportFitOnly = useCallback(() => {
-    const el = rootRef.current
-    if (!el) return
-    if (!supportsCssZoom) {
-      baseFitRef.current = 1
-      setFitPct(100)
-      return
-    }
-    el.style.zoom = '1'
-    const sw = el.scrollWidth
-    const cw = el.clientWidth
-    baseFitRef.current = sw > cw + 2 ? cw / sw : 1
-    setFitPct(Math.round(baseFitRef.current * 100))
-    applyCombinedZoom()
+    // rAF으로 쓰로틀: 같은 프레임 내 중복 측정 방지 및 강제 리플로우 최소화
+    if (rafRef.current !== null) return
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null
+      const el = rootRef.current
+      if (!el) return
+      if (!supportsCssZoom) {
+        baseFitRef.current = 1
+        setFitPct(100)
+        return
+      }
+      // zoom='1' 쓰기 → 다음 rAF에서 측정 (같은 프레임 내 읽기/쓰기 분리)
+      el.style.zoom = '1'
+      requestAnimationFrame(() => {
+        const sw = el.scrollWidth
+        const cw = el.clientWidth
+        baseFitRef.current = sw > cw + 2 ? cw / sw : 1
+        setFitPct(Math.round(baseFitRef.current * 100))
+        applyCombinedZoom()
+      })
+    })
   }, [applyCombinedZoom])
 
+  // left/right 제거: ResizeObserver가 콘텐츠 크기 변화를 감지하므로 불필요한 재측정 방지
   useLayoutEffect(() => {
     measureViewportFitOnly()
-  }, [measureViewportFitOnly, left, right])
+  }, [measureViewportFitOnly])
 
   useLayoutEffect(() => {
     applyCombinedZoom()
@@ -91,6 +101,7 @@ export function DashboardShell({ left, right }: Props) {
     return () => {
       ro.disconnect()
       window.removeEventListener('resize', measureViewportFitOnly)
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
     }
   }, [measureViewportFitOnly])
 

@@ -16,16 +16,23 @@ interface CacheEntry<T> {
   expiresAt: number
 }
 
+/** 동일 key에 대한 in-flight fetch를 단일 Promise로 병합 (thundering-herd 방지) */
+const inflight = new Map<string, Promise<unknown>>()
+
 async function backgroundRevalidate<T>(key: string, ttlSec: number, fetcher: () => Promise<T>) {
-  try {
-    const data = await fetcher()
-    const kv = getKv()
-    if (kv) {
-      await kv.set(key, { data, expiresAt: Date.now() + ttlSec * 1000 }, { ex: ttlSec * 2 })
+  if (inflight.has(key)) return
+  const promise = (async () => {
+    try {
+      const data = await fetcher()
+      const kv = getKv()
+      if (kv) {
+        void kv.set(key, { data, expiresAt: Date.now() + ttlSec * 1000 }, { ex: ttlSec * 2 }).catch(() => {})
+      }
+    } catch {
+      // background revalidation failure is silent
     }
-  } catch {
-    // background revalidation failure is silent
-  }
+  })().finally(() => inflight.delete(key))
+  inflight.set(key, promise)
 }
 
 export async function kvSWR<T>(key: string, ttlSec: number, fetcher: () => Promise<T>): Promise<T> {
@@ -41,23 +48,28 @@ export async function kvSWR<T>(key: string, ttlSec: number, fetcher: () => Promi
         return cached.data
       }
       // stale: return immediately, revalidate in background
-      backgroundRevalidate(key, ttlSec, fetcher)
+      void backgroundRevalidate(key, ttlSec, fetcher)
       return cached.data
     }
   } catch {
     // cache miss on error
   }
 
-  const data = await fetcher()
-  try {
+  // in-flight dedup: join existing request for same key
+  const existing = inflight.get(key) as Promise<T> | undefined
+  if (existing) return existing
+
+  const promise = (async () => {
+    const data = await fetcher()
     const kv2 = getKv()
     if (kv2) {
-      await kv2.set(key, { data, expiresAt: Date.now() + ttlSec * 1000 }, { ex: ttlSec * 2 })
+      void kv2.set(key, { data, expiresAt: Date.now() + ttlSec * 1000 }, { ex: ttlSec * 2 }).catch(() => {})
     }
-  } catch {
-    // cache write failure is non-fatal
-  }
-  return data
+    return data
+  })().finally(() => inflight.delete(key)) as Promise<T>
+
+  inflight.set(key, promise)
+  return promise
 }
 
 export const TTL = {
@@ -84,9 +96,5 @@ export async function kvOptionalGet<T>(key: string): Promise<T | null> {
 export async function kvOptionalSet<T>(key: string, value: T, exSeconds: number): Promise<void> {
   const kv = getKv()
   if (!kv) return
-  try {
-    await kv.set(key, value, { ex: exSeconds })
-  } catch {
-    // non-fatal
-  }
+  void kv.set(key, value, { ex: exSeconds }).catch(() => {})
 }

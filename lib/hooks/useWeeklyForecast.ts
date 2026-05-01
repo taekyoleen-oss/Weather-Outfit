@@ -10,15 +10,15 @@ export function useWeeklyForecast(location: LocationInfo | null) {
 
   useEffect(() => {
     if (!location) return
-    let cancelled = false
+    const ac = new AbortController()
     setLoading(true)
 
-    fetch(`/api/weather/weekly?nx=${location.nx}&ny=${location.ny}`)
+    fetch(`/api/weather/weekly?nx=${location.nx}&ny=${location.ny}`, { signal: ac.signal })
       .then((r) => r.json())
-      .then((d) => { if (!cancelled && Array.isArray(d)) { setData(d); setLoading(false) } })
-      .catch(() => { if (!cancelled) setLoading(false) })
+      .then((d) => { if (!ac.signal.aborted && Array.isArray(d)) { setData(d); setLoading(false) } })
+      .catch((e) => { if (ac.signal.aborted || (e as Error).name === 'AbortError') return; setLoading(false) })
 
-    return () => { cancelled = true }
+    return () => { ac.abort() }
   }, [location])
 
   return { data, loading }

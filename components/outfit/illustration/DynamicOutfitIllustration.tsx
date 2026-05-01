@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import type { OutfitItem, HeroIllustKey, GenderType, OutfitWeatherSnapshot, TempZone } from '@/types/outfit'
 import { outfitCharacterImageSrc } from '@/lib/outfit/characterIllust'
 import { ILLUST_VB_W, ILLUST_VIEWBOX_HEIGHT, illustDisplayHeightOverWidth } from './illustViewBox'
@@ -36,36 +37,47 @@ export function DynamicOutfitIllustration({
   void calendarMonth
   void showSunshine
   void weatherSky
-  const pxH = size * illustDisplayHeightOverWidth()
+  const pxH = Math.round(size * illustDisplayHeightOverWidth())
   const fluid = layout === 'fluid'
+  const alt = gender === 'female' ? '여성 복장 일러스트' : '남성 복장 일러스트'
 
   const src = outfitCharacterImageSrc(gender, tempZone)
 
+  const imgStyle = {
+    filter: 'saturate(1.08) contrast(1.04)',
+    transform: fluid ? 'scale(1.14)' : 'scale(1.08)',
+    transformOrigin: 'center 56%',
+  }
+
+  if (fluid) {
+    return (
+      <div
+        style={{
+          position: 'relative',
+          width: '100%',
+          aspectRatio: `${ILLUST_VB_W} / ${ILLUST_VIEWBOX_HEIGHT}`,
+        }}
+      >
+        <Image
+          fill
+          src={src}
+          alt={alt}
+          style={{ objectFit: 'contain', ...imgStyle }}
+          sizes={`(max-width: 640px) 100vw, ${size}px`}
+        />
+      </div>
+    )
+  }
+
   return (
-    <img
+    <Image
       src={src}
-      alt={gender === 'female' ? '여성 복장 일러스트' : '남성 복장 일러스트'}
-      width={fluid ? '100%' : size}
-      height={fluid ? undefined : `${pxH}px`}
-      style={
-        fluid
-          ? {
-              display: 'block',
-              width: '100%',
-              aspectRatio: `${ILLUST_VB_W} / ${ILLUST_VIEWBOX_HEIGHT}`,
-              objectFit: 'contain',
-              filter: 'saturate(1.08) contrast(1.04)',
-              transform: 'scale(1.14)',
-              transformOrigin: 'center 56%',
-            }
-          : {
-              display: 'block',
-              filter: 'saturate(1.08) contrast(1.04)',
-              transform: 'scale(1.08)',
-              transformOrigin: 'center 56%',
-            }
-      }
-      draggable={false}
+      alt={alt}
+      width={size}
+      height={pxH}
+      style={{ display: 'block', ...imgStyle }}
+      sizes={`${size}px`}
+      priority
     />
   )
 }

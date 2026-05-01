@@ -1,4 +1,5 @@
 import type { KakaoSearchResult } from '@/types/location'
+import { safeFetch } from '@/lib/utils/safeFetch'
 
 const KAKAO_API_BASE = 'https://dapi.kakao.com/v2/local'
 
@@ -7,7 +8,7 @@ export async function searchKakaoKeyword(query: string, size = 5): Promise<Kakao
   if (!key) throw new Error('KAKAO_LOCAL_API_KEY not set')
 
   const url = `${KAKAO_API_BASE}/search/keyword.json?query=${encodeURIComponent(query)}&size=${size}`
-  const res = await fetch(url, {
+  const res = await safeFetch(url, {
     headers: { Authorization: `KakaoAK ${key}` },
     cache: 'no-store',
   })
@@ -23,7 +24,7 @@ export async function searchKakaoAddress(query: string, size = 5): Promise<Kakao
   if (!key) throw new Error('KAKAO_LOCAL_API_KEY not set')
 
   const url = `${KAKAO_API_BASE}/search/address.json?query=${encodeURIComponent(query)}&size=${size}`
-  const res = await fetch(url, {
+  const res = await safeFetch(url, {
     headers: { Authorization: `KakaoAK ${key}` },
     cache: 'no-store',
   })
@@ -54,7 +55,7 @@ export async function reverseGeocodeComponents(
   if (!key) return { label: fallback, addressLine: fallback }
 
   const url = `${KAKAO_API_BASE}/geo/coord2address.json?x=${lon}&y=${lat}`
-  const res = await fetch(url, {
+  const res = await safeFetch(url, {
     headers: { Authorization: `KakaoAK ${key}` },
     next: { revalidate: 0 },
   })

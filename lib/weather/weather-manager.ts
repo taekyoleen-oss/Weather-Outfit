@@ -302,7 +302,7 @@ export class WeatherManager {
       meta: out.meta,
     }
     if (out.meta.data_source !== 'KV_CACHED_SNAPSHOT' && out.meta.data_source !== 'VILAGE_SHORT_TERM_GRID') {
-      await kvOptionalSet(cacheKey(nx, ny), payload, TTL.weatherManagerFallback)
+      void kvOptionalSet(cacheKey(nx, ny), payload, TTL.weatherManagerFallback)
     }
 
     return {

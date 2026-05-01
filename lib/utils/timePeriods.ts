@@ -76,3 +76,9 @@ export function getPreviousCompletedPeriod(currentHourKst: number): TimePeriod |
   }
   return best
 }
+
+export function getPeriodById(id: TimePeriod['id']): TimePeriod {
+  const p = TIME_PERIODS.find((x) => x.id === id)
+  if (!p) throw new Error(`Unknown period id: ${id}`)
+  return p
+}

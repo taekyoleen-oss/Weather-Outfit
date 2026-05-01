@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import type { SkyCode, PtyCode, TimeOfDay } from '@/types/weather'
 import { pickIllustKey, illustFile, weatherLabel } from '@/lib/utils/formatWeather'
+import { NightCloudyIcon } from './NightCloudyIcon'
 
 interface Props {
   skyCode: SkyCode
@@ -47,29 +48,7 @@ export function WeatherHeroIllustration({ skyCode, ptyCode, period, iconSrc, ico
     >
       {iconHour !== undefined ? (
         isNightCloudy ? (
-          <span
-            className="relative inline-block"
-            style={{
-              width: Math.round(size * 0.42),
-              height: Math.round(size * 0.38),
-              color: '#94A3B8',
-              filter: 'grayscale(1) saturate(0)',
-              fontFamily: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif',
-            }}
-          >
-            <span
-              className="absolute leading-none"
-              style={{ left: Math.round(size * 0.03), top: Math.round(size * -0.12), fontSize: Math.round(size * 0.34) }}
-            >
-              🌙
-            </span>
-            <span
-              className="absolute leading-none"
-              style={{ left: Math.round(size * 0.17), top: Math.round(size * 0.03), fontSize: Math.round(size * 0.26) }}
-            >
-              ☁️
-            </span>
-          </span>
+          <NightCloudyIcon size={size} />
         ) : (
           <span
             className="leading-none"

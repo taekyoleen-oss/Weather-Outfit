@@ -7,13 +7,17 @@
  */
 
 import { z } from 'zod'
+import { safeFetch } from '@/lib/utils/safeFetch'
 
 const KMA_ULTRA_BASE = 'http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0'
 
+let _kmaKey: string | null = null
 function kmaKey(): string {
-  const key = process.env.KMA_API_KEY
-  if (!key) throw new Error('KMA_API_KEY not set')
-  return key
+  if (_kmaKey !== null) return _kmaKey
+  const raw = process.env.KMA_API_KEY
+  if (!raw) throw new Error('KMA_API_KEY not set')
+  try { _kmaKey = decodeURIComponent(raw) } catch { _kmaKey = raw }
+  return _kmaKey
 }
 
 /** KST 벽시계 (API base_date / fcst_date 와 동일 체계) */
@@ -55,7 +59,7 @@ export async function fetchUltraSrtNcst(
   baseTime: string
 ): Promise<Record<string, string> | null> {
   const params = new URLSearchParams({
-    serviceKey: decodeURIComponent(kmaKey()),
+    serviceKey: kmaKey(),
     pageNo: '1',
     numOfRows: '500',
     dataType: 'JSON',
@@ -131,31 +135,43 @@ export async function fetchUltraSrtFcstT1HAtSlot(
     })
   }
 
-  for (const { baseDate, baseTime } of candidates) {
+  const tryCandidate = async (cand: { baseDate: string; baseTime: string }) => {
     const params = new URLSearchParams({
-      serviceKey: decodeURIComponent(kmaKey()),
+      serviceKey: kmaKey(),
       pageNo: '1',
       numOfRows: '600',
       dataType: 'JSON',
-      base_date: baseDate,
-      base_time: baseTime,
+      base_date: cand.baseDate,
+      base_time: cand.baseTime,
       nx: String(nx),
       ny: String(ny),
     })
     const url = `${KMA_ULTRA_BASE}/getUltraSrtFcst?${params}`
-    const res = await fetch(url, { next: { revalidate: 0 } })
-    if (!res.ok) continue
+    const res = await safeFetch(url, { next: { revalidate: 0 } })
+    if (!res.ok) throw new Error('not ok')
     const json = (await res.json()) as unknown
     const items = extractItems(json)
-    if (!items.length) continue
+    if (!items.length) throw new Error('empty')
     for (const raw of items) {
       const p = FcstItemSchema.safeParse(raw)
       if (!p.success || p.data.category !== 'T1H') continue
       if (p.data.fcstDate === fcstYmd && p.data.fcstTime === fcstTimeNeed) {
         const t1h = parseFloat(p.data.fcstValue)
         if (!Number.isFinite(t1h)) continue
-        return { t1h, baseDate, baseTime, fcstDate: p.data.fcstDate, fcstTime: p.data.fcstTime }
+        return { t1h, baseDate: cand.baseDate, baseTime: cand.baseTime, fcstDate: p.data.fcstDate, fcstTime: p.data.fcstTime }
       }
+    }
+    throw new Error('slot not found')
+  }
+
+  // 3개씩 배치로 Promise.any → 첫 배치 실패 시 다음 배치로 폴백
+  const BATCH = 3
+  for (let i = 0; i < candidates.length; i += BATCH) {
+    const batch = candidates.slice(i, i + BATCH)
+    try {
+      return await Promise.any(batch.map(tryCandidate))
+    } catch {
+      // 배치 전체 실패 → 다음 배치
     }
   }
   return null

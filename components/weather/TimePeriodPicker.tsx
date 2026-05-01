@@ -3,28 +3,28 @@
 import type { HourlyForecast, SkyCode, PtyCode } from '@/types/weather'
 import { TIME_PERIODS, getPeriodIndex } from '@/lib/utils/timePeriods'
 import { weatherLabel, formatTemp1 } from '@/lib/utils/formatWeather'
-import { kstTodayYmd } from '@/lib/utils/timeOfDay'
+import { addCalendarDaysFromKstYmd, kstTodayYmd } from '@/lib/utils/timeOfDay'
 
 const WEATHER_EMOJI: Record<string, string> = {
-  '맑음': '☀️',
+  맑음: '☀️',
   '구름 많음': '🌤',
-  '흐림': '☁️',
-  '비': '🌧',
+  흐림: '☁️',
+  비: '🌧',
   '비/눈': '🌨',
-  '눈': '❄️',
-  '소나기': '⛈',
+  눈: '❄️',
+  소나기: '⛈',
 }
 
 function emojiForHourAndLabel(
   hourNum: number,
   label: string | null,
   fallback: string,
-  sunsetHm: number | null
+  sunsetHm: number | null,
 ): string {
   if (!label) return fallback
   const slotHm = hourNum * 100
   const isNight =
-    sunsetHm == null ? (hourNum >= 19 || hourNum < 6) : (slotHm > sunsetHm || hourNum < 6)
+    sunsetHm == null ? hourNum >= 19 || hourNum < 6 : slotHm > sunsetHm || hourNum < 6
   if (!isNight) return WEATHER_EMOJI[label] ?? fallback
   if (label === '맑음') return '🌙'
   if (label === '구름 많음') return '🌙☁️'
@@ -33,13 +33,12 @@ function emojiForHourAndLabel(
 
 function isNightByHour(hourNum: number, sunsetHm: number | null): boolean {
   const slotHm = hourNum * 100
-  return sunsetHm == null ? (hourNum >= 19 || hourNum < 6) : (slotHm > sunsetHm || hourNum < 6)
+  return sunsetHm == null ? hourNum >= 19 || hourNum < 6 : slotHm > sunsetHm || hourNum < 6
 }
 
 function sunsetHmFromText(sunsetTime?: string): number | null {
   if (!sunsetTime) return null
   const t = sunsetTime.trim()
-  // "1845" or "18:45" 모두 지원
   const compact = t.includes(':') ? t.replace(':', '') : t
   const hm = parseInt(compact, 10)
   return Number.isFinite(hm) ? hm : null
@@ -47,20 +46,19 @@ function sunsetHmFromText(sunsetTime?: string): number | null {
 
 interface Props {
   currentHour: number
-  /** 관측/초단기 현재기온 — '지금' 칩에만 사용 */
   currentConditions?: { temperature: number; skyCode: SkyCode; ptyCode: PtyCode } | null
   hourly: HourlyForecast[]
   selectedRepHour: number
   selectedDayOffset: number
   sunsetTime?: string
-  onSelect: (repHour: number, dayOffset: number) => void
+  onSelectPreset: (repHour: number, dayOffset: number) => void
 }
 
 function ymdToUtcMidnight(ymd: string): number {
   return Date.UTC(
     parseInt(ymd.slice(0, 4), 10),
     parseInt(ymd.slice(4, 6), 10) - 1,
-    parseInt(ymd.slice(6, 8), 10)
+    parseInt(ymd.slice(6, 8), 10),
   )
 }
 
@@ -76,7 +74,7 @@ function resolveSlotYmd(
   h: HourlyForecast,
   todayYmd: string,
   prevYmd: string | null,
-  prevHour: number | null
+  prevHour: number | null,
 ): string {
   if (h.fcstDate) return h.fcstDate
   if (prevYmd === null) return todayYmd
@@ -89,7 +87,7 @@ function findHourlyAtHour(
   hourNum: number,
   targetYmd: string,
   hourly: HourlyForecast[],
-  slotYmds: string[]
+  slotYmds: string[],
 ): HourlyForecast | undefined {
   const timeStr = String(hourNum).padStart(2, '0') + ':00'
   const idx = hourly.findIndex((h, i) => h.time === timeStr && slotYmds[i] === targetYmd)
@@ -103,9 +101,8 @@ export function TimePeriodPicker({
   selectedRepHour,
   selectedDayOffset,
   sunsetTime,
-  onSelect,
+  onSelectPreset,
 }: Props) {
-  const currentIdx = getPeriodIndex(currentHour)
   const todayYmd = kstTodayYmd()
   const slotYmds: string[] = []
   let prevYmd: string | null = null
@@ -118,15 +115,13 @@ export function TimePeriodPicker({
   }
 
   const periodCount = TIME_PERIODS.length
+  const currentIdx = getPeriodIndex(currentHour)
   const curHourStr = String(currentHour).padStart(2, '0') + ':00'
   const sunsetHm = sunsetHmFromText(sunsetTime)
 
   function fallbackTempForNow(): number | undefined {
-    // 1) 가장 안정적: "오늘 + 현재시각 슬롯" (예: 18:00)
     const idx = hourly.findIndex((h, i) => h.time === curHourStr && slotYmds[i] === todayYmd)
     if (idx >= 0) return hourly[idx].temperature
-
-    // 2) 오늘 슬롯 중, 현재시각 이하의 가장 최신값
     const toHour = (t: string) => parseInt(t.split(':')[0], 10)
     let best: number | undefined
     let bestHour = -1
@@ -139,8 +134,6 @@ export function TimePeriodPicker({
       }
     }
     if (best !== undefined) return best
-
-    // 3) 그래도 없으면, 전체 중 첫 슬롯 (데이터 로딩 직후 최소 표시용)
     return hourly[0]?.temperature
   }
 
@@ -149,12 +142,10 @@ export function TimePeriodPicker({
     const idx = rawIdx % periodCount
     const period = TIME_PERIODS[idx]
     const dayOffset = Math.floor(rawIdx / periodCount)
-    /** 다음날에 해당하는 칩(rawIdx≥periodCount)에는 각각 '내일' 배지 표시 */
     const isTomorrow = dayOffset >= 1
     const targetYmd = addDaysYmd(todayYmd, dayOffset)
     const isCurrent = i === 0
 
-    /** 지금: 현재 시 정각 슬롯(날씨 아이콘) / 그 외: 구간 시작 시각(예: 오후 → 12시) */
     const displayHour = isCurrent ? currentHour : period.start
     const displayEntry = findHourlyAtHour(displayHour, targetYmd, hourly, slotYmds)
     const repFallback = findHourlyAtHour(period.repHour, targetYmd, hourly, slotYmds)
@@ -175,6 +166,8 @@ export function TimePeriodPicker({
       temperature = atStart?.temperature
     }
 
+    const isSelected = selectedRepHour === period.repHour && selectedDayOffset === dayOffset
+
     return {
       period,
       isTomorrow,
@@ -183,7 +176,7 @@ export function TimePeriodPicker({
       temperature,
       weatherEmoji,
       isNight,
-      isSelected: selectedRepHour === period.repHour && selectedDayOffset === dayOffset,
+      isSelected,
     }
   })
 
@@ -195,11 +188,12 @@ export function TimePeriodPicker({
       >
         🕐 시간대 선택
       </h3>
-      <div className="grid grid-cols-4 gap-1.5">
+      <div className="grid grid-cols-4 max-lg:grid-cols-2 gap-1.5">
         {chips.map(({ period, isTomorrow, dayOffset, isCurrent, temperature, weatherEmoji, isNight, isSelected }) => (
           <button
             key={period.id + (isTomorrow ? '-t' : '')}
-            onClick={() => onSelect(period.repHour, dayOffset)}
+            type="button"
+            onClick={() => onSelectPreset(period.repHour, dayOffset)}
             className="flex flex-col items-center gap-0.5 max-lg:gap-1 py-2 px-1 rounded-xl transition-all"
             style={{
               background: isSelected ? 'rgba(255,181,71,0.15)' : 'var(--surface)',
@@ -207,7 +201,6 @@ export function TimePeriodPicker({
             }}
             aria-pressed={isSelected}
           >
-            {/* Badge row — fixed height for alignment */}
             <div className="h-[16px] flex items-center justify-center">
               {isCurrent && (
                 <span
@@ -227,7 +220,6 @@ export function TimePeriodPicker({
               )}
             </div>
 
-            {/* Weather emoji - keep icon row height aligned with hourly strip */}
             <div className="h-[20px] w-full flex items-center justify-center">
               {weatherEmoji === '🌙☁️' ? (
                 <span
@@ -257,7 +249,6 @@ export function TimePeriodPicker({
               )}
             </div>
 
-            {/* Period label */}
             <span
               className="text-[11px] max-lg:text-[13px] font-semibold mt-0.5 max-lg:mt-0 leading-tight max-lg:tracking-wide"
               style={{ color: isSelected ? 'var(--accent)' : 'var(--text)' }}
@@ -265,7 +256,6 @@ export function TimePeriodPicker({
               {period.label}
             </span>
 
-            {/* Temperature */}
             {temperature !== undefined ? (
               <span
                 className="text-xs max-lg:text-[13px] font-bold tabular-nums leading-none max-lg:mt-0.5"
@@ -274,10 +264,7 @@ export function TimePeriodPicker({
                 {formatTemp1(temperature)}°
               </span>
             ) : (
-              <span
-                className="max-lg:text-[13px] max-lg:leading-none text-xs"
-                style={{ color: 'var(--muted)' }}
-              >
+              <span className="max-lg:text-[13px] max-lg:leading-none text-xs" style={{ color: 'var(--muted)' }}>
                 --
               </span>
             )}

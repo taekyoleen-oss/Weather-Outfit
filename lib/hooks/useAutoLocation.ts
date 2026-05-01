@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import type { LocationInfo } from '@/types/location'
 
 const DEFAULT_LOCATION: LocationInfo = {
@@ -88,9 +88,15 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
 }
 
 export function useAutoLocation() {
-  const [location, setLocation] = useState<LocationInfo>(() => loadStoredLocation() ?? DEFAULT_LOCATION)
+  // 첫 페인트는 서버·클라이언트 동일(DEFAULT)로 맞춰 hydration 불일치 방지 — 저장 위치는 마운트 후 적용
+  const [location, setLocation] = useState<LocationInfo>(DEFAULT_LOCATION)
   const [gpsLoading, setGpsLoading] = useState(false)
   const [gpsError, setGpsError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const stored = loadStoredLocation()
+    if (stored) setLocation(stored)
+  }, [])
 
   const requestGps = useCallback((opts?: { reason?: 'manual' | 'auto'; silent?: boolean }) => {
     const reason = opts?.reason ?? 'manual'

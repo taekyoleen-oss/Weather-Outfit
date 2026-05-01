@@ -7,11 +7,39 @@ import type { RecentLocation } from '@/types/location'
 const STORAGE_KEY = 'weatherfit:recentLocations'
 const MAX_RECENT = 5
 
+function isValidRecentLocation(v: unknown): v is RecentLocation {
+  return (
+    v != null &&
+    typeof v === 'object' &&
+    typeof (v as RecentLocation).name === 'string' &&
+    typeof (v as RecentLocation).lat === 'number' &&
+    typeof (v as RecentLocation).lon === 'number' &&
+    typeof (v as RecentLocation).nx === 'number' &&
+    typeof (v as RecentLocation).ny === 'number' &&
+    typeof (v as RecentLocation).usedAt === 'number'
+  )
+}
+
+function loadRecentLocations(): RecentLocation[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return []
+    const parsed: unknown = JSON.parse(raw)
+    if (!Array.isArray(parsed)) { localStorage.removeItem(STORAGE_KEY); return [] }
+    const valid = parsed.filter(isValidRecentLocation)
+    if (valid.length !== parsed.length) localStorage.setItem(STORAGE_KEY, JSON.stringify(valid))
+    return valid
+  } catch {
+    localStorage.removeItem(STORAGE_KEY)
+    return []
+  }
+}
+
 export function saveRecentLocation(loc: LocationInfo) {
   if (typeof window === 'undefined') return
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    const existing: RecentLocation[] = raw ? JSON.parse(raw) : []
+    const existing = loadRecentLocations()
     const filtered = existing.filter((r) => r.name !== loc.name)
     const updated = [{ ...loc, usedAt: Date.now() }, ...filtered].slice(0, MAX_RECENT)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
@@ -27,10 +55,7 @@ export function RecentChips({ onSelect, currentName }: Props) {
   const [recents, setRecents] = useState<RecentLocation[]>([])
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY)
-      if (raw) setRecents(JSON.parse(raw))
-    } catch {}
+    setRecents(loadRecentLocations())
   }, [])
 
   if (!recents.length) return null

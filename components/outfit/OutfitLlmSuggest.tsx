@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CurrentWeather, DustData } from '@/types/weather'
 import type { ActivityType, GenderType, OutfitResult as OutfitResultType } from '@/types/outfit'
 import type { TerrainType } from '@/types/location'
@@ -111,9 +111,20 @@ export function OutfitLlmSuggest({
       result.tempZone,
       result.dangerLevel,
       result.cancelActivity,
-      result.items,
+      result.uvAlert,
+      result.dustAlert,
+      result.rainAlert,
+      result.windAlert,
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- stable derived string used in JSON value above
+      result.items.map((i) => i.id).join(','),
     ],
   )
+
+  /** 날씨·활동·추천 구성이 바뀌면 이전 AI 결과·요청 버튼 노출을 초기화 */
+  useEffect(() => {
+    abortRef.current?.abort()
+    setState({ status: 'idle' })
+  }, [reqKey])
 
   async function requestSuggestion() {
     abortRef.current?.abort()
@@ -213,15 +224,17 @@ export function OutfitLlmSuggest({
           위 복장은 앱 가이드라인·룰 기준이며, 아래는 동일한 날씨·미세먼지·바람·활동 시간·활동 종류를 반영한
           보조 설명과 착용 아이디어입니다. (Claude API)
         </p>
-        <button
-          type="button"
-          onClick={requestSuggestion}
-          disabled={state.status === 'loading'}
-          className="mt-2 text-xs sm:text-sm px-3 py-1.5 rounded-lg transition-opacity disabled:opacity-60"
-          style={{ background: 'var(--primary)', color: '#fff' }}
-        >
-          {state.status === 'loading' ? 'AI 제안 생성 중…' : state.status === 'ok' ? 'AI 제안 다시 생성' : 'AI 맞춤 제안 생성'}
-        </button>
+        {state.status !== 'ok' && (
+          <button
+            type="button"
+            onClick={requestSuggestion}
+            disabled={state.status === 'loading'}
+            className="mt-2 text-xs sm:text-sm px-3 py-1.5 rounded-lg transition-opacity disabled:opacity-60"
+            style={{ background: 'var(--primary)', color: '#fff' }}
+          >
+            {state.status === 'loading' ? 'AI 제안 생성 중…' : 'AI 맞춤 제안 생성'}
+          </button>
+        )}
       </div>
 
       {state.status === 'loading' && (
@@ -267,6 +280,14 @@ export function OutfitLlmSuggest({
               ))}
             </ul>
           </div>
+          <button
+            type="button"
+            onClick={requestSuggestion}
+            className="text-[11px] sm:text-xs font-semibold mt-2 px-2 py-1 rounded-lg transition-opacity disabled:opacity-60"
+            style={{ color: 'var(--primary)', border: '1px solid rgba(91,141,238,0.35)', background: 'var(--surface)' }}
+          >
+            AI 제안 다시 생성
+          </button>
         </>
       )}
     </div>

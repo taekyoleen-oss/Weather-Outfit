@@ -1,4 +1,5 @@
 import type { WeatherAlert } from '@/types/weather'
+import { safeFetch } from '@/lib/utils/safeFetch'
 
 /** 기상청 날씨누리 — 기상특보 발효현황 */
 export const KMA_WEATHER_WARN_PAGE =
@@ -6,13 +7,17 @@ export const KMA_WEATHER_WARN_PAGE =
 
 const BASE = 'http://apis.data.go.kr/1360000/WthrWrnInfoService'
 
+let _kmaKey: string | null = null
 function kmaKey(): string {
-  return process.env.KMA_API_KEY ?? ''
+  if (_kmaKey !== null) return _kmaKey
+  const raw = process.env.KMA_API_KEY ?? ''
+  try { _kmaKey = decodeURIComponent(raw) } catch { _kmaKey = raw }
+  return _kmaKey
 }
 
 export async function fetchWeatherAlerts(regCode: string): Promise<WeatherAlert[]> {
   const params = new URLSearchParams({
-    serviceKey: decodeURIComponent(kmaKey()),
+    serviceKey: kmaKey(),
     pageNo: '1',
     numOfRows: '10',
     dataType: 'JSON',
@@ -20,7 +25,7 @@ export async function fetchWeatherAlerts(regCode: string): Promise<WeatherAlert[
   })
 
   const url = `${BASE}/getWthrWrnList?${params}`
-  const res = await fetch(url, { next: { revalidate: 0 } })
+  const res = await safeFetch(url, { next: { revalidate: 0 } })
   if (!res.ok) return []
 
   const json = await res.json()

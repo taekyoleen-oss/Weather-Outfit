@@ -1,5 +1,6 @@
 import path from 'node:path'
 import { readFile } from 'node:fs/promises'
+import { safeFetch } from '@/lib/utils/safeFetch'
 
 interface DfsZoneRow {
   areaNo: string
@@ -97,7 +98,7 @@ export async function resolveAreaNoByCoords(args: {
   const key = process.env.KAKAO_LOCAL_API_KEY
   if (key) {
     try {
-      const res = await fetch(`https://dapi.kakao.com/v2/local/geo/coord2regioncode.json?x=${lon}&y=${lat}`, {
+      const res = await safeFetch(`https://dapi.kakao.com/v2/local/geo/coord2regioncode.json?x=${lon}&y=${lat}`, {
         headers: { Authorization: `KakaoAK ${key}` },
         cache: 'no-store',
       })

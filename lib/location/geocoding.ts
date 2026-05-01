@@ -1,6 +1,7 @@
 import type { LocationInfo } from '@/types/location'
 import { latLonToGrid } from './geoConvert'
 import { detectTerrain } from './terrainDetector'
+import { safeFetch } from '@/lib/utils/safeFetch'
 
 /**
  * Nominatim(OpenStreetMap) 지오코딩 — Kakao API 실패 시 fallback
@@ -12,7 +13,7 @@ export async function searchNominatim(query: string): Promise<LocationInfo[]> {
     `?q=${encodeURIComponent(query)}` +
     `&format=json&countrycodes=kr&addressdetails=1&limit=5`
 
-  const res = await fetch(url, {
+  const res = await safeFetch(url, {
     headers: {
       'User-Agent': 'WeatherFit/1.0 (weather-outfit-suggestion)',
       'Accept-Language': 'ko,en',

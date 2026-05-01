@@ -8,7 +8,11 @@ import { GpsButton } from '@/components/weather/GpsButton'
 import { RecentChips, saveRecentLocation } from '@/components/weather/RecentChips'
 import { WeatherCard } from '@/components/weather/WeatherCard'
 import { HourlyWeatherStrip } from '@/components/weather/HourlyWeatherStrip'
-import { WeeklyForecastInline } from '@/components/weather/WeeklyForecastInline'
+import dynamic from 'next/dynamic'
+const WeeklyForecastInline = dynamic(
+  () => import('@/components/weather/WeeklyForecastInline').then((m) => m.WeeklyForecastInline),
+  { ssr: false, loading: () => <div className="h-24 animate-pulse rounded-2xl" style={{ background: 'var(--border)' }} /> }
+)
 import { HighlightsGrid } from '@/components/weather/HighlightsGrid'
 import { TimePeriodPicker } from '@/components/weather/TimePeriodPicker'
 import { OutfitPanel } from '@/components/outfit/OutfitPanel'
@@ -16,7 +20,8 @@ import { NearbyWeatherChips } from '@/components/weather/NearbyWeatherChips'
 import { useAutoLocation } from '@/lib/hooks/useAutoLocation'
 import { useWeather } from '@/lib/hooks/useWeather'
 import { useWeeklyForecast } from '@/lib/hooks/useWeeklyForecast'
-import { getTimeOfDay, currentHourKst, kstTodayYmd } from '@/lib/utils/timeOfDay'
+import { getTimeOfDay, kstTodayYmd, diffCalendarDaysYmd, addCalendarDaysFromKstYmd } from '@/lib/utils/timeOfDay'
+import { useNowMinute } from '@/lib/hooks/useNowMinute'
 import { feelsLike, weatherLabel, weatherEmojiFromLabel, pickIllustKey, illustFile } from '@/lib/utils/formatWeather'
 import {
   TIME_PERIODS,
@@ -25,6 +30,7 @@ import {
   samePeriodHourlySliceFloor,
   orderHourlyStripBeforeNoon,
 } from '@/lib/utils/timePeriods'
+import { buildHourlySlotYmds, resolveHourlyForYmdBand } from '@/lib/utils/resolveHourlyForPeriod'
 import type {
   DustData,
   PollenData,
@@ -69,6 +75,14 @@ function hourlyToCurrentWeather(entry: HourlyForecast, base: CurrentWeather): Cu
   }
 }
 
+function addHoursWrap24(baseHour: number, deltaHour: number): number {
+  return (baseHour + deltaHour + 2400) % 24
+}
+
+function activityStartFloor(periodStart: number, isNow: boolean, kstHour: number): number {
+  return isNow ? (kstHour + 1) % 24 : periodStart
+}
+
 function extractDongName(locationName?: string, address?: string): string | undefined {
   const sources = [address ?? '', locationName ?? ''].filter(Boolean)
   for (const src of sources) {
@@ -91,75 +105,96 @@ export default function HomePage() {
   const [alerts, setAlerts] = useState<WeatherAlert[]>([])
   const [openMeteoCompare, setOpenMeteoCompare] = useState<OpenMeteoDailyCompare | null>(null)
 
-  const hour = currentHourKst()
+  const hour = useNowMinute()
 
-  // Selected time period (repHour + dayOffset of the chosen period)
-  const [selectedPeriodSelection, setSelectedPeriodSelection] = useState<{ repHour: number; dayOffset: number }>(
-    () => ({ repHour: TIME_PERIODS[getPeriodIndex(currentHourKst())].repHour, dayOffset: 0 })
+  const [periodPreset, setPeriodPreset] = useState(() => ({
+    repHour: TIME_PERIODS[getPeriodIndex(hour)].repHour,
+    dayOffset: 0,
+  }))
+  const [scheduleYmd, setScheduleYmd] = useState(() => kstTodayYmd())
+  const [wxActivityHours, setWxActivityHours] = useState<{ start: number; end: number } | null>(null)
+
+  const todayYmdKst = kstTodayYmd()
+  const presetChipPeriod = useMemo(
+    () => TIME_PERIODS.find((p) => p.repHour === periodPreset.repHour) ?? TIME_PERIODS[2],
+    [periodPreset.repHour],
   )
-  const selectedPeriodHour = selectedPeriodSelection.repHour
+  const outfitIsNowPeriod =
+    periodPreset.dayOffset === 0 &&
+    getPeriodIndex(periodPreset.repHour) === getPeriodIndex(hour) &&
+    scheduleYmd === todayYmdKst
+
+  const fallbackActivityStart = activityStartFloor(presetChipPeriod.start, outfitIsNowPeriod, hour)
+  const activityStartHour = wxActivityHours?.start ?? fallbackActivityStart
+  const activityEndHour = wxActivityHours?.end ?? addHoursWrap24(fallbackActivityStart, 2)
+  const activityBand = TIME_PERIODS[getPeriodIndex(activityStartHour)]
+
+  /** 오늘(KST) 기준 달력 일수 오프셋 — 스트립 보조 */
+  const selectedCalendarDayOffset = useMemo(
+    () => diffCalendarDaysYmd(todayYmdKst, scheduleYmd),
+    [todayYmdKst, scheduleYmd],
+  )
+
+  const forecastYmdBounds = useMemo(() => {
+    const slotYmds = buildHourlySlotYmds(weatherData?.hourly ?? [])
+    if (!slotYmds.length) return { min: todayYmdKst, max: todayYmdKst }
+    const uniq = [...new Set(slotYmds)].sort()
+    return { min: uniq[0]!, max: uniq[uniq.length - 1]! }
+  }, [weatherData?.hourly, todayYmdKst])
 
   // 앱 시작 시 자동 위치 갱신: 저장 위치가 오래됐거나 실제 이동이 큰 경우에만 조용히 갱신
   useEffect(() => {
     requestGps({ reason: 'auto', silent: true })
   }, [requestGps])
 
-  // Reset selected period to current when location changes
   useEffect(() => {
-    setSelectedPeriodSelection({ repHour: TIME_PERIODS[getPeriodIndex(currentHourKst())].repHour, dayOffset: 0 })
+    setPeriodPreset({ repHour: TIME_PERIODS[getPeriodIndex(hour)].repHour, dayOffset: 0 })
+    setScheduleYmd(kstTodayYmd())
+    setWxActivityHours(null)
   }, [location])
 
-  // When new weather arrives, keep selected period in sync with current time
   useEffect(() => {
     if (weatherData) {
-      setSelectedPeriodSelection({ repHour: TIME_PERIODS[getPeriodIndex(currentHourKst())].repHour, dayOffset: 0 })
+      setPeriodPreset({ repHour: TIME_PERIODS[getPeriodIndex(hour)].repHour, dayOffset: 0 })
+      setScheduleYmd(kstTodayYmd())
+      setWxActivityHours(null)
     }
   }, [weatherData])
 
-  const period = getTimeOfDay(selectedPeriodHour, sunriseSunset?.sunrise, sunriseSunset?.sunset)
+  function handleSelectPreset(repHour: number, dayOffset: number) {
+    setPeriodPreset({ repHour, dayOffset })
+    setScheduleYmd(addCalendarDaysFromKstYmd(kstTodayYmd(), dayOffset))
+    setWxActivityHours(null)
+  }
 
-  // Weather to display based on selected period
+  const period = getTimeOfDay(activityStartHour, sunriseSunset?.sunrise, sunriseSunset?.sunset)
+
+  // Weather to display — 활동 기준일·시작 시각 구간의 대표 슬롯(지금 칩은 현재 시각 슬롯)
   const displayWeather = useMemo((): CurrentWeather | null => {
     const base = weatherData?.current ?? null
+    const hourly = weatherData?.hourly ?? []
     if (!base) return null
-    const currentPeriodIdx = getPeriodIndex(hour)
-    const selectedPeriodIdx = getPeriodIndex(selectedPeriodHour)
-    // 지금 시간대: 카드 기온·체감 등을 현재 KST '시' 정각 슬롯(예 11:02 → 11시)과 맞춤
-    if (selectedPeriodSelection.dayOffset === 0 && selectedPeriodIdx === currentPeriodIdx) {
+    const today = todayYmdKst
+
+    const isPickerNowSlot =
+      periodPreset.dayOffset === 0 &&
+      getPeriodIndex(periodPreset.repHour) === getPeriodIndex(hour) &&
+      scheduleYmd === today
+
+    if (isPickerNowSlot) {
       const hourStr = String(hour).padStart(2, '0') + ':00'
-      const entry = weatherData?.hourly.find((h) => h.time === hourStr) ?? null
+      const entry = hourly.find((h) => h.time === hourStr) ?? null
       return entry ? hourlyToCurrentWeather(entry, base) : base
     }
-    const repHourStr = String(selectedPeriodHour).padStart(2, '0') + ':00'
-    const today = kstTodayYmd()
-    const targetMs =
-      Date.UTC(
-        parseInt(today.slice(0, 4), 10),
-        parseInt(today.slice(4, 6), 10) - 1,
-        parseInt(today.slice(6, 8), 10)
-      ) +
-      selectedPeriodSelection.dayOffset * 86400000
-    const d = new Date(targetMs)
-    const targetYmd = `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`
-    const entry =
-      weatherData?.hourly.find((h) => h.time === repHourStr && h.fcstDate === targetYmd) ??
-      (selectedPeriodSelection.dayOffset === 0
-        ? weatherData?.hourly.find((h) => h.time === repHourStr) ?? null
-        : null)
-    return entry ? hourlyToCurrentWeather(entry, base) : base
-  }, [weatherData, selectedPeriodHour, selectedPeriodSelection.dayOffset, hour])
 
-  // Highlight range for HourlyWeatherStrip
-  const selectedPeriod = TIME_PERIODS.find((p) => p.repHour === selectedPeriodHour)
-  const selectedPeriodStartHour = selectedPeriod?.start ?? selectedPeriodHour
+    const { entry } = resolveHourlyForYmdBand(hourly, scheduleYmd, activityBand, today)
+    if (entry) {
+      return hourlyToCurrentWeather(entry, { ...base, basisDateKst: scheduleYmd })
+    }
+    return base
+  }, [weatherData, hour, periodPreset, scheduleYmd, activityBand, todayYmdKst])
 
-  /** 오늘·선택 구간이 현재 시각 구간과 같을 때(지금): 활동 시작 시각 하한을 KST 현재 시+1로 둠 */
-  const isOutfitNowPeriod =
-    selectedPeriodSelection.dayOffset === 0 &&
-    getPeriodIndex(selectedPeriodHour) === getPeriodIndex(hour)
-  const outfitScheduleSyncKey = `${selectedPeriodHour}|${selectedPeriodSelection.dayOffset}`
-
-  const curPeriodIdx = getPeriodIndex(hour)
+  const outfitScheduleSyncKey = `${periodPreset.repHour}|${periodPreset.dayOffset}`
 
   /** 가장 최근에 끝난 시간대의 대표 기온·체감(시간별 예보 슬롯 기준) */
   const previousPeriodSummary = useMemo((): PreviousPeriodWeatherSummary | null => {
@@ -218,46 +253,36 @@ export default function HomePage() {
     let usedTomorrowPath = false
     let out: HourlyForecast[]
 
-    if (!selectedPeriod) {
-      out = sliceFromHourOnSameDay(hourly, samePeriodHourlySliceFloor(hour, curPeriodIdx))
-    } else {
-      const selIdx = getPeriodIndex(selectedPeriodHour)
+    {
+      const sliceStartHour = activityStartHour
+      const selIdx = getPeriodIndex(sliceStartHour)
       const curIdx = getPeriodIndex(hour)
-      const isTomorrow = selectedPeriodSelection.dayOffset > 0 || selIdx < curIdx
+      const dayOff = diffCalendarDaysYmd(todayYmd, scheduleYmd)
+      const isTomorrow = dayOff > 0 || selIdx < curIdx
 
-      if (selIdx === curIdx && selectedPeriodSelection.dayOffset === 0) {
-        // 오전이고 오전 시간대가 선택된 경우: 오전 시작(6시)부터 표시
+      if (selIdx === curIdx && dayOff === 0) {
         out = sliceFromHourOnSameDay(hourly, samePeriodHourlySliceFloor(hour, curIdx))
       } else if (!isTomorrow) {
         const preNoonFloor = hour < 12 ? TIME_PERIODS[1].start : -1
-        const startFloor = Math.max(selectedPeriod.start, hour, preNoonFloor)
+        const startFloor = Math.max(sliceStartHour, hour, preNoonFloor)
         out = sliceFromHourOnSameDay(hourly, startFloor)
       } else {
         usedTomorrowPath = true
-        const today = kstTodayYmd()
-        const targetMs =
-          Date.UTC(
-            parseInt(today.slice(0, 4), 10),
-            parseInt(today.slice(4, 6), 10) - 1,
-            parseInt(today.slice(6, 8), 10)
-          ) +
-          selectedPeriodSelection.dayOffset * 86400000
-        const d = new Date(targetMs)
-        const targetYmd = `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`
+        const targetYmd = scheduleYmd
         const dateAwareIdx = hourly.findIndex(
-          (h) => h.fcstDate === targetYmd && toHourNum(h.time) >= selectedPeriod.start
+          (h) => h.fcstDate === targetYmd && toHourNum(h.time) >= sliceStartHour,
         )
         if (dateAwareIdx >= 0) {
           out = hourly.slice(dateAwareIdx)
         } else {
           const midnightIdx = hourly.findIndex((h, i) =>
-            i > 0 && toHourNum(h.time) < toHourNum(hourly[i - 1].time)
+            i > 0 && toHourNum(h.time) < toHourNum(hourly[i - 1].time),
           )
           if (midnightIdx < 0) {
             out = sliceFromHourOnSameDay(hourly, hour)
           } else {
             const afterMidnight = hourly.slice(midnightIdx)
-            const startIdx = afterMidnight.findIndex((h) => toHourNum(h.time) >= selectedPeriod.start)
+            const startIdx = afterMidnight.findIndex((h) => toHourNum(h.time) >= sliceStartHour)
             out = startIdx >= 0 ? afterMidnight.slice(startIdx) : afterMidnight
           }
         }
@@ -268,7 +293,7 @@ export default function HomePage() {
       out = orderHourlyStripBeforeNoon(out, hour)
     }
     return out
-  }, [weatherData, selectedPeriod, selectedPeriodHour, selectedPeriodSelection.dayOffset, hour, curPeriodIdx])
+  }, [weatherData, activityStartHour, scheduleYmd, selectedCalendarDayOffset, hour])
 
   /** 오전(6–11시) 날씨 요약 — 오후(12시 이후)에만 계산 */
   const morningSummary = useMemo((): MorningSummary | null => {
@@ -313,12 +338,12 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!location) return
-    let cancelled = false
+    const ac = new AbortController()
     setOpenMeteoCompare(null)
-    fetch(`/api/weather/compare?lat=${location.lat}&lon=${location.lon}`)
+    fetch(`/api/weather/compare?lat=${location.lat}&lon=${location.lon}`, { signal: ac.signal })
       .then((r) => r.json())
       .then((d: OpenMeteoDailyCompare & { error?: string }) => {
-        if (cancelled || d?.error) return
+        if (ac.signal.aborted || d?.error) return
         if (
           d &&
           typeof d.todayMin === 'number' &&
@@ -336,50 +361,47 @@ export default function HomePage() {
           })
         }
       })
-      .catch(() => {})
-    return () => {
-      cancelled = true
-    }
+      .catch((e) => { if ((e as Error).name !== 'AbortError') {} })
+    return () => { ac.abort() }
   }, [location])
 
   useEffect(() => {
     if (!location) return
     const { nx, ny, lat, lon } = location
+    const ac = new AbortController()
 
-    fetch(`/api/dust?nx=${nx}&ny=${ny}`)
+    fetch(`/api/dust?nx=${nx}&ny=${ny}`, { signal: ac.signal })
       .then((r) => r.json())
-      .then((d) => { if (!d.error) setDust(d) })
-      .catch(() => {})
+      .then((d) => { if (!ac.signal.aborted && !d.error) setDust(d) })
+      .catch((e) => { if ((e as Error).name !== 'AbortError') {} })
 
     const pollenUrl = `/api/pollen?lat=${lat}&lon=${lon}&nx=${nx}&ny=${ny}`
     const fetchPollenWithRetry = async () => {
       for (let attempt = 0; attempt < 2; attempt++) {
+        if (ac.signal.aborted) return
         try {
-          const r = await fetch(pollenUrl)
+          const r = await fetch(pollenUrl, { signal: ac.signal })
           const d = await r.json()
-          if (!d?.error) {
-            setPollen(d)
-            return
-          }
-        } catch {
-          // retry once on transient failures
+          if (!d?.error) { setPollen(d); return }
+        } catch (e) {
+          if ((e as Error).name === 'AbortError') return
         }
-        if (attempt === 0) {
-          await new Promise((resolve) => setTimeout(resolve, 800))
-        }
+        if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 800))
       }
     }
     void fetchPollenWithRetry()
 
-    fetch(`/api/sunrise?lat=${lat}&lon=${lon}`)
+    fetch(`/api/sunrise?lat=${lat}&lon=${lon}`, { signal: ac.signal })
       .then((r) => r.json())
-      .then((d) => { if (d.sunrise) setSunriseSunset(d) })
-      .catch(() => {})
+      .then((d) => { if (!ac.signal.aborted && d.sunrise) setSunriseSunset(d) })
+      .catch((e) => { if ((e as Error).name !== 'AbortError') {} })
 
-    fetch(`/api/alert?regCode=108`)
+    fetch(`/api/alert?regCode=108`, { signal: ac.signal })
       .then((r) => r.json())
-      .then((d) => { if (Array.isArray(d)) setAlerts(d) })
-      .catch(() => {})
+      .then((d) => { if (!ac.signal.aborted && Array.isArray(d)) setAlerts(d) })
+      .catch((e) => { if ((e as Error).name !== 'AbortError') {} })
+
+    return () => { ac.abort() }
   }, [location])
 
   function handleSelectLocation(loc: LocationInfo) {
@@ -412,10 +434,10 @@ export default function HomePage() {
           : null
       }
       hourly={weatherData?.hourly ?? []}
-      selectedRepHour={selectedPeriodHour}
-      selectedDayOffset={selectedPeriodSelection.dayOffset}
+      selectedRepHour={periodPreset.repHour}
+      selectedDayOffset={periodPreset.dayOffset}
       sunsetTime={sunriseSunset?.sunset}
-      onSelect={(repHour, dayOffset) => setSelectedPeriodSelection({ repHour, dayOffset })}
+      onSelectPreset={handleSelectPreset}
     />
   )
 
@@ -445,9 +467,10 @@ export default function HomePage() {
     <HourlyWeatherStrip
       hourly={displayedHourly}
       currentHour={hour}
-      selectedPeriodStart={selectedPeriod?.start}
-      selectedPeriodEnd={selectedPeriod?.end}
-      selectedDayOffset={selectedPeriodSelection.dayOffset}
+      selectedPeriodStart={activityStartHour}
+      selectedPeriodEnd={activityEndHour}
+      selectedDayOffset={selectedCalendarDayOffset}
+      highlightTargetYmd={scheduleYmd}
       sunsetTime={sunriseSunset?.sunset}
     />
   )
@@ -469,11 +492,18 @@ export default function HomePage() {
     <OutfitPanel
       weather={displayWeather}
       dust={dust}
+      alerts={alerts}
       terrain={location.terrain ?? 'urban'}
-      outfitPeriodStartHour={selectedPeriodStartHour}
-      outfitIsNowPeriod={isOutfitNowPeriod}
+      outfitPeriodStartHour={presetChipPeriod.start}
+      outfitIsNowPeriod={outfitIsNowPeriod}
       outfitCurrentKstHour={hour}
       outfitScheduleSyncKey={outfitScheduleSyncKey}
+      scheduleYmd={scheduleYmd}
+      scheduleYmdMin={forecastYmdBounds.min}
+      scheduleYmdMax={forecastYmdBounds.max}
+      onScheduleYmdChange={setScheduleYmd}
+      activityStartHourMin={outfitIsNowPeriod ? (hour + 1) % 24 : 0}
+      onActivityHoursChange={(s, e) => setWxActivityHours({ start: s, end: e })}
     />
   )
 

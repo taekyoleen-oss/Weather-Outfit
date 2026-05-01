@@ -1,35 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { fetchVilageForecast } from '@/lib/weather/kma'
+import { z } from 'zod'
+import { fetchVilageForecast, getBaseDateTime, kstNow } from '@/lib/weather/kma'
 import { kvSWR, TTL } from '@/lib/cache/kv'
 import { reverseGeocode } from '@/lib/location/kakao'
 import { getOptimizedWeatherForLocation } from '@/lib/weather/weather-manager'
 
+const QuerySchema = z.object({
+  nx: z.coerce.number().int().min(1).max(149),
+  ny: z.coerce.number().int().min(1).max(253),
+  lat: z.coerce.number().min(33).max(43),
+  lon: z.coerce.number().min(124).max(132),
+  name: z.string().optional(),
+})
+
 export async function GET(req: NextRequest) {
-  const { searchParams } = req.nextUrl
-  const nx = parseInt(searchParams.get('nx') ?? '60', 10)
-  const ny = parseInt(searchParams.get('ny') ?? '127', 10)
-  const lat = parseFloat(searchParams.get('lat') ?? '37.5665')
-  const lon = parseFloat(searchParams.get('lon') ?? '126.9780')
+  const raw = Object.fromEntries(req.nextUrl.searchParams)
+  const parsed = QuerySchema.safeParse(raw)
+  if (!parsed.success) {
+    return NextResponse.json({ error: '유효하지 않은 파라미터입니다.' }, { status: 400 })
+  }
+  const { nx, ny, lat, lon, name: nameParam } = parsed.data
 
   try {
-    // 캐시 키에 KMA 발표 시각(baseTime)을 포함해, 발표 시각이 바뀌면 즉시 새 데이터를 가져온다.
-    // kma.ts 의 getBaseDateTime 과 동일한 규칙: base < h (base+1시부터 데이터 시작)
-    const kstHour = new Date(Date.now() + 9 * 60 * 60 * 1000).getUTCHours()
-    const KMA_BASE_HOURS = [2, 5, 8, 11, 14, 17, 20, 23]
-    const validBases = KMA_BASE_HOURS.filter((b) => b < kstHour)
-    const baseTime = validBases.length ? validBases[validBases.length - 1] : 23
-    const key = `vfcst2:${nx}:${ny}:${baseTime}`
-    const data = await kvSWR(key, TTL.shortForecast, () => fetchVilageForecast(nx, ny))
+    const { baseTime } = getBaseDateTime(kstNow())
+    const baseHour = parseInt(baseTime.slice(0, 2), 10)
+    const key = `vfcst2:${nx}:${ny}:${baseHour}`
 
-    // resolve location name
-    let locationName = searchParams.get('name') ?? ''
-    if (!locationName) {
-      try {
-        locationName = await reverseGeocode(lat, lon)
-      } catch {
-        locationName = `${nx}, ${ny}`
-      }
-    }
+    // [vilage fetch + reverse geocode] 병렬 → 이후 optimization (vilage 의존)
+    const [data, locationName] = await Promise.all([
+      kvSWR(key, TTL.shortForecast, () => fetchVilageForecast(nx, ny)),
+      (async () => {
+        if (nameParam) return nameParam
+        try { return await reverseGeocode(lat, lon) } catch { return `${nx}, ${ny}` }
+      })(),
+    ])
+
     data.current.location = locationName
 
     let body: Record<string, unknown> = { ...data, fetchedAt: data.current.fetchedAt }
@@ -73,7 +78,9 @@ export async function GET(req: NextRequest) {
       console.warn('[weather] KMA optimization skipped:', optErr)
     }
 
-    return NextResponse.json(body)
+    const res = NextResponse.json(body)
+    res.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=300')
+    return res
   } catch (err) {
     console.error('Weather API error:', err)
     return NextResponse.json({ error: '날씨 데이터를 불러오지 못했습니다.' }, { status: 500 })

@@ -1,4 +1,5 @@
 /** 어제 동시간대·오늘 일 최저/최고 (Open-Meteo, API 키 불필요) */
+import { safeFetch } from '@/lib/utils/safeFetch'
 
 function kstTodayYmd(): string {
   return new Intl.DateTimeFormat('en-CA', {
@@ -65,7 +66,7 @@ export async function fetchOpenMeteoDailyCompare(lat: number, lon: number): Prom
   url.searchParams.set('forecast_days', '1')
   url.searchParams.set('timezone', 'Asia/Seoul')
 
-  const res = await fetch(url.toString(), { next: { revalidate: 1800 } })
+  const res = await safeFetch(url.toString(), { next: { revalidate: 1800 } })
   if (!res.ok) {
     return { yesterdaySameHourTemp: null, todayMin: null, todayMax: null }
   }

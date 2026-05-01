@@ -2,14 +2,18 @@
 
 import type { HourlyForecast } from '@/types/weather'
 import { weatherLabel, formatTemp1 } from '@/lib/utils/formatWeather'
-import { kstTodayYmd } from '@/lib/utils/timeOfDay'
+import { addCalendarDaysFromKstYmd, kstTodayYmd } from '@/lib/utils/timeOfDay'
+import { NightCloudyIcon } from './NightCloudyIcon'
 
 interface Props {
   hourly: HourlyForecast[]
   currentHour: number
   selectedPeriodStart?: number
   selectedPeriodEnd?: number
+  /** 오늘(KST) 기준 일수 오프셋 — `highlightTargetYmd`가 없을 때만 사용 */
   selectedDayOffset?: number
+  /** 있으면 이 yyyymmdd에 맞춰 구간 하이라이트(오프셋보다 우선) */
+  highlightTargetYmd?: string
   sunsetTime?: string
 }
 
@@ -77,6 +81,7 @@ export function HourlyWeatherStrip({
   selectedPeriodStart,
   selectedPeriodEnd,
   selectedDayOffset = 0,
+  highlightTargetYmd,
   sunsetTime,
 }: Props) {
   if (!hourly.length) {
@@ -106,11 +111,15 @@ export function HourlyWeatherStrip({
     prevHour = parseInt(hourly[i].time.split(':')[0], 10)
   }
 
-  const selectedTargetYmd = (() => {
-    const ms = ymdToUtcMidnight(todayYmd) + selectedDayOffset * 86400000
-    const d = new Date(ms)
-    return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`
-  })()
+  const selectedTargetYmd =
+    highlightTargetYmd ??
+    (() => {
+      const ms = ymdToUtcMidnight(todayYmd) + selectedDayOffset * 86400000
+      const d = new Date(ms)
+      return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`
+    })()
+
+  const nextTargetYmd = addCalendarDaysFromKstYmd(selectedTargetYmd, 1)
   const sunsetHm = sunsetHmFromText(sunsetTime)
 
   return (
@@ -148,12 +157,18 @@ export function HourlyWeatherStrip({
             const hourNum = parseInt(h.time.split(':')[0], 10)
             const slotYmd = slotYmds[i] ?? todayYmd
             const isCurrent = hourNum === currentHour && slotYmd === todayYmd
-            const isInPeriod =
-              selectedPeriodStart !== undefined &&
-              selectedPeriodEnd !== undefined &&
-              hourNum >= selectedPeriodStart &&
-              hourNum <= selectedPeriodEnd &&
-              slotYmd === selectedTargetYmd
+            const isInPeriod = (() => {
+              if (selectedPeriodStart === undefined || selectedPeriodEnd === undefined) return false
+              const s = selectedPeriodStart
+              const e = selectedPeriodEnd
+              if (s <= e) {
+                return hourNum >= s && hourNum <= e && slotYmd === selectedTargetYmd
+              }
+              return (
+                (slotYmd === selectedTargetYmd && hourNum >= s) ||
+                (slotYmd === nextTargetYmd && hourNum <= e)
+              )
+            })()
             const prevYmd = i > 0 ? slotYmds[i - 1]! : null
             const showDayBanner = i === 0 ? dayBannerLabel(todayYmd, slotYmd) !== null : slotYmd !== prevYmd
             const dayBanner = showDayBanner ? dayBannerLabel(todayYmd, slotYmd) : null
@@ -218,16 +233,8 @@ export function HourlyWeatherStrip({
                 {isCurrent ? '지금' : h.time.slice(0, 2) + '시'}
               </span>
               {isNightCloudy ? (
-                <span
-                  className="h-[20px] relative w-[26px] flex items-center justify-center leading-none"
-                  style={{
-                    color: '#94A3B8',
-                    filter: 'grayscale(1) saturate(0)',
-                    fontFamily: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif',
-                  }}
-                >
-                  <span className="absolute left-[2px] -top-[5px] text-lg">🌙</span>
-                  <span className="absolute left-[10px] top-[3px] text-base">☁️</span>
+                <span className="h-[20px] flex items-center justify-center">
+                  <NightCloudyIcon size={53} />
                 </span>
               ) : (
                 <span

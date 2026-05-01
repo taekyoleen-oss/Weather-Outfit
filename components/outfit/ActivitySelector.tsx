@@ -8,12 +8,30 @@ import type { ActivityGuideData, RiskGuide } from '@/lib/outfit/activityGuides'
 interface Props {
   value: ActivityType
   onChange: (a: ActivityType) => void
+  /** 복장·카드 기준일(KST yyyymmdd) */
+  scheduleYmd: string
+  scheduleYmdMin: string
+  scheduleYmdMax: string
+  onScheduleYmdChange: (ymd: string) => void
   startHour: number
   /** 시작 시각 `<select>`에 나올 최소 시(시간대 시작 또는 지금 구간일 때 현재 시+1, KST) */
   startHourMin: number
   endHour: number
   onStartHourChange: (hour: number) => void
   onEndHourChange: (hour: number) => void
+}
+
+function ymdToDateInput(ymd: string): string {
+  return `${ymd.slice(0, 4)}-${ymd.slice(4, 6)}-${ymd.slice(6, 8)}`
+}
+
+function dateInputToYmd(iso: string): string {
+  return iso.replace(/-/g, '')
+}
+
+function formatYmdKorean(ymd: string): string {
+  if (ymd.length < 8) return ymd
+  return `${ymd.slice(0, 4)}.${ymd.slice(4, 6)}.${ymd.slice(6, 8)}`
 }
 
 const ACTIVITIES: { id: ActivityType; label: string; icon: string }[] = [
@@ -229,6 +247,10 @@ function ActivityGuideModal({ guide, onClose }: { guide: ActivityGuideData; onCl
 export function ActivitySelector({
   value,
   onChange,
+  scheduleYmd,
+  scheduleYmdMin,
+  scheduleYmdMax,
+  onScheduleYmdChange,
   startHour,
   startHourMin,
   endHour,
@@ -289,7 +311,30 @@ export function ActivitySelector({
         })}
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="mt-3 space-y-2">
+        <label className="block space-y-1">
+          <span className="text-[11px] font-semibold" style={{ color: 'var(--muted)' }}>
+            기준일 (KST)
+          </span>
+          <input
+            type="date"
+            className="w-full text-xs rounded-lg px-2 py-1.5 outline-none"
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
+            value={ymdToDateInput(scheduleYmd)}
+            min={ymdToDateInput(scheduleYmdMin)}
+            max={ymdToDateInput(scheduleYmdMax)}
+            onChange={(e) => {
+              const v = e.target.value
+              if (!v) return
+              onScheduleYmdChange(dateInputToYmd(v))
+            }}
+            aria-label="복장·날씨 기준일"
+          />
+        </label>
+        <p className="text-[10px] leading-snug" style={{ color: 'var(--muted)' }}>
+          {formatYmdKorean(scheduleYmd)} · {hh(startHour)}–{hh(endHour)} (시간대 칩과 동기화되며, 여기서 바꿀 수 있어요)
+        </p>
+        <div className="grid grid-cols-2 gap-2">
         <label className="space-y-1">
           <span className="text-[11px] font-semibold" style={{ color: 'var(--muted)' }}>시작 시간</span>
           <select
@@ -318,6 +363,7 @@ export function ActivitySelector({
             ))}
           </select>
         </label>
+        </div>
       </div>
 
       {/* Guide Modal */}

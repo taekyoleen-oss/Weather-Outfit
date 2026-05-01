@@ -15,30 +15,38 @@ export function useWeather(location: LocationInfo | null) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchWithRetry = useCallback(async (loc: LocationInfo, attempt = 0): Promise<WeatherData> => {
-    const url = `/api/weather?nx=${loc.nx}&ny=${loc.ny}&lat=${loc.lat}&lon=${loc.lon}&name=${encodeURIComponent(loc.name)}`
-    const res = await fetch(url)
-    if (!res.ok) {
-      if (attempt < 3) {
-        await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000))
-        return fetchWithRetry(loc, attempt + 1)
+  const fetchWithRetry = useCallback(
+    async (loc: LocationInfo, signal: AbortSignal, attempt = 0): Promise<WeatherData> => {
+      const url = `/api/weather?nx=${loc.nx}&ny=${loc.ny}&lat=${loc.lat}&lon=${loc.lon}&name=${encodeURIComponent(loc.name)}`
+      const res = await fetch(url, { signal })
+      if (!res.ok) {
+        if (attempt < 3) {
+          await new Promise<void>((r) => setTimeout(r, Math.pow(2, attempt) * 1000))
+          if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
+          return fetchWithRetry(loc, signal, attempt + 1)
+        }
+        throw new Error('날씨 데이터 로드 실패')
       }
-      throw new Error('날씨 데이터 로드 실패')
-    }
-    return res.json()
-  }, [])
+      return res.json()
+    },
+    []
+  )
 
   useEffect(() => {
     if (!location) return
-    let cancelled = false
+    const ac = new AbortController()
     setLoading(true)
     setError(null)
 
-    fetchWithRetry(location)
-      .then((d) => { if (!cancelled) { setData(d); setLoading(false) } })
-      .catch((e) => { if (!cancelled) { setError(e.message); setLoading(false) } })
+    fetchWithRetry(location, ac.signal)
+      .then((d) => { if (!ac.signal.aborted) { setData(d); setLoading(false) } })
+      .catch((e) => {
+        if (ac.signal.aborted || (e as Error).name === 'AbortError') return
+        setError((e as Error).message)
+        setLoading(false)
+      })
 
-    return () => { cancelled = true }
+    return () => { ac.abort() }
   }, [location, fetchWithRetry])
 
   return { data, loading, error }

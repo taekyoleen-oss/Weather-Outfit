@@ -1,15 +1,16 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { ActivitySelector } from './ActivitySelector'
 import { GenderToggle } from './GenderToggle'
 import { OutfitResult } from './OutfitResult'
 import { OutfitLlmSuggest } from './OutfitLlmSuggest'
 import { recommendOutfit } from '@/lib/outfit/recommender'
 import type { ActivityType, GenderType } from '@/types/outfit'
-import type { CurrentWeather, DustData } from '@/types/weather'
+import type { CurrentWeather, DustData, WeatherAlert } from '@/types/weather'
 import type { TerrainType } from '@/types/location'
 import { kstTodayYmd } from '@/lib/utils/timeOfDay'
+import { OutfitDayChecklist } from './OutfitDayChecklist'
 
 function calendarMonthKstFromWeather(w: CurrentWeather | null): number | undefined {
   if (!w) return undefined
@@ -22,6 +23,7 @@ function calendarMonthKstFromWeather(w: CurrentWeather | null): number | undefin
 interface Props {
   weather: CurrentWeather | null
   dust?: DustData | null
+  alerts?: WeatherAlert[]
   terrain: TerrainType
   /** 선택한 시간대의 시작 시각(새벽 0, 오전 6, …) */
   outfitPeriodStartHour: number
@@ -31,6 +33,14 @@ interface Props {
   outfitCurrentKstHour: number
   /** 시간대·날짜 변경 시 복장 시작/종료 시각을 다시 맞출 때 사용하는 키 */
   outfitScheduleSyncKey: string
+  scheduleYmd: string
+  scheduleYmdMin: string
+  scheduleYmdMax: string
+  onScheduleYmdChange: (ymd: string) => void
+  /** 시작 시각 선택 하한(0–23) — 페이지에서 KST·기준일 반영 */
+  activityStartHourMin: number
+  /** 상단 날씨 카드·스트립과 동기화 */
+  onActivityHoursChange?: (startHour: number, endHour: number) => void
 }
 
 type SensitivityLevel = -2 | 0 | 2
@@ -91,15 +101,30 @@ function activityStartFloor(periodStart: number, isNow: boolean, kstHour: number
 export function OutfitPanel({
   weather,
   dust,
+  alerts = [],
   terrain,
   outfitPeriodStartHour,
   outfitIsNowPeriod,
   outfitCurrentKstHour,
   outfitScheduleSyncKey,
+  scheduleYmd,
+  scheduleYmdMin,
+  scheduleYmdMax,
+  onScheduleYmdChange,
+  activityStartHourMin,
+  onActivityHoursChange,
 }: Props) {
   const [activity, setActivity] = useState<ActivityType>('urban_walk')
-  const [gender, setGender] = useState<GenderType>(() => loadPref('wf:gender', 'male'))
-  const [sensitivity, setSensitivity] = useState<SensitivityLevel>(() => loadPref('wf:sensitivity', 0) as SensitivityLevel)
+  /** SSR·첫 클라이언트 페인트는 서버와 동일한 기본값 → hydration 일치 후 localStorage 복원 */
+  const [gender, setGender] = useState<GenderType>('male')
+  const [sensitivity, setSensitivity] = useState<SensitivityLevel>(0)
+
+  useEffect(() => {
+    const g = loadPref<GenderType>('wf:gender', 'male')
+    if (g === 'female' || g === 'male') setGender(g)
+    const raw = loadPref<number>('wf:sensitivity', 0)
+    if (raw === -2 || raw === 0 || raw === 2) setSensitivity(raw as SensitivityLevel)
+  }, [])
   const [startHour, setStartHour] = useState<number>(() =>
     activityStartFloor(outfitPeriodStartHour, outfitIsNowPeriod, outfitCurrentKstHour)
   )
@@ -109,6 +134,9 @@ export function OutfitPanel({
       ACTIVITY_DEFAULT_DURATION_HOURS.urban_walk
     )
   )
+
+  const activityRef = useRef(activity)
+  activityRef.current = activity
 
   function handleActivity(a: ActivityType) {
     setActivity(a)
@@ -127,15 +155,19 @@ export function OutfitPanel({
   }
   const selectedDuration = durationFromStartEnd(startHour, endHour)
 
-  const startHourMin = activityStartFloor(outfitPeriodStartHour, outfitIsNowPeriod, outfitCurrentKstHour)
+  const startHourMin = activityStartHourMin
+
+  useEffect(() => {
+    onActivityHoursChange?.(startHour, endHour)
+  }, [startHour, endHour, onActivityHoursChange])
 
   useEffect(() => {
     const f = activityStartFloor(outfitPeriodStartHour, outfitIsNowPeriod, outfitCurrentKstHour)
     setStartHour(f)
-    setEndHour(addHoursWrap24(f, ACTIVITY_DEFAULT_DURATION_HOURS[activity]))
-    // 시각이 한 시간 넘어갈 때마다 초기화하지 않음(지금 구간에서만 별도로 하한 상향)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- outfitCurrentKstHour는 의도적으로 제외
-  }, [outfitScheduleSyncKey, outfitPeriodStartHour, outfitIsNowPeriod, activity])
+    setEndHour(addHoursWrap24(f, ACTIVITY_DEFAULT_DURATION_HOURS[activityRef.current]))
+    // outfitCurrentKstHour, activityRef: intentionally excluded — kst hour has its own effect; activity change is handled by handleActivity
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [outfitScheduleSyncKey, outfitPeriodStartHour, outfitIsNowPeriod])
 
   useEffect(() => {
     if (!outfitIsNowPeriod) return
@@ -176,6 +208,10 @@ export function OutfitPanel({
       <ActivitySelector
         value={activity}
         onChange={handleActivity}
+        scheduleYmd={scheduleYmd}
+        scheduleYmdMin={scheduleYmdMin}
+        scheduleYmdMax={scheduleYmdMax}
+        onScheduleYmdChange={onScheduleYmdChange}
         startHour={startHour}
         startHourMin={startHourMin}
         endHour={endHour}
@@ -252,6 +288,19 @@ export function OutfitPanel({
             durationHours={selectedDuration}
             result={result}
             feelsLikeSensitivity={sensitivity}
+          />
+        </>
+      )}
+
+      {weather && (
+        <>
+          <div className="border-t" style={{ borderColor: 'var(--border)' }} />
+          <OutfitDayChecklist
+            weather={weather}
+            dust={dust ?? null}
+            alerts={alerts}
+            durationHours={selectedDuration}
+            sensitivity={sensitivity}
           />
         </>
       )}

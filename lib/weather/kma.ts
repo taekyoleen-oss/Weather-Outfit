@@ -1,17 +1,21 @@
 import { z } from 'zod'
 import type { CurrentWeather, HourlyForecast, SkyCode, PtyCode } from '@/types/weather'
 import { feelsLike } from '@/lib/utils/formatWeather'
+import { safeFetch } from '@/lib/utils/safeFetch'
 
 const KMA_BASE = 'http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0'
 
+let _kmaKey: string | null = null
 function kmaKey(): string {
-  const key = process.env.KMA_API_KEY
-  if (!key) throw new Error('KMA_API_KEY not set')
-  return key
+  if (_kmaKey !== null) return _kmaKey
+  const raw = process.env.KMA_API_KEY
+  if (!raw) throw new Error('KMA_API_KEY not set')
+  try { _kmaKey = decodeURIComponent(raw) } catch { _kmaKey = raw }
+  return _kmaKey
 }
 
 // KST = UTC+9; KMA API uses Korean Standard Time for all dates/times
-function kstNow(): Date {
+export function kstNow(): Date {
   return new Date(Date.now() + 9 * 60 * 60 * 1000)
 }
 
@@ -29,7 +33,7 @@ function formatDate(d: Date): string {
  *      H=12시 → base=11 (12시~데이터, 12시 포함 ✓)
  *      H=15시 → base=11 (12시~데이터, 15시 포함 ✓)  ← 14시 base는 15:00부터라 동일
  */
-function getBaseDateTime(now: Date): { baseDate: string; baseTime: string } {
+export function getBaseDateTime(now: Date): { baseDate: string; baseTime: string } {
   const h = now.getUTCHours()
   const baseHours = [2, 5, 8, 11, 14, 17, 20, 23]
   // base + 1 ≤ h  →  base < h
@@ -62,7 +66,7 @@ export async function fetchVilageForecast(nx: number, ny: number): Promise<{
   const { baseDate, baseTime } = getBaseDateTime(now)
 
   const params = new URLSearchParams({
-    serviceKey: decodeURIComponent(kmaKey()),
+    serviceKey: kmaKey(),
     pageNo: '1',
     numOfRows: '1000',
     dataType: 'JSON',
@@ -73,7 +77,7 @@ export async function fetchVilageForecast(nx: number, ny: number): Promise<{
   })
 
   const url = `${KMA_BASE}/getVilageFcst?${params}`
-  const res = await fetch(url, { next: { revalidate: 0 } })
+  const res = await safeFetch(url, { next: { revalidate: 0 } })
   if (!res.ok) throw new Error(`KMA API error: ${res.status}`)
   const json = await res.json()
 

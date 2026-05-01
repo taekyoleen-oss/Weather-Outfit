@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import type { OutfitItem, OutfitResult, OutfitWeatherSnapshot, GenderType } from '@/types/outfit'
 import { CATEGORY_ORDER, CATEGORY_LABELS, type OutfitCategoryKey } from '@/lib/outfit/categories'
 import { outfitAccessorySrc, type OutfitAccessoryKey } from '@/lib/outfit/accessoryIllust'
@@ -15,41 +16,75 @@ const PC_BAND_RIGHT: (OutfitCategoryKey | null)[] = ['acc', 'rain', 'base', 'bot
 
 const BLANK_CATS = new Set(['rain', 'acc', 'mask'])
 
-const ILLUST_ACC_IMG_CLASS =
-  'h-10 w-10 shrink-0 object-contain sm:h-[2.75rem] sm:w-[2.75rem]'
+/** 텍스트 칩(`itemChip`)과 동일한 pill 래퍼 안에 넣을 때 */
+const ILLUST_ACC_IN_CHIP_CLASS = 'h-5 w-5 shrink-0 object-contain sm:h-5 sm:w-5'
 
+/** 그림만 있을 때 호버·접근성용 설명 (브라우저 기본 툴팁) */
+function itemIllustTooltip(item: OutfitItem): string {
+  const parts = [item.name, item.condition, item.activityTag].filter(Boolean) as string[]
+  return parts.join(' — ')
+}
+
+const WEATHER_ACCESSORY_TOOLTIP: Partial<Record<OutfitAccessoryKey, string>> = {
+  umbrellaOpen: '날씨 조건에 따른 우산·우천 대비',
+  hatMale: '날씨·자외선 조건에 따른 모자',
+  hatFemaleWide: '날씨·자외선 조건에 따른 모자',
+  sunglasses: '날씨·자외선 조건에 따른 선글라스',
+  gloves: '기온·체감 조건에 따른 장갑',
+  scarf: '한랭·바람 조건에 따른 목도리',
+  windbreaker: '강풍 등 날씨 조건에 따른 바람막이',
+}
+
+function itemChip(item: OutfitItem, idx: number) {
+  return (
+    <span
+      key={item.id}
+      className="inline-flex max-w-full min-w-0 items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full sm:text-[11px]"
+      style={{
+        background: item.required ? 'rgba(239,68,68,0.07)' : 'rgba(100,116,139,0.08)',
+        color: item.required ? 'var(--danger)' : 'var(--text)',
+        border: `1px solid ${item.required ? 'rgba(239,68,68,0.2)' : 'var(--border)'}`,
+        marginLeft: idx === 0 ? 0 : 4,
+      }}
+    >
+      <span className="flex-shrink-0">{item.icon}</span>
+      <span className="font-medium truncate">{item.name}</span>
+    </span>
+  )
+}
+
+/** 액세서리 PNG: `acc` 이거나, 바람막이·윈드쉘 계열(`windbreaker` 키)은 아우터/미들에서도 동일 에셋 표시 */
 function itemChipsOrAccessoryImages(items: OutfitItem[], gender: GenderType) {
   return items.map((item, idx) => {
     const accKey = outfitItemToAccessoryKey(item, gender)
-    if (accKey) {
+    const useAccessoryImage =
+      accKey && (item.category === 'acc' || accKey === 'windbreaker')
+    if (useAccessoryImage) {
+      const tip = itemIllustTooltip(item)
       return (
-        <img
+        <span
           key={item.id}
-          src={outfitAccessorySrc(accKey)}
-          alt={item.name}
-          width={44}
-          height={44}
-          className={ILLUST_ACC_IMG_CLASS}
-          style={{ marginLeft: idx === 0 ? 0 : -10 }}
-          draggable={false}
-          loading="lazy"
-        />
+          className={ITEM_CHIP_CLASS}
+          style={{
+            ...itemChipShellStyle(item.required),
+            marginLeft: idx === 0 ? 0 : 4,
+          }}
+        >
+          <Image
+            src={outfitAccessorySrc(accKey)}
+            alt={tip}
+            title={tip}
+            aria-label={tip}
+            width={20}
+            height={20}
+            className={ILLUST_ACC_IN_CHIP_CLASS}
+            sizes="20px"
+            loading="lazy"
+          />
+        </span>
       )
     }
-    return (
-      <span
-        key={item.id}
-        className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full sm:text-[11px]"
-        style={{
-          background: item.required ? 'rgba(239,68,68,0.07)' : 'rgba(100,116,139,0.08)',
-          color: item.required ? 'var(--danger)' : 'var(--text)',
-          border: `1px solid ${item.required ? 'rgba(239,68,68,0.2)' : 'var(--border)'}`,
-        }}
-      >
-        <span>{item.icon}</span>
-        <span className="font-medium">{item.name}</span>
-      </span>
-    )
+    return itemChip(item, idx)
   })
 }
 
@@ -95,8 +130,8 @@ function CategoryBlock({
   const rowClass = `flex min-h-0 flex-1 flex-col justify-center gap-1 py-0.5 lg:gap-1 ${isRight ? 'items-start text-left' : 'items-end text-right'}`
   const accCount = accessoryKeys?.length ?? 0
   const isVariantAccRow = cat === 'acc' && variantLabel != null
-  const hasLargeAccessoryVisual =
-    hasItems && items.some((it) => outfitItemToAccessoryKey(it, gender) != null)
+  /** 예전 큰 PNG 행 높이용 — 칩 스타일로 바뀌어 일반 칩 행과 동일 높이면 충분 */
+  const hasAccessoryVisual = hasItems && items.some((it) => outfitItemToAccessoryKey(it, gender) != null)
   /** PC: 칩 없이 빈 행만 유지할 때만 데스크톱에서 숨김 — 날씨 소품이 있으면 표시 */
   const reserveRowOnDesktop = !hasItems && accCount === 0
   const showVariant = variantLabel != null && (hasItems || accCount > 0)
@@ -132,9 +167,9 @@ function CategoryBlock({
             : `flex-wrap gap-1.5 sm:gap-2 ${isRight ? 'justify-start' : 'justify-end'}`
         }`}
         style={{
-          minHeight: Math.max(22, accCount > 0 || hasLargeAccessoryVisual ? (hasLargeAccessoryVisual ? 88 : 40) : 22),
+          minHeight: Math.max(22, accCount > 0 || hasAccessoryVisual ? 40 : 22),
           width: isVariantAccRow ? '150%' : undefined,
-          transform: isVariantAccRow ? `translateX(${isRight ? '-40px' : '40px'})` : undefined,
+          transform: isVariantAccRow ? `translateX(${isRight ? '-30px' : '30px'})` : undefined,
         }}
       >
         {/* 모바일/태블릿에서는 카테고리 라벨이 숨겨져 필수/선택 배지를 행 안에 노출 */}
@@ -142,19 +177,31 @@ function CategoryBlock({
           <span className="lg:hidden inline-flex shrink-0">{variantBadge}</span>
         ) : null}
         {hasItems ? itemChipsOrAccessoryImages(items, gender) : null}
-        {accessoryKeys?.map((key, idx) => (
-          <img
-            key={key}
-            src={outfitAccessorySrc(key)}
-            alt={ACCESSORY_ALT[key]}
-            width={44}
-            height={44}
-            className={ILLUST_ACC_IMG_CLASS}
-            style={{ marginLeft: idx === 0 ? 0 : -10 }}
-            draggable={false}
-            loading="lazy"
-          />
-        ))}
+        {accessoryKeys?.map((key, idx) => {
+          const tip = WEATHER_ACCESSORY_TOOLTIP[key] ?? ACCESSORY_ALT[key]
+          return (
+            <span
+              key={key}
+              className={ITEM_CHIP_CLASS}
+              style={{
+                ...itemChipShellStyle(false),
+                marginLeft: idx === 0 ? 0 : 4,
+              }}
+            >
+              <Image
+                src={outfitAccessorySrc(key)}
+                alt={tip}
+                title={tip}
+                aria-label={tip}
+                width={20}
+                height={20}
+                className={ILLUST_ACC_IN_CHIP_CLASS}
+                sizes="20px"
+                loading="lazy"
+              />
+            </span>
+          )
+        })}
       </div>
     </div>
   )
@@ -171,7 +218,7 @@ interface Props {
 export function OutfitIllustPanel({ result, gender, calendarMonth, showSunshine, weatherSky }: Props) {
   const byCategory = CATEGORY_ORDER.reduce(
     (acc, cat) => {
-      const items = result.items.filter((i) => i.category === cat)
+      const items = result.items.filter((i) => i.category === cat && !i.activityTag)
       if (items.length) acc[cat] = items
       return acc
     },
@@ -179,8 +226,10 @@ export function OutfitIllustPanel({ result, gender, calendarMonth, showSunshine,
   )
 
   const weatherAccessories = accessoriesByOutfitCategory(result, gender, weatherSky, showSunshine)
-  const allAccItems = ((byCategory.acc ?? []) as OutfitItem[]).filter(
-    (it) => !it.name.includes('넥워머'),
+  const accOrActivity = (it: OutfitItem) =>
+    it.category === 'acc' || !!it.activityTag
+  const allAccItems = (result.items as OutfitItem[]).filter(
+    (it) => accOrActivity(it) && !it.name.includes('넥워머'),
   )
   const requiredAccItems = allAccItems.filter((it) => it.required)
   const optionalAccItems = allAccItems.filter((it) => !it.required)

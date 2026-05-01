@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { WeatherHeroIllustration } from './WeatherHeroIllustration'
 import { FreshnessBadge } from './FreshnessBadge'
 import type {
@@ -118,10 +118,22 @@ const COLD_LEVELS: IndexRow[] = [
 // ─── 공통 모달 ─────────────────────────────────────────────────────────────────
 
 function IndexModal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  const closeBtnRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    closeBtnRef.current?.focus()
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
     >
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div
@@ -132,9 +144,10 @@ function IndexModal({ title, onClose, children }: { title: string; onClose: () =
         <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
           <p className="text-sm font-bold" style={{ color: 'var(--primary)' }}>{title}</p>
           <button
+            ref={closeBtnRef}
             onClick={onClose}
-            className="p-1.5 rounded-full text-sm leading-none"
-            style={{ color: 'var(--muted)', background: 'var(--surface)' }}
+            className="flex items-center justify-center rounded-full"
+            style={{ color: 'var(--muted)', background: 'var(--surface)', width: 44, height: 44, fontSize: 14 }}
             aria-label="닫기"
           >✕</button>
         </div>
@@ -359,10 +372,12 @@ export function WeatherCard({
           <p className="font-semibold mt-0.5 tabular-nums" style={{ color: textColor }}>{formatTemp1(feels)}°</p>
           <button
             onClick={() => setModal('heat')}
-            className="absolute -top-1 -right-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-bold"
-            style={{ background: infoBtnBg, color: '#fff' }}
+            className="absolute -top-4 -right-4 flex items-center justify-center"
+            style={{ width: 44, height: 44, background: 'transparent' }}
             aria-label="폭염·한파 기준 보기"
-          >ℹ</button>
+          >
+            <span className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-bold" style={{ background: infoBtnBg, color: '#fff' }}>ℹ</span>
+          </button>
         </div>
 
         <Stat label="습도" value={`${weather.humidity}%`} color={textColor} muted={mutedColor} />
@@ -484,8 +499,8 @@ export function WeatherCard({
         {/* ℹ 기준 보기 버튼 */}
         <button
           onClick={() => setModal('uv')}
-          className="flex-shrink-0 flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-opacity hover:opacity-80"
-          style={{ background: infoBtnBg, color: '#fff' }}
+          className="flex-shrink-0 flex items-center gap-1 px-2 rounded-lg text-[10px] font-semibold transition-opacity hover:opacity-80"
+          style={{ background: infoBtnBg, color: '#fff', minHeight: 44 }}
           aria-label="자외선·오존 기준 보기"
         >
           <span>ℹ</span>

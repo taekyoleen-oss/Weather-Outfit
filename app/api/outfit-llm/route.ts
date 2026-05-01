@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { OUTFIT_LLM_SYSTEM, buildOutfitLlmUserMessage, type OutfitLlmRequestPayload } from '@/lib/outfit/llmOutfitPrompt'
+import { safeFetch } from '@/lib/utils/safeFetch'
 
 const BodySchema = z.object({
   locationName: z.string().optional().default(''),
@@ -113,13 +114,14 @@ export async function POST(req: NextRequest) {
   const model = process.env.ANTHROPIC_MODEL ?? 'claude-haiku-4-5'
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await safeFetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
         'x-api-key': key,
         'anthropic-version': '2023-06-01',
       },
+      timeoutMs: 8000,
       body: JSON.stringify({
         model,
         max_tokens: 1400,
@@ -131,20 +133,9 @@ export async function POST(req: NextRequest) {
 
     if (!res.ok) {
       const errText = await res.text()
-      console.error('Anthropic API', res.status, errText)
-      let detail = errText.slice(0, 280)
-      try {
-        const j = JSON.parse(errText) as { error?: { message?: string; type?: string } }
-        if (j?.error?.message) detail = j.error.message
-      } catch {
-        /* raw text */
-      }
+      console.error('Anthropic API error', res.status, errText.slice(0, 500))
       return NextResponse.json(
-        {
-          error: 'upstream',
-          message: 'AI 응답을 가져오지 못했습니다.',
-          detail,
-        },
+        { error: 'upstream', message: '추천 생성에 실패했습니다.' },
         { status: 502 },
       )
     }
@@ -173,10 +164,12 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    return NextResponse.json({
+    const resp = NextResponse.json({
       explanation: parsed.explanation,
       outfitSuggestions: parsed.outfitSuggestions,
     })
+    resp.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=300')
+    return resp
   } catch (e) {
     console.error('outfit-llm route', e)
     return NextResponse.json({ error: 'server', message: '서버 오류가 발생했습니다.' }, { status: 500 })

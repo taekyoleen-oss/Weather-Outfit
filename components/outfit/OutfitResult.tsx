@@ -36,8 +36,9 @@ export function OutfitResult({
 }: Props) {
   const [tab, setTab] = useState<TabId>('illust')
 
-  const requiredItems = result.items.filter((i) => i.required)
-  const optionalItems = result.items.filter((i) => !i.required)
+  const activityItems = result.items.filter((i) => i.activityTag)
+  const requiredItems = result.items.filter((i) => i.required && !i.activityTag)
+  const optionalItems = result.items.filter((i) => !i.required && !i.activityTag)
   const hh = (h: number) => `${String(h).padStart(2, '0')}:00`
   const optionalGuideLines = optionalItems.map(
     (item) => `${item.name}${item.condition ? `: ${item.condition}` : ': 기온/체감/바람 변화 시 추가 착용'}`
@@ -185,6 +186,11 @@ export function OutfitResult({
 
           <SectionList title={`필수 아이템 (${requiredItems.length})`} items={requiredItems} />
           <SectionList title={`선택 아이템 (${optionalItems.length})`} items={optionalItems} />
+          <SectionList
+            title={`활동·장소 전용 (${activityItems.length})`}
+            subtitle="등산·골프·강변 등 선택한 활동에 붙는 준비 물품입니다."
+            items={activityItems}
+          />
 
           {/* Tips */}
           {result.tips.length > 0 && (
@@ -208,12 +214,25 @@ export function OutfitResult({
   )
 }
 
-function SectionList({ title, items }: { title: string; items: OutfitResultType['items'] }) {
+function SectionList({
+  title,
+  subtitle,
+  items,
+}: {
+  title: string
+  subtitle?: string
+  items: OutfitResultType['items']
+}) {
   if (!items.length) return null
   return (
     <div>
-      <p className="text-xs font-semibold mb-2" style={{ color: 'var(--muted)' }}>{title}</p>
-      <div className="grid grid-cols-1 gap-1.5">
+      <p className="text-xs font-semibold" style={{ color: 'var(--muted)' }}>{title}</p>
+      {subtitle ? (
+        <p className="text-[10px] mt-0.5 mb-2 leading-relaxed" style={{ color: 'var(--muted)' }}>{subtitle}</p>
+      ) : (
+        <div className="mb-2" />
+      )}
+      <div className="flex flex-wrap gap-1.5 sm:gap-2">
         {items.map((item) => (
           <OutfitItemCard key={`${title}-${item.id}`} item={item} />
         ))}

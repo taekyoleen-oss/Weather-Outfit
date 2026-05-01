@@ -105,8 +105,10 @@ export function MobileLayout({
           return (
             <button
               key={t.key}
+              id={`mobile-tab-${t.key}`}
               role="tab"
               aria-selected={active}
+              aria-controls="mobile-tabpanel"
               onClick={() => setTab(t.key)}
               className="flex-1 flex items-center justify-center gap-1.5 max-lg:gap-2 py-2.5 rounded-xl transition-all text-sm max-lg:text-[15px] font-semibold max-lg:tracking-tight"
               style={{
@@ -123,7 +125,12 @@ export function MobileLayout({
       </div>
 
       {/* ── Tab content ── */}
-      <div className="flex-1 px-3 pt-3 pb-10 space-y-3" role="tabpanel">
+      <div
+        id="mobile-tabpanel"
+        role="tabpanel"
+        aria-labelledby={`mobile-tab-${tab}`}
+        className="flex-1 px-3 pt-3 pb-10 space-y-3"
+      >
         {tab === 'weather' ? weatherContent : outfitContent}
       </div>
     </div>
