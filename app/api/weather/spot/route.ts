@@ -46,6 +46,36 @@ interface SpotHourlySlot {
   score: GolfScore
 }
 
+interface TenMinutePrecipSlot {
+  minuteOffset: number
+  timeKst: string
+  precipProb: number
+  precipMm: number
+}
+
+interface LightningNow {
+  level: 'none' | 'watch' | 'warning'
+  message: string
+  source: 'alert-derived'
+}
+
+interface MountainHourlyInfo {
+  fcstYmd: string
+  fcstHour: number
+  tempC: number
+  windMs: number
+  pop: number
+  visibilityKm: number | null
+  level: 'good' | 'caution' | 'danger'
+}
+
+interface WildfireHourlyInfo {
+  fcstYmd: string
+  fcstHour: number
+  score: number
+  level: 'low' | 'moderate' | 'high' | 'very_high'
+}
+
 interface LivingIdxOut {
   value: number
   grade?: string
@@ -77,6 +107,10 @@ interface SpotResponse {
   tmnToday: number | null
   tmxToday: number | null
   hourly: SpotHourlySlot[]
+  precip10m: TenMinutePrecipSlot[]
+  lightningNow: LightningNow
+  mountainHourly: MountainHourlyInfo[]
+  wildfireHourly: WildfireHourlyInfo[]
   alerts: { type: string; level: string; message: string; isLightningRelated: boolean }[]
   indices: {
     uv: LivingIdxOut | null
@@ -138,6 +172,73 @@ function popAtOrBeforeHour(
   return best
 }
 
+function addMinutesKst(hh: number, mm: number, deltaMin: number): { hh: number; mm: number } {
+  const total = hh * 60 + mm + deltaMin
+  const norm = ((total % 1440) + 1440) % 1440
+  return { hh: Math.floor(norm / 60), mm: norm % 60 }
+}
+
+function two(n: number): string {
+  return String(n).padStart(2, '0')
+}
+
+function makePrecip10m(
+  nowHour: number,
+  nowMinute: number,
+  popNow: number,
+  rn1Now: number,
+  nextHourPop: number,
+  nextHourRn1: number,
+): TenMinutePrecipSlot[] {
+  const out: TenMinutePrecipSlot[] = []
+  for (let m = 0; m <= 60; m += 10) {
+    const ratio = m / 60
+    const pop = Math.round(popNow + (nextHourPop - popNow) * ratio)
+    const mm = Math.max(0, rn1Now + (nextHourRn1 - rn1Now) * ratio)
+    const t = addMinutesKst(nowHour, nowMinute, m)
+    out.push({
+      minuteOffset: m,
+      timeKst: `${two(t.hh)}:${two(t.mm)}`,
+      precipProb: Math.min(100, Math.max(0, pop)),
+      precipMm: Math.round(mm * 10) / 10,
+    })
+  }
+  return out
+}
+
+function wildfireLevel(score: number): WildfireHourlyInfo['level'] {
+  if (score >= 80) return 'very_high'
+  if (score >= 60) return 'high'
+  if (score >= 35) return 'moderate'
+  return 'low'
+}
+
+function mountainLevel(input: { windMs: number; pop: number; visibilityKm: number | null }): MountainHourlyInfo['level'] {
+  if (input.windMs >= 9 || input.pop >= 70 || (input.visibilityKm != null && input.visibilityKm < 2)) return 'danger'
+  if (input.windMs >= 6 || input.pop >= 40 || (input.visibilityKm != null && input.visibilityKm < 5)) return 'caution'
+  return 'good'
+}
+
+function wildfireScore(input: { tempC: number; humidity: number; windMs: number; precipMm: number; ptyCode: PtyCode }): number {
+  let score = 0
+  if (input.tempC >= 30) score += 25
+  else if (input.tempC >= 25) score += 16
+  else if (input.tempC >= 20) score += 8
+
+  if (input.humidity < 25) score += 30
+  else if (input.humidity < 35) score += 20
+  else if (input.humidity < 45) score += 12
+
+  if (input.windMs >= 9) score += 26
+  else if (input.windMs >= 7) score += 18
+  else if (input.windMs >= 5) score += 10
+
+  if (input.ptyCode !== '0' || input.precipMm > 0.2) score -= 28
+  else if (input.precipMm > 0.0) score -= 14
+
+  return Math.max(0, Math.min(100, Math.round(score)))
+}
+
 export async function GET(req: NextRequest) {
   const raw = Object.fromEntries(req.nextUrl.searchParams)
   const parsed = QuerySchema.safeParse(raw)
@@ -156,7 +257,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const { ymd, baseTime } = nowNcstBaseTime()
-    const { hour: kstHour, ymd: todayYmd } = kstWallClock()
+    const { hour: kstHour, minute: kstMinute, ymd: todayYmd } = kstWallClock()
 
     const cacheKey = `spot-golf:${nx}:${ny}:${todayYmd}:${kstHour}`
     const cacheTtlSec = 60
@@ -282,6 +383,69 @@ export async function GET(req: NextRequest) {
       const sortedByScore = [...hourly].sort((a, b) => b.score.score - a.score.score)
       const bestTeeHours = sortedByScore.filter((h) => h.score.score >= 45).slice(0, 3).map((h) => h.fcstHour)
 
+      const lightningNow: LightningNow = hasLightning
+        ? {
+            level: 'warning',
+            message: '현재 지역(시·도 근사)에 낙뢰/뇌우 관련 특보가 감지되었습니다.',
+            source: 'alert-derived',
+          }
+        : {
+            level: popNow >= 60 || observed?.ptyCode !== '0' ? 'watch' : 'none',
+            message:
+              popNow >= 60 || observed?.ptyCode !== '0'
+                ? '강수/대류 가능성이 있어 낙뢰 발생 가능성에 주의하세요.'
+                : '낙뢰 관련 특보는 현재 확인되지 않습니다.',
+            source: 'alert-derived',
+          }
+
+      const nextHour = hourly[0]
+      const precip10m = makePrecip10m(
+        kstHour,
+        kstMinute,
+        popNow,
+        observed?.rn1 ?? 0,
+        nextHour?.pop ?? popNow,
+        nextHour?.precipitation ?? observed?.rn1 ?? 0,
+      )
+
+      const mountainHourly: MountainHourlyInfo[] = hourly.slice(0, 6).map((h) => {
+        const lvl = mountainLevel({
+          windMs: h.windSpeed,
+          pop: h.pop,
+          visibilityKm: visKm,
+        })
+        return {
+          fcstYmd: h.fcstYmd,
+          fcstHour: h.fcstHour,
+          tempC: h.temperature,
+          windMs: h.windSpeed,
+          pop: h.pop,
+          visibilityKm: visKm,
+          level: lvl,
+        }
+      })
+
+      const wildfireHourly: WildfireHourlyInfo[] = (fcstBundle?.slots ?? []).slice(0, 6).map((slot, i) => {
+        const pty = toPtyCode(slot.PTY)
+        const reh = parseFloat(slot.REH ?? '50')
+        const temp = parseFloat(slot.T1H ?? '0')
+        const wsd = parseFloat(slot.WSD ?? '0')
+        const rn1 = parseFloat(slot.RN1 ?? '0')
+        const score = wildfireScore({
+          tempC: Number.isFinite(temp) ? temp : 0,
+          humidity: Number.isFinite(reh) ? reh : 50,
+          windMs: Number.isFinite(wsd) ? wsd : 0,
+          precipMm: Number.isFinite(rn1) ? rn1 : 0,
+          ptyCode: pty,
+        })
+        return {
+          fcstYmd: slot.fcstDate,
+          fcstHour: parseInt(slot.fcstTime.slice(0, 2), 10),
+          score,
+          level: wildfireLevel(score),
+        }
+      }).filter((v, i) => Number.isFinite(v.fcstHour) && i >= 0)
+
       let outfit: OutfitSummaryOut | null = null
       if (observed) {
         const o = recommendOutfit({
@@ -326,6 +490,10 @@ export async function GET(req: NextRequest) {
         tmnToday,
         tmxToday,
         hourly,
+        precip10m,
+        lightningNow,
+        mountainHourly,
+        wildfireHourly,
         alerts,
         indices: {
           uv: living.uv ? { value: living.uv.value, grade: living.uv.grade } : null,
