@@ -72,6 +72,8 @@ interface Props {
   initialSpot?: LocationInfo | null
   anchorLocation?: LocationInfo | null
   compact?: boolean
+  /** false: 모바일 4탭/PC 상단에서 상위 검색으로만 위치를 맞출 때(내부 검색창 숨김) */
+  showLocationSearch?: boolean
 }
 
 const MOUNTAIN_CHOICES: LocationInfo[] = [
@@ -86,6 +88,7 @@ export function SpotPanel({
   initialSpot = null,
   anchorLocation = null,
   compact = false,
+  showLocationSearch = true,
 }: Props) {
   const [spot, setSpot] = useState<LocationInfo | null>(initialSpot ?? null)
   const [data, setData] = useState<SpotApiResponse | null>(null)
@@ -93,11 +96,19 @@ export function SpotPanel({
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
+  // PC·접이식: 상위에서 넘긴 anchor만 따름 (산 빠른 선택은 로컬로 spot만 덮어씀)
   useEffect(() => {
+    if (showLocationSearch) return
+    if (!anchorLocation) return
+    setSpot(anchorLocation)
+  }, [anchorLocation, showLocationSearch])
+
+  useEffect(() => {
+    if (!showLocationSearch) return
     if (spot) return
     if (!anchorLocation) return
     setSpot(anchorLocation)
-  }, [anchorLocation, spot])
+  }, [anchorLocation, spot, showLocationSearch])
 
   useEffect(() => {
     if (!spot) return
@@ -130,14 +141,14 @@ export function SpotPanel({
 
   return (
     <section className={compact ? 'space-y-2.5' : 'space-y-3'} aria-label="단기 예측 날씨">
-      <LocationSearchBar onSelect={setSpot} />
+      {showLocationSearch ? <LocationSearchBar onSelect={setSpot} /> : null}
       {spot && (
         <div
           className={`rounded-xl ${compact ? 'p-2.5' : 'p-3'}`}
           style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
         >
           <p className="text-[10px] font-semibold mb-1" style={{ color: 'var(--muted)' }}>
-            4번째 탭 기준 위치
+            조회 기준 위치
           </p>
           <p className="text-xs font-semibold" style={{ color: 'var(--text)' }}>
             장소: {spot.name}

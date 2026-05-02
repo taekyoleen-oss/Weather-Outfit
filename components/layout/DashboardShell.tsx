@@ -10,6 +10,8 @@ const ZOOM_STEP = 0.05
 const DESKTOP_BASE_SCALE = 1.16
 
 interface Props {
+  /** 전체 폭 상단(줌 바 아래, 2열 그리드 위) — PC 통합 검색·접이식 블록 등 */
+  top?: ReactNode
   left: ReactNode
   right: ReactNode
 }
@@ -31,7 +33,7 @@ function detectCssZoomSupport(): boolean {
   return typeof CSS !== 'undefined' && typeof CSS.supports === 'function' && CSS.supports('zoom', '1')
 }
 
-export function DashboardShell({ left, right }: Props) {
+export function DashboardShell({ top, left, right }: Props) {
   const rootRef = useRef<HTMLDivElement>(null)
   const baseFitRef = useRef(1)
   const userZoomRef = useRef(1)
@@ -184,6 +186,14 @@ export function DashboardShell({ left, right }: Props) {
       </div>
 
       <div className="w-full min-w-0 max-w-full px-0 box-border py-2">
+        {top ? (
+          <div
+            className="w-full min-w-0 max-w-full px-2 sm:px-3 pb-4 mb-1 border-b box-border"
+            style={{ borderColor: 'var(--border)' }}
+          >
+            {top}
+          </div>
+        ) : null}
         <div
           ref={rootRef}
           className="w-full min-w-0 max-w-full grid gap-5 lg:gap-6 [grid-template-columns:minmax(0,clamp(270px,32vw,460px))_minmax(0,1fr)]"
