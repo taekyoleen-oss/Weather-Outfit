@@ -279,7 +279,7 @@ export function SpotPanel({
                   <p className="text-[10px]" style={{ color: 'var(--text)' }}>
                     {m.tempC.toFixed(0)}° · {m.windMs.toFixed(1)}m/s
                   </p>
-                  <p className="text-[10px]" style={{ color: 'var(--humidity)' }}>POP {Math.round(m.pop)}%</p>
+                  <p className="text-[10px]" style={{ color: 'var(--humidity)' }}>강수확률 {Math.round(m.pop)}%</p>
                   <p className="text-[10px] font-semibold" style={{ color: m.level === 'danger' ? '#b91c1c' : m.level === 'caution' ? '#b45309' : '#15803d' }}>
                     산악 {mountainLevelText(m.level)}
                   </p>

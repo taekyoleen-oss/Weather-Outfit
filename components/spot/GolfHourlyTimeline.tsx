@@ -10,6 +10,7 @@ export interface GolfHourlyRow {
   skyCode?: SkyCode
   ptyCode?: PtyCode
   pop: number
+  precipitation?: number
   windSpeed: number
   feelsLikeC: number
   score: { score: number; grade: string }
@@ -70,7 +71,10 @@ export function GolfHourlyTimeline({ hourly, compact = false }: Props) {
                 {formatTemp1(h.temperature)}°
               </span>
               <span className="text-[9px]" style={{ color: 'var(--humidity)' }}>
-                POP {Math.round(h.pop)}%
+                강수확률 {Math.round(h.pop)}%
+              </span>
+              <span className="text-[9px]" style={{ color: 'var(--humidity)' }}>
+                강수량 {h.precipitation != null && h.precipitation > 0 ? `${h.precipitation.toFixed(1)}mm` : '-'}
               </span>
               <span className="text-[9px]" style={{ color: 'var(--muted)' }}>
                 {h.windSpeed.toFixed(1)}m/s

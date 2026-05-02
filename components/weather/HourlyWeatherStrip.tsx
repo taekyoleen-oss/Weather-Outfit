@@ -129,7 +129,7 @@ export function HourlyWeatherStrip({
       </h3>
       <div className="flex gap-0.5 sm:gap-1 pb-1">
         {/* 좌측 고정 라벨 열 */}
-        <div className="grid grid-rows-[14px_14px_20px_14px_14px_14px_14px] min-w-[46px] sm:min-w-[54px] py-1.5 px-1 rounded-xl bg-white/35">
+        <div className="grid grid-rows-[14px_14px_20px_14px_14px_14px_14px_14px] min-w-[46px] sm:min-w-[54px] py-1.5 px-1 rounded-xl bg-white/35">
           {/* 배너/시간/기온 행은 비워서 높이만 맞춤 */}
           <div className="h-[14px] w-full" />
           <div className="h-[14px] flex items-center">
@@ -143,6 +143,9 @@ export function HourlyWeatherStrip({
           </div>
           <div className="h-[14px] flex items-center">
             <span className="text-[10px] font-semibold leading-none" style={{ color: 'var(--muted)' }}>강수(%)</span>
+          </div>
+          <div className="h-[14px] flex items-center">
+            <span className="text-[10px] font-semibold leading-none" style={{ color: 'var(--muted)' }}>강수량(mm)</span>
           </div>
           <div className="h-[14px] flex items-center">
             <span className="text-[10px] font-semibold leading-none" style={{ color: 'var(--muted)' }}>습도(%)</span>
@@ -195,7 +198,7 @@ export function HourlyWeatherStrip({
                 />
               )}
             <div
-              className="grid grid-rows-[14px_14px_20px_14px_14px_14px_14px] items-center min-w-[52px] sm:min-w-[58px] py-1.5 px-1 rounded-xl transition-colors text-center"
+              className="grid grid-rows-[14px_14px_20px_14px_14px_14px_14px_14px] items-center min-w-[52px] sm:min-w-[58px] py-1.5 px-1 rounded-xl transition-colors text-center"
               style={{
                 background: isCurrent
                   ? 'rgba(255,181,71,0.12)'
@@ -255,6 +258,7 @@ export function HourlyWeatherStrip({
                 {formatTemp1(h.temperature)}°
               </span>
               <span className="h-[14px] flex items-center justify-center text-xs" style={{ color: 'var(--humidity)' }}>{h.pop > 0 ? h.pop : '-'}</span>
+              <span className="h-[14px] flex items-center justify-center text-xs" style={{ color: 'var(--humidity)' }}>{h.precipitation > 0 ? h.precipitation.toFixed(1) : '-'}</span>
               <span className="h-[14px] flex items-center justify-center text-xs" style={{ color: 'var(--muted)' }}>{Math.round(h.humidity)}</span>
               <span className="h-[14px] flex items-center justify-center text-xs" style={{ color: 'var(--muted)' }}>{h.windSpeed.toFixed(1)}</span>
             </div>

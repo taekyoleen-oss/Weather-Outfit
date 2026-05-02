@@ -458,6 +458,13 @@ export default function HomePage() {
       sunsetTime={sunriseSunset?.sunset}
     />
   )
+  const hourlyStripMobile = (
+    <HourlyWeatherStrip
+      hourly={displayedHourly}
+      currentHour={hour}
+      sunsetTime={sunriseSunset?.sunset}
+    />
+  )
   const highlightsGrid = (
     <HighlightsGrid
       weather={displayWeather}
@@ -535,7 +542,7 @@ export default function HomePage() {
           currentContent={weatherCard}
           weatherContent={
             <>
-              {hourlyStrip}
+              {hourlyStripMobile}
               {highlightsGrid}
               <WeeklyForecastInline key="weekly-inline-mobile" {...weeklyProps} />
             </>
