@@ -14,6 +14,8 @@ interface Props {
   selectedDayOffset?: number
   /** 있으면 이 yyyymmdd에 맞춰 구간 하이라이트(오프셋보다 우선) */
   highlightTargetYmd?: string
+  /** true면 `highlightTargetYmd`가 아닌 날의 슬롯을 흐리게 */
+  fadeNonMatchingTargetYmd?: boolean
   sunsetTime?: string
 }
 
@@ -82,6 +84,7 @@ export function HourlyWeatherStrip({
   selectedPeriodEnd,
   selectedDayOffset = 0,
   highlightTargetYmd,
+  fadeNonMatchingTargetYmd = false,
   sunsetTime,
 }: Props) {
   if (!hourly.length) {
@@ -122,8 +125,20 @@ export function HourlyWeatherStrip({
   const nextTargetYmd = addCalendarDaysFromKstYmd(selectedTargetYmd, 1)
   const sunsetHm = sunsetHmFromText(sunsetTime)
 
+  const hasAnySlotForTarget =
+    highlightTargetYmd == null
+      ? true
+      : slotYmds.some((y) => y === highlightTargetYmd)
+
   return (
-    <div className="glass-card p-3 sm:p-4">
+    <div
+      className="glass-card p-3 sm:p-4"
+      style={
+        fadeNonMatchingTargetYmd && highlightTargetYmd && !hasAnySlotForTarget
+          ? { opacity: 0.45 }
+          : undefined
+      }
+    >
       <h3 className="text-sm font-semibold mb-2.5" style={{ color: 'var(--muted)' }}>
         시간별 예보
       </h3>
@@ -176,6 +191,10 @@ export function HourlyWeatherStrip({
             const showDayBanner = i === 0 ? dayBannerLabel(todayYmd, slotYmd) !== null : slotYmd !== prevYmd
             const dayBanner = showDayBanner ? dayBannerLabel(todayYmd, slotYmd) : null
             const dayChanged = i > 0 && slotYmd !== prevYmd
+            const fadeThisSlot =
+              fadeNonMatchingTargetYmd &&
+              !!highlightTargetYmd &&
+              slotYmd !== highlightTargetYmd
             const label = weatherLabel(h.skyCode, h.ptyCode)
             const slotHm = hourNum * 100
             const isNight =
@@ -200,6 +219,7 @@ export function HourlyWeatherStrip({
             <div
               className="grid grid-rows-[14px_14px_20px_14px_14px_14px_14px_14px] items-center min-w-[52px] sm:min-w-[58px] py-1.5 px-1 rounded-xl transition-colors text-center"
               style={{
+                opacity: fadeThisSlot ? 0.4 : 1,
                 background: isCurrent
                   ? 'rgba(255,181,71,0.12)'
                   : isInPeriod

@@ -11,10 +11,25 @@ import { OutfitItemCard } from './OutfitItemCard'
 import { OutfitIllustPanel } from './OutfitIllustPanel'
 import { formatTemp1 } from '@/lib/utils/formatWeather'
 
+export type OutfitPeriodWeather =
+  | {
+      source: 'period_hourly'
+      conditionLabel: string
+      minTemp: number
+      maxTemp: number
+      periodName: string
+    }
+  | {
+      source: 'day_daily'
+      conditionLabel: string
+      minTemp: number
+      maxTemp: number
+    }
+
 interface Props {
   result: OutfitResultType
   schedule?: { startHour: number; endHour: number; durationHour: number }
-  periodWeather?: { label: string; minTemp: number; maxTemp: number } | null
+  periodWeather?: OutfitPeriodWeather | null
   /** 기본: 「오늘의 복장 추천」— 모바일 등에서 「복장 추천」으로 변경 */
   resultTitle?: string
   gender?: GenderType
@@ -97,7 +112,10 @@ export function OutfitResult({
           </div>
           {periodWeather && (
             <p className="text-[11px] sm:text-xs font-semibold tabular-nums text-right leading-snug" style={{ color: 'var(--muted)' }}>
-              {periodWeather.label} · 최고 {formatTemp1(periodWeather.maxTemp)}° / 최저 {formatTemp1(periodWeather.minTemp)}°
+              {periodWeather.source === 'period_hourly'
+                ? `${periodWeather.periodName} · `
+                : '해당일 · '}
+              {periodWeather.conditionLabel} · 최고 {formatTemp1(periodWeather.maxTemp)}° / 최저 {formatTemp1(periodWeather.minTemp)}°
             </p>
           )}
         </div>

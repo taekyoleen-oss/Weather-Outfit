@@ -7,14 +7,20 @@ import { OutfitResult } from './OutfitResult'
 import { OutfitLlmSuggest } from './OutfitLlmSuggest'
 import { recommendOutfit } from '@/lib/outfit/recommender'
 import type { ActivityType, GenderType } from '@/types/outfit'
-import type { CurrentWeather, DustData, HourlyForecast, WeatherAlert } from '@/types/weather'
+import type {
+  CurrentWeather,
+  DailyForecast,
+  DustData,
+  HourlyForecast,
+  WeatherAlert,
+} from '@/types/weather'
 import type { TerrainType } from '@/types/location'
 import { addCalendarDaysFromKstYmd, kstTodayYmd } from '@/lib/utils/timeOfDay'
 import { OutfitDayChecklist } from './OutfitDayChecklist'
 import { weatherLabel } from '@/lib/utils/formatWeather'
 import { buildHourlySlotYmds } from '@/lib/utils/resolveHourlyForPeriod'
 import type { VisitSchedule } from '@/lib/utils/visitSchedule'
-import { shiftVisitScheduleHours } from '@/lib/utils/visitSchedule'
+import { PERIOD_CHIP_LABELS_KO, TIME_PERIODS } from '@/lib/utils/timePeriods'
 
 function calendarMonthKstFromWeather(w: CurrentWeather | null): number | undefined {
   if (!w) return undefined
@@ -27,6 +33,8 @@ function calendarMonthKstFromWeather(w: CurrentWeather | null): number | undefin
 interface Props {
   weather: CurrentWeather | null
   hourly?: HourlyForecast[]
+  /** 일별 예보 — 시간대별 슬롯이 없을 때 최고·최저·날씨 표시용 */
+  daily?: DailyForecast[]
   dust?: DustData | null
   alerts?: WeatherAlert[]
   terrain: TerrainType
@@ -82,6 +90,25 @@ const ACTIVITY_DEFAULT_DURATION_HOURS: Record<ActivityType, number> = {
 
 function addHoursWrap24(baseHour: number, deltaHour: number): number {
   return (baseHour + deltaHour) % 24
+}
+
+function visitSchedulePeriodLabel(s: VisitSchedule): string {
+  const i = TIME_PERIODS.findIndex((p) => p.start === s.startHour && p.end === s.endHour)
+  return i >= 0 ? PERIOD_CHIP_LABELS_KO[i] : '시간대'
+}
+
+function periodChipNameFromHours(startHour: number, endHour: number): string {
+  const i = TIME_PERIODS.findIndex((p) => p.start === startHour && p.end === endHour)
+  return i >= 0 ? PERIOD_CHIP_LABELS_KO[i] : '선택 구간'
+}
+
+function ymdToDateInput(ymd: string): string {
+  if (ymd.length !== 8) return ''
+  return `${ymd.slice(0, 4)}-${ymd.slice(4, 6)}-${ymd.slice(6, 8)}`
+}
+
+function isoToYmd(iso: string): string {
+  return iso.replace(/-/g, '')
 }
 
 function durationFromStartEnd(startHour: number, endHour: number): number {
@@ -157,6 +184,7 @@ function MobileBottomSheet({
 export function OutfitPanel({
   weather,
   hourly = [],
+  daily = [],
   dust,
   alerts = [],
   terrain,
@@ -248,7 +276,7 @@ export function OutfitPanel({
     isMobileSheet,
     mobileInterestSchedule?.startHour,
     mobileInterestSchedule?.endHour,
-    mobileInterestSchedule?.dateOffset,
+    mobileInterestSchedule?.visitDateYmd,
   ])
 
   const result = useMemo(() => {
@@ -276,33 +304,54 @@ export function OutfitPanel({
   }, [weather, dust, activity, gender, terrain, sensitivity, startHour, selectedDuration])
 
   const periodWeather = useMemo(() => {
-    if (!hourly.length) return null
-    const slotYmds = buildHourlySlotYmds(hourly, kstTodayYmd())
+    const todayYmd = kstTodayYmd()
+    const slotYmds = buildHourlySlotYmds(hourly, todayYmd)
     const nextYmd = addCalendarDaysFromKstYmd(scheduleYmd, 1)
     const inRange = hourly.filter((h, i) => {
       const slotYmd = slotYmds[i]
       if (!slotYmd) return false
-      const hour = parseInt(h.time.slice(0, 2), 10)
-      if (Number.isNaN(hour)) return false
+      const hourNum = parseInt(h.time.slice(0, 2), 10)
+      if (Number.isNaN(hourNum)) return false
       if (startHour <= endHour) {
-        return slotYmd === scheduleYmd && hour >= startHour && hour <= endHour
+        return slotYmd === scheduleYmd && hourNum >= startHour && hourNum <= endHour
       }
-      return (slotYmd === scheduleYmd && hour >= startHour) || (slotYmd === nextYmd && hour <= endHour)
+      return (
+        (slotYmd === scheduleYmd && hourNum >= startHour) ||
+        (slotYmd === nextYmd && hourNum <= endHour)
+      )
     })
-    if (!inRange.length) return null
 
-    const minTemp = Math.min(...inRange.map((h) => h.temperature))
-    const maxTemp = Math.max(...inRange.map((h) => h.temperature))
-    const labelCounts = new Map<string, number>()
-    for (const h of inRange) {
-      const label = weatherLabel(h.skyCode, h.ptyCode)
-      labelCounts.set(label, (labelCounts.get(label) ?? 0) + 1)
+    if (inRange.length > 0) {
+      const minTemp = Math.min(...inRange.map((h) => h.temperature))
+      const maxTemp = Math.max(...inRange.map((h) => h.temperature))
+      const labelCounts = new Map<string, number>()
+      for (const h of inRange) {
+        const label = weatherLabel(h.skyCode, h.ptyCode)
+        labelCounts.set(label, (labelCounts.get(label) ?? 0) + 1)
+      }
+      const conditionLabel =
+        [...labelCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ??
+        weatherLabel(inRange[0]!.skyCode, inRange[0]!.ptyCode)
+      return {
+        source: 'period_hourly' as const,
+        conditionLabel,
+        minTemp,
+        maxTemp,
+        periodName: periodChipNameFromHours(startHour, endHour),
+      }
     }
-    const label =
-      [...labelCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ??
-      weatherLabel(inRange[0]!.skyCode, inRange[0]!.ptyCode)
-    return { label, minTemp, maxTemp }
-  }, [hourly, scheduleYmd, startHour, endHour])
+
+    const dayRow = daily.find((d) => d.date === scheduleYmd)
+    if (dayRow) {
+      return {
+        source: 'day_daily' as const,
+        conditionLabel: weatherLabel(dayRow.skyCode, dayRow.ptyCode),
+        minTemp: dayRow.minTemp,
+        maxTemp: dayRow.maxTemp,
+      }
+    }
+    return null
+  }, [hourly, daily, scheduleYmd, startHour, endHour])
 
   const genderSensitivityBlock = (
     <>
@@ -375,34 +424,86 @@ export function OutfitPanel({
 
       {isMobileSheet && mobileInterestSchedule && onMobileInterestScheduleChange && (
         <div className="space-y-2">
-          <p className="text-[10px] leading-snug" style={{ color: 'var(--muted)' }}>
-            기준 {scheduleYmd.slice(0, 4)}.{scheduleYmd.slice(4, 6)}.{scheduleYmd.slice(6, 8)} ·{' '}
-            {String(startHour).padStart(2, '0')}:00–{String(endHour).padStart(2, '0')}:00
+          <p className="text-[10px] font-semibold" style={{ color: 'var(--muted)' }}>
+            관심 지역 · 날짜·시간대
           </p>
-          <div className="flex items-center justify-between gap-2">
-            <button
-              type="button"
-              className="flex-1 text-xs font-semibold py-2 rounded-lg transition-opacity active:opacity-90"
-              style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
-              onClick={() =>
-                onMobileInterestScheduleChange(shiftVisitScheduleHours(mobileInterestSchedule, -4))
-              }
-            >
-              −4시간
-            </button>
-            <span className="text-[11px] font-medium px-1 text-center" style={{ color: 'var(--muted)' }}>
-              중심 {mobileInterestSchedule.startHour}시
-            </span>
-            <button
-              type="button"
-              className="flex-1 text-xs font-semibold py-2 rounded-lg transition-opacity active:opacity-90"
-              style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
-              onClick={() =>
-                onMobileInterestScheduleChange(shiftVisitScheduleHours(mobileInterestSchedule, 4))
-              }
-            >
-              +4시간
-            </button>
+          <label className="block space-y-1">
+            <span className="text-[10px]" style={{ color: 'var(--muted)' }}>날짜</span>
+            <input
+              type="date"
+              className="w-full text-xs rounded-lg px-2 py-2 outline-none"
+              style={{
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                color: 'var(--text)',
+              }}
+              min={ymdToDateInput(scheduleYmdMin)}
+              max={ymdToDateInput(scheduleYmdMax)}
+              value={ymdToDateInput(mobileInterestSchedule.visitDateYmd)}
+              onChange={(e) => {
+                const v = e.target.value
+                if (!v) return
+                onMobileInterestScheduleChange({
+                  ...mobileInterestSchedule,
+                  visitDateYmd: isoToYmd(v),
+                })
+              }}
+            />
+          </label>
+          <div className="grid grid-cols-4 gap-1">
+            {TIME_PERIODS.map((p, i) => {
+              const selected =
+                mobileInterestSchedule.startHour === p.start &&
+                mobileInterestSchedule.endHour === p.end
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  className="flex flex-col items-center justify-center gap-0.5 py-1.5 px-0.5 rounded-lg text-center transition-all active:scale-95 min-w-0"
+                  style={{
+                    background: selected ? 'var(--primary-tint-12)' : 'var(--surface)',
+                    border: `2px solid ${selected ? 'var(--primary)' : 'var(--border)'}`,
+                  }}
+                  onClick={() =>
+                    onMobileInterestScheduleChange({
+                      ...mobileInterestSchedule,
+                      startHour: p.start,
+                      endHour: p.end,
+                    })
+                  }
+                >
+                  <span className="text-sm leading-none">{p.emoji}</span>
+                  <span
+                    className="font-medium leading-tight text-[9px] sm:text-[10px] break-keep"
+                    style={{ color: selected ? 'var(--primary)' : 'var(--muted)' }}
+                  >
+                    {PERIOD_CHIP_LABELS_KO[i]}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+          <div className="space-y-1">
+            <p className="text-[10px] text-center leading-snug" style={{ color: 'var(--muted)' }}>
+              기준 {scheduleYmd.slice(0, 4)}.{scheduleYmd.slice(4, 6)}.{scheduleYmd.slice(6, 8)} ·{' '}
+              {visitSchedulePeriodLabel(mobileInterestSchedule)}
+            </p>
+            {periodWeather ? (
+              <p
+                className="text-[10px] text-center leading-snug font-semibold"
+                style={{ color: 'var(--text)' }}
+              >
+                {periodWeather.source === 'period_hourly'
+                  ? `${periodWeather.periodName} 구간 · `
+                  : '해당일 · '}
+                {periodWeather.conditionLabel} · 최고 {Math.round(periodWeather.maxTemp)}° / 최저{' '}
+                {Math.round(periodWeather.minTemp)}°
+              </p>
+            ) : hourly.length > 0 || daily.length > 0 ? (
+              <p className="text-[10px] text-center" style={{ color: 'var(--muted)' }}>
+                선택 날짜·구간의 예보를 불러오지 못했습니다.
+              </p>
+            ) : null}
           </div>
         </div>
       )}

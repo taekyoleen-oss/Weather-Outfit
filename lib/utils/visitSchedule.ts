@@ -1,55 +1,90 @@
 import { addCalendarDaysFromKstYmd, kstTodayYmd } from '@/lib/utils/timeOfDay'
+import { TIME_PERIODS, getPeriodIndex } from '@/lib/utils/timePeriods'
 
 export interface VisitScheduleShape {
-  dateOffset: 0 | 1 | 2
+  /** KST 관심 조회일 yyyymmdd (임의 날짜, 저장 유지) */
+  visitDateYmd: string
   startHour: number
   endHour: number
 }
 
-/** 앱 전역 관심 일정 (page·InterestLocationCard·OutfitPanel) */
+/** 앱 전역 관심 일정 — 외출옷 탭은 start/end(시간대) 유지 */
 export type VisitSchedule = VisitScheduleShape
 
-/** 시작 시각 기준 종료 = min(시작+4, 23) */
-export function endHourFromStart(startHour: number): number {
-  return Math.min(startHour + 4, 23)
+/** 저장값이 표준 구간과 다르면 시작 시각이 속한 시간대로 스냅 */
+export function snapScheduleToPeriodBounds(s: VisitScheduleShape): VisitScheduleShape {
+  const exact = TIME_PERIODS.find((p) => p.start === s.startHour && p.end === s.endHour)
+  if (exact) return s
+  const i = getPeriodIndex(Math.min(Math.max(s.startHour, 0), 23))
+  const p = TIME_PERIODS[i]!
+  return { ...s, startHour: p.start, endHour: p.end }
+}
+
+/** 시간대별 대표 시각(시간별 예보 슬롯 선택용) */
+export function repHourForVisitSchedule(s: VisitScheduleShape): number {
+  const m = TIME_PERIODS.find((p) => p.start === s.startHour && p.end === s.endHour)
+  return m?.repHour ?? s.startHour
 }
 
 export function defaultVisitSchedule(nowHour: number): VisitScheduleShape {
-  const start = Math.min(Math.max(nowHour, 0), 23)
+  const i = getPeriodIndex(nowHour)
+  const p = TIME_PERIODS[i]!
   return {
-    dateOffset: 0,
-    startHour: start,
-    endHour: Math.max(endHourFromStart(start), Math.min(start + 1, 23)),
+    visitDateYmd: kstTodayYmd(),
+    startHour: p.start,
+    endHour: p.end,
   }
 }
 
-/** 관심 일정이 이미 지났으면 오늘·현재 시각 기준으로 되돌림 */
+/** localStorage 구형 `{ dateOffset }` → 절대 날짜 */
+export function migrateLegacyVisitSchedule(raw: unknown, todayYmd: string): VisitScheduleShape | null {
+  if (!raw || typeof raw !== 'object') return null
+  const o = raw as Record<string, unknown>
+  const start = typeof o.startHour === 'number' ? o.startHour : 9
+  const end = typeof o.endHour === 'number' ? o.endHour : 17
+  if (typeof o.visitDateYmd === 'string' && /^\d{8}$/.test(o.visitDateYmd)) {
+    return snapScheduleToPeriodBounds({
+      visitDateYmd: o.visitDateYmd,
+      startHour: start,
+      endHour: end,
+    })
+  }
+  if (typeof o.dateOffset === 'number') {
+    const off = Math.min(2, Math.max(0, Math.floor(o.dateOffset))) as 0 | 1 | 2
+    return snapScheduleToPeriodBounds({
+      visitDateYmd: addCalendarDaysFromKstYmd(todayYmd, off),
+      startHour: start,
+      endHour: end,
+    })
+  }
+  return null
+}
+
+/**
+ * 형식 보정·당일이면 이미 지난 시간대만 현재 구간으로 갱신.
+ * 날짜 자체(과거·미래)는 사용자 선택을 유지합니다.
+ */
 export function normalizeVisitScheduleIfPast(
   s: VisitScheduleShape,
   todayYmd: string,
   nowHour: number,
 ): VisitScheduleShape {
-  const visitYmd = addCalendarDaysFromKstYmd(todayYmd, s.dateOffset)
-  if (visitYmd < todayYmd) {
+  let next = snapScheduleToPeriodBounds(s)
+  if (!/^\d{8}$/.test(next.visitDateYmd)) {
     return defaultVisitSchedule(nowHour)
   }
-  if (visitYmd > todayYmd) {
-    return s
+  if (next.visitDateYmd === todayYmd && next.endHour <= nowHour) {
+    const i = getPeriodIndex(nowHour)
+    const p = TIME_PERIODS[i]!
+    return { ...next, startHour: p.start, endHour: p.end }
   }
-  if (s.endHour <= nowHour) {
-    return defaultVisitSchedule(nowHour)
-  }
-  return s
+  return next
 }
 
 export function schedulesEqual(a: VisitScheduleShape, b: VisitScheduleShape): boolean {
-  return a.dateOffset === b.dateOffset && a.startHour === b.startHour && a.endHour === b.endHour
-}
-
-/** 같은 날 안에서 시작 시각을 ±시간 이동 — 종료는 시작+4h(캡 23) */
-export function shiftVisitScheduleHours(s: VisitSchedule, delta: number): VisitSchedule {
-  const start = Math.max(0, Math.min(23, s.startHour + delta))
-  let end = Math.min(start + 4, 23)
-  if (end <= start) end = Math.min(start + 1, 23)
-  return { ...s, startHour: start, endHour: end }
+  return (
+    a.visitDateYmd === b.visitDateYmd &&
+    a.startHour === b.startHour &&
+    a.endHour === b.endHour
+  )
 }

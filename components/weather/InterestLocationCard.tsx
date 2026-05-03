@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useEffect } from 'react'
 import type { CurrentWeather, HourlyForecast, DailyForecast, WeatherAlert } from '@/types/weather'
 import type { LocationInfo } from '@/types/location'
 import {
@@ -10,10 +10,10 @@ import {
   windDirectionLabel,
 } from '@/lib/utils/formatWeather'
 import { kstTodayYmd, addCalendarDaysFromKstYmd } from '@/lib/utils/timeOfDay'
-import { endHourFromStart } from '@/lib/utils/visitSchedule'
 import type { VisitSchedule } from '@/lib/utils/visitSchedule'
 import { HourlyWeatherStrip } from './HourlyWeatherStrip'
 import { CompactLocationBar } from './CompactLocationBar'
+import { buildHourlySlotYmds } from '@/lib/utils/resolveHourlyForPeriod'
 
 interface Props {
   weather: CurrentWeather | null
@@ -23,7 +23,6 @@ interface Props {
   location: LocationInfo
   currentHour: number
   loading?: boolean
-  /** 항상 유효한 관심 일정(부모에서 기본값·정규화) */
   schedule: VisitSchedule
   onScheduleChange: (s: VisitSchedule) => void
   pinnedLocation: LocationInfo | null
@@ -57,61 +56,43 @@ function fmt(t: number) {
   return `${Math.round(t)}°`
 }
 
-function hhmm(h: number) {
-  return `${String(h).padStart(2, '0')}:00`
+function ymdToDateInput(ymd: string): string {
+  if (ymd.length !== 8) return ''
+  return `${ymd.slice(0, 4)}-${ymd.slice(4, 6)}-${ymd.slice(6, 8)}`
 }
 
-const DATE_OPTS = [
-  { value: 0 as const, label: '오늘' },
-  { value: 1 as const, label: '내일' },
-  { value: 2 as const, label: '모레' },
-]
+function dateInputToYmd(iso: string): string {
+  return iso.replace(/-/g, '')
+}
 
-function HourPicker({
-  label,
-  value,
-  min,
-  max,
-  onChange,
-}: {
-  label: string
-  value: number
-  min?: number
-  max?: number
-  onChange: (h: number) => void
-}) {
-  const dec = () => {
-    const next = value - 1
-    if (min !== undefined && next < min) return
-    onChange((next + 24) % 24)
+function computeForecastYmdMax(todayYmd: string, daily: DailyForecast[], hourly: HourlyForecast[]): string {
+  let max = todayYmd
+  for (const d of daily) {
+    if (d.date?.length === 8 && d.date > max) max = d.date
   }
-  const inc = () => {
-    const next = value + 1
-    if (max !== undefined && next > max) return
-    onChange(next % 24)
+  for (const h of hourly) {
+    if (h.fcstDate?.length === 8 && h.fcstDate > max) max = h.fcstDate
   }
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-xs font-medium w-8" style={{ color: 'var(--muted)' }}>{label}</span>
-      <div className="flex items-center gap-2">
-        <button
-          onClick={dec}
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold transition-all active:scale-90"
-          style={{ background: 'var(--primary-tint-10)', color: 'var(--humidity)' }}
-          aria-label="-1시간"
-        >◄</button>
-        <span className="text-lg font-bold min-w-[3.5rem] text-center" style={{ color: 'var(--text)' }}>
-          {hhmm(value)}
-        </span>
-        <button
-          onClick={inc}
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold transition-all active:scale-90"
-          style={{ background: 'var(--primary-tint-10)', color: 'var(--humidity)' }}
-          aria-label="+1시간"
-        >►</button>
-      </div>
-    </div>
-  )
+  const cap = addCalendarDaysFromKstYmd(todayYmd, 14)
+  return max > cap ? cap : max
+}
+
+function clampYmd(ymd: string, minY: string, maxY: string): string {
+  if (ymd < minY) return minY
+  if (ymd > maxY) return maxY
+  return ymd
+}
+
+function syntheticFromDaily(d: DailyForecast, base: CurrentWeather): CurrentWeather {
+  const mid = Math.round((d.minTemp + d.maxTemp) / 2)
+  return {
+    ...base,
+    temperature: mid,
+    feelsLike: feelsLike(mid, base.windSpeed, base.humidity),
+    skyCode: d.skyCode,
+    ptyCode: d.ptyCode,
+    basisDateKst: d.date,
+  }
 }
 
 function hourlyToCurrent(entry: HourlyForecast, base: CurrentWeather): CurrentWeather {
@@ -129,6 +110,24 @@ function hourlyToCurrent(entry: HourlyForecast, base: CurrentWeather): CurrentWe
   }
 }
 
+/** 해당 달력일의 시간별 슬롯 하나(가능하면 12시 근처) */
+function pickHourlyForVisitDay(
+  hourly: HourlyForecast[],
+  visitYmd: string,
+  todayYmd: string,
+): HourlyForecast | null {
+  if (!hourly.length) return null
+  const slotYmds = buildHourlySlotYmds(hourly, todayYmd)
+  const indices: number[] = []
+  for (let i = 0; i < slotYmds.length; i++) {
+    if (slotYmds[i] === visitYmd) indices.push(i)
+  }
+  if (!indices.length) return null
+  const at12 = indices.find((i) => hourly[i].time.startsWith('12:'))
+  const pick = at12 ?? indices[Math.floor(indices.length / 2)]!
+  return hourly[pick] ?? null
+}
+
 export function InterestLocationCard({
   weather,
   hourly,
@@ -143,46 +142,43 @@ export function InterestLocationCard({
   onLocationSelect,
 }: Props) {
   const todayYmd = kstTodayYmd()
-  const visitYmd = useMemo(
-    () => addCalendarDaysFromKstYmd(todayYmd, schedule.dateOffset),
-    [schedule.dateOffset, todayYmd],
-  )
+  const visitYmd = schedule.visitDateYmd
 
-  const slotWeather: CurrentWeather | null = useMemo(() => {
-    if (!weather || !hourly.length) return weather
-    const wantH = schedule.startHour
-    const entry =
-      hourly.find((h) => {
-        const hh = parseInt(h.time.split(':')[0], 10)
-        if (Number.isNaN(hh) || hh !== wantH) return false
-        return h.fcstDate === visitYmd || !h.fcstDate
-      }) ?? hourly.find((h) => parseInt(h.time.split(':')[0], 10) === wantH)
-    if (!entry) return weather
-    return hourlyToCurrent(entry, weather)
-  }, [weather, hourly, schedule.startHour, visitYmd])
+  const { dateMin, dateMax } = useMemo(() => {
+    const max = computeForecastYmdMax(todayYmd, daily, hourly)
+    return { dateMin: todayYmd, dateMax: max }
+  }, [todayYmd, daily, hourly])
 
-  const handleDateChange = (d: 0 | 1 | 2) => {
-    onScheduleChange({ dateOffset: d, startHour: schedule.startHour, endHour: schedule.endHour })
+  useEffect(() => {
+    const c = clampYmd(visitYmd, dateMin, dateMax)
+    if (c !== visitYmd) onScheduleChange({ ...schedule, visitDateYmd: c })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- schedule 스냅 1회; 전체 schedule은 렌더 시점 값 사용
+  }, [dateMin, dateMax, visitYmd])
+
+  const visitRepresentative: CurrentWeather | null = useMemo(() => {
+    if (!weather) return null
+    const row = daily.find((d) => d.date === visitYmd)
+    if (row) return syntheticFromDaily(row, weather)
+    const h = pickHourlyForVisitDay(hourly, visitYmd, todayYmd)
+    if (h) return hourlyToCurrent(h, weather)
+    return null
+  }, [weather, daily, hourly, visitYmd, todayYmd])
+
+  const handleVisitDateIso = (iso: string) => {
+    if (!iso) return
+    const ymd = clampYmd(dateInputToYmd(iso), dateMin, dateMax)
+    onScheduleChange({
+      ...schedule,
+      visitDateYmd: ymd,
+    })
   }
 
-  const handleStartChange = (h: number) => {
-    const newEnd = Math.min(endHourFromStart(h), 23)
-    const end = newEnd >= h ? newEnd : Math.min(h + 1, 23)
-    onScheduleChange({ dateOffset: schedule.dateOffset, startHour: h, endHour: end })
-  }
+  const topAlert = alerts.find((a) => a.type || a.message) ?? null
 
-  const handleEndChange = (h: number) => {
-    if (h <= schedule.startHour) return
-    onScheduleChange({ dateOffset: schedule.dateOffset, startHour: schedule.startHour, endHour: h })
-  }
-
-  const topAlert = alerts.find(a => a.type || a.message) ?? null
-
-  // ── Loading ───────────────────────────────────────────────────────────────
   if (loading && !weather) {
     return (
       <div className="space-y-3">
-        {[32, 20, 16].map(h => (
+        {[32, 20, 16].map((h) => (
           <div
             key={h}
             className="animate-pulse rounded-lg"
@@ -193,7 +189,7 @@ export function InterestLocationCard({
     )
   }
 
-  if (!weather || !slotWeather) {
+  if (!weather) {
     return (
       <div className="glass-card rounded-lg p-5 text-center" style={{ color: 'var(--muted)' }}>
         <p className="text-sm">날씨 데이터를 불러오는 중...</p>
@@ -201,18 +197,33 @@ export function InterestLocationCard({
     )
   }
 
-  const slotLabel = weatherLabel(slotWeather.skyCode, slotWeather.ptyCode)
-  const slotEmoji = weatherEmojiFromLabel(slotLabel)
-  const slotFl = feelsLike(slotWeather.temperature, slotWeather.windSpeed, slotWeather.humidity)
+  const visitLabel = weatherLabel(
+    visitRepresentative?.skyCode ?? weather.skyCode,
+    visitRepresentative?.ptyCode ?? weather.ptyCode,
+  )
+  const visitEmoji = weatherEmojiFromLabel(visitLabel)
+  const visitFl = visitRepresentative
+    ? feelsLike(
+        visitRepresentative.temperature,
+        weather.windSpeed,
+        weather.humidity,
+      )
+    : null
 
   const curLabel = weatherLabel(weather.skyCode, weather.ptyCode)
   const curEmoji = weatherEmojiFromLabel(curLabel)
   const curFl = feelsLike(weather.temperature, weather.windSpeed, weather.humidity)
   const windDir = windDirectionLabel(weather.windDirection)
 
+  const visitDisplayTemp = visitRepresentative?.temperature
+  const dailyForVisit = daily.find((d) => d.date === visitYmd)
+  const visitNote =
+    dailyForVisit && visitRepresentative
+      ? `${fmt(dailyForVisit.minTemp)} / ${fmt(dailyForVisit.maxTemp)}`
+      : null
+
   return (
     <div className="space-y-3">
-
       {topAlert && (
         <div
           className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl"
@@ -239,7 +250,6 @@ export function InterestLocationCard({
         </div>
       )}
 
-      {/* 상단: 관심 지역 + 관심 일정 */}
       <div className="glass-card rounded-lg px-3 py-3 space-y-3">
         <p className="text-xs font-semibold" style={{ color: 'var(--muted)' }}>관심 지역</p>
         <CompactLocationBar
@@ -248,57 +258,54 @@ export function InterestLocationCard({
           placeholder={pinnedLocation ? pinnedLocation.name : '관심 지역 검색'}
         />
 
-        <div className="flex gap-1.5 pt-1">
-          {DATE_OPTS.map(d => (
-            <button
-              key={d.value}
-              type="button"
-              onClick={() => handleDateChange(d.value)}
-              className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95"
-              style={{
-                background: schedule.dateOffset === d.value ? 'var(--primary)' : 'var(--primary-tint-08)',
-                color: schedule.dateOffset === d.value ? 'white' : 'var(--humidity)',
-                border: `1px solid ${schedule.dateOffset === d.value ? 'var(--primary)' : 'var(--border)'}`,
-              }}
-            >
-              {d.label}
-            </button>
-          ))}
-        </div>
-
-        <HourPicker
-          label="시작"
-          value={schedule.startHour}
-          min={0}
-          max={schedule.endHour - 1}
-          onChange={handleStartChange}
-        />
-        <HourPicker
-          label="종료"
-          value={schedule.endHour}
-          min={schedule.startHour + 1}
-          max={23}
-          onChange={handleEndChange}
-        />
-        <p className="text-[10px] text-center" style={{ color: 'var(--muted)' }}>
-          종료는 기본적으로 시작 후 4시간 — 필요 시 조정할 수 있어요
-        </p>
+        <label className="block space-y-1">
+          <span className="text-[10px] font-semibold" style={{ color: 'var(--muted)' }}>
+            조회 날짜 (저장되어 앱을 다시 열어도 유지)
+          </span>
+          <input
+            type="date"
+            className="w-full text-sm rounded-lg px-2 py-2 outline-none"
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
+            value={ymdToDateInput(clampYmd(visitYmd, dateMin, dateMax))}
+            min={ymdToDateInput(dateMin)}
+            max={ymdToDateInput(dateMax)}
+            onChange={(e) => handleVisitDateIso(e.target.value)}
+          />
+        </label>
       </div>
 
-      {/* 관심 시간 날씨 | 지금 */}
-      <div className="glass-card rounded-lg px-4 py-4">
+      <div
+        className="glass-card rounded-lg px-4 py-4"
+        style={!visitRepresentative ? { opacity: 0.88 } : undefined}
+      >
         <div className="flex gap-3 items-stretch">
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-semibold mb-1" style={{ color: 'var(--muted)' }}>
-              관심 시간 ({hhmm(schedule.startHour)} 기준)
+              선택 날짜 날씨
             </p>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-4xl font-bold leading-none" style={{ color: 'var(--text)' }}>
-                {fmt(slotWeather.temperature)}
-              </span>
-              <span className="text-2xl">{slotEmoji}</span>
-            </div>
-            <p className="text-xs mt-1 font-medium truncate" style={{ color: 'var(--muted)' }}>{slotLabel}</p>
+            {!visitRepresentative ? (
+              <p className="text-sm font-medium leading-snug" style={{ color: 'var(--muted)' }}>
+                이 날짜의 예보 데이터가 없습니다.
+                <span className="block text-[11px] mt-1 opacity-90">
+                  주간·시간별 범위 안의 날짜를 선택해 보세요.
+                </span>
+              </p>
+            ) : (
+              <>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-4xl font-bold leading-none" style={{ color: 'var(--text)' }}>
+                    {fmt(visitDisplayTemp!)}
+                  </span>
+                  <span className="text-2xl">{visitEmoji}</span>
+                </div>
+                {visitNote && (
+                  <p className="text-[10px] mt-0.5" style={{ color: 'var(--muted)' }}>
+                    최저 / 최고 {visitNote}
+                  </p>
+                )}
+                <p className="text-xs mt-1 font-medium truncate" style={{ color: 'var(--muted)' }}>{visitLabel}</p>
+              </>
+            )}
           </div>
           <div className="w-px self-stretch shrink-0" style={{ background: 'var(--border)' }} aria-hidden />
           <div className="flex-1 min-w-0 text-right">
@@ -317,8 +324,10 @@ export function InterestLocationCard({
         </p>
         <div className="mt-3 pt-3 border-t grid grid-cols-2 gap-2 text-left" style={{ borderColor: 'var(--border)' }}>
           <div>
-            <span className="text-[10px] block" style={{ color: 'var(--muted)' }}>관심 시간 체감</span>
-            <span className="text-sm font-bold" style={{ color: 'var(--text)' }}>{fmt(slotFl)}</span>
+            <span className="text-[10px] block" style={{ color: 'var(--muted)' }}>선택일 체감</span>
+            <span className="text-sm font-bold" style={{ color: visitFl != null ? 'var(--text)' : 'var(--muted)' }}>
+              {visitFl != null ? fmt(visitFl) : '—'}
+            </span>
           </div>
           <div className="text-right">
             <span className="text-[10px] block" style={{ color: 'var(--muted)' }}>지금 체감</span>
@@ -337,10 +346,8 @@ export function InterestLocationCard({
         <HourlyWeatherStrip
           hourly={hourly}
           currentHour={currentHour}
-          selectedPeriodStart={schedule.startHour}
-          selectedPeriodEnd={schedule.endHour}
-          selectedDayOffset={schedule.dateOffset}
           highlightTargetYmd={visitYmd}
+          fadeNonMatchingTargetYmd
         />
       )}
 
@@ -348,7 +355,7 @@ export function InterestLocationCard({
         <div className="glass-card rounded-lg px-4 py-3">
           <p className="text-xs font-semibold mb-3" style={{ color: 'var(--muted)' }}>주간 예보</p>
           <div className="space-y-2.5">
-            {daily.slice(0, 7).map(d => {
+            {daily.slice(0, 7).map((d) => {
               const label = dayLabel(d.date, todayYmd)
               const emoji = weatherEmojiFromLabel(weatherLabel(d.skyCode, d.ptyCode))
               const isHighlight = d.date === visitYmd

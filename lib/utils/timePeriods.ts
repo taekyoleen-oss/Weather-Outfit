@@ -16,6 +16,9 @@ export const TIME_PERIODS: TimePeriod[] = [
   { id: 'evening',   label: '저녁', emoji: '🌇', repHour: 19, start: 18, end: 23 },
 ]
 
+/** 관심지역·외출옷 칩 라벨 (TIME_PERIODS 순서와 동일: 새벽·아침·점심·저녁) */
+export const PERIOD_CHIP_LABELS_KO = ['새벽', '아침', '점심', '저녁'] as const
+
 export function getPeriodIndex(hour: number): number {
   if (hour <= 6) return 0
   if (hour <= 11) return 1

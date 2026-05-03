@@ -4,7 +4,6 @@ import { useEffect, useState, useMemo, useCallback } from 'react'
 import { DashboardShell } from '@/components/layout/DashboardShell'
 import { MobileLayout } from '@/components/layout/MobileLayout'
 import { LocationSearchBar } from '@/components/weather/LocationSearchBar'
-import { CompactLocationBar } from '@/components/weather/CompactLocationBar'
 import { LocationSourcePicker } from '@/components/weather/LocationSourcePicker'
 import { InterestLocationCard } from '@/components/weather/InterestLocationCard'
 import { GpsButton } from '@/components/weather/GpsButton'
@@ -24,7 +23,12 @@ import { SpotPanel } from '@/components/spot/SpotPanel'
 import { useAutoLocation } from '@/lib/hooks/useAutoLocation'
 import { useWeather } from '@/lib/hooks/useWeather'
 import { useWeeklyForecast } from '@/lib/hooks/useWeeklyForecast'
-import { getTimeOfDay, kstTodayYmd, diffCalendarDaysYmd, addCalendarDaysFromKstYmd } from '@/lib/utils/timeOfDay'
+import {
+  getTimeOfDay,
+  kstTodayYmd,
+  diffCalendarDaysYmd,
+  addCalendarDaysFromKstYmd,
+} from '@/lib/utils/timeOfDay'
 import { useNowMinute } from '@/lib/hooks/useNowMinute'
 import { feelsLike, weatherLabel, weatherEmojiFromLabel, pickIllustKey, illustFile } from '@/lib/utils/formatWeather'
 import {
@@ -52,7 +56,9 @@ import type { OpenMeteoDailyCompare } from '@/lib/weather/openMeteoCompare'
 import type { VisitSchedule } from '@/lib/utils/visitSchedule'
 import {
   defaultVisitSchedule,
+  migrateLegacyVisitSchedule,
   normalizeVisitScheduleIfPast,
+  repHourForVisitSchedule,
   schedulesEqual,
 } from '@/lib/utils/visitSchedule'
 
@@ -264,9 +270,10 @@ export default function HomePage() {
     try {
       const raw = localStorage.getItem(INTEREST_SCHEDULE_KEY)
       if (raw) {
-        const p = JSON.parse(raw) as VisitSchedule
-        if (p && typeof p.startHour === 'number') {
-          setTab2VisitSchedule(normalizeVisitScheduleIfPast(p, kstTodayYmd(), hour))
+        const p = JSON.parse(raw) as unknown
+        const migrated = migrateLegacyVisitSchedule(p, kstTodayYmd())
+        if (migrated) {
+          setTab2VisitSchedule(normalizeVisitScheduleIfPast(migrated, kstTodayYmd(), hour))
           return
         }
       }
@@ -312,6 +319,8 @@ export default function HomePage() {
     return weatherData
   }, [tab3Source, tab2WeatherData, weatherData])
 
+  const { data: outfitWeeklyRaw } = useWeeklyForecast(outfitLocation)
+
   // ── Spot effective location (Tab 4) ──────────────────────────────────────
   const spotLocation = useMemo((): LocationInfo => {
     if (tab4Source === 'tab2' && tab2Location) return tab2Location
@@ -354,6 +363,11 @@ export default function HomePage() {
     return { min: uniq[0]!, max: uniq[uniq.length - 1]! }
   }, [outfitWeatherData?.hourly, todayYmdKst])
 
+  const outfitMergedDaily = useMemo(
+    () => mergeWeeklyDailyStartingTomorrow(outfitWeeklyRaw, outfitWeatherData?.hourly ?? [], todayYmdKst),
+    [outfitWeeklyRaw, outfitWeatherData?.hourly, todayYmdKst],
+  )
+
   // ── Auto GPS refresh on mount ─────────────────────────────────────────────
   useEffect(() => {
     requestGps({ reason: 'auto', silent: true })
@@ -383,9 +397,13 @@ export default function HomePage() {
   /** 관심지역 탭 일정 → 복장 기준일·시간대 동기화 (날씨 최초 로드 시 기간 리셋 이후에도 다시 맞춤) */
   useEffect(() => {
     if (!tab2VisitSchedule) return
-    const ymd = addCalendarDaysFromKstYmd(kstTodayYmd(), tab2VisitSchedule.dateOffset)
+    const ymd = tab2VisitSchedule.visitDateYmd
     setScheduleYmd(ymd)
-    setPeriodPreset({ repHour: tab2VisitSchedule.startHour, dayOffset: tab2VisitSchedule.dateOffset })
+    const dayOff = Math.max(0, diffCalendarDaysYmd(kstTodayYmd(), ymd))
+    setPeriodPreset({
+      repHour: repHourForVisitSchedule(tab2VisitSchedule),
+      dayOffset: dayOff,
+    })
     setWxActivityHours({ start: tab2VisitSchedule.startHour, end: tab2VisitSchedule.endHour })
   }, [tab2VisitSchedule, weatherData])
 
@@ -403,7 +421,7 @@ export default function HomePage() {
     [outfitWeatherData, hour, periodPreset, scheduleYmd, activityBand, todayYmdKst],
   )
 
-  const outfitScheduleSyncKey = `${periodPreset.repHour}|${periodPreset.dayOffset}|${tab2VisitSchedule?.startHour ?? ''}|${tab2VisitSchedule?.dateOffset ?? ''}`
+  const outfitScheduleSyncKey = `${periodPreset.repHour}|${periodPreset.dayOffset}|${tab2VisitSchedule?.visitDateYmd ?? ''}|${tab2VisitSchedule?.startHour ?? ''}`
 
   // ── Displayed hourly: Tab 1 ───────────────────────────────────────────────
   const displayedHourly = useMemo(
@@ -678,6 +696,7 @@ export default function HomePage() {
   const outfitPanelProps = {
     weather: outfitDisplayWeather,
     hourly: outfitWeatherData?.hourly ?? [],
+    daily: outfitMergedDaily,
     dust,
     alerts,
     terrain: outfitLocation.terrain ?? 'urban',
@@ -727,9 +746,9 @@ export default function HomePage() {
     </div>
   )
 
-  // Tab 2 header: compact search for pinned location
+  // Tab 2 header: 제목만 (지역 검색은 카드 안 한 곳에서만)
   const tab2Header = (
-    <div className="px-3 pt-2 pb-2 space-y-1.5">
+    <div className="px-3 pt-2 pb-2">
       <div className="flex items-center gap-1.5">
         <span className="text-sm font-bold" style={{ color: tab2Location ? 'var(--primary)' : 'var(--muted)' }}>
           {tab2Location ? '📌' : '📍'}
@@ -739,11 +758,6 @@ export default function HomePage() {
           {tab2Location ? `— ${tab2Location.name}` : '— 현재 위치 기준'}
         </span>
       </div>
-      <CompactLocationBar
-        currentLocation={tab2Location}
-        onSelect={handleSaveTab2Location}
-        placeholder={tab2Location ? tab2Location.name : '관심 지역 검색 (미설정 시 현재 위치 표시)'}
-      />
     </div>
   )
 
