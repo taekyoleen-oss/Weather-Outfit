@@ -115,6 +115,43 @@ function hourlyToCurrent(entry: HourlyForecast, base: CurrentWeather): CurrentWe
   }
 }
 
+/** HourlyWeatherStrip과 동일 규칙으로 슬롯의 KST 달력일 */
+function resolveSlotYmdForHourly(
+  h: HourlyForecast,
+  todayYmd: string,
+  prevYmd: string | null,
+  prevHour: number | null,
+): string {
+  if (h.fcstDate) return h.fcstDate
+  if (prevYmd === null) return todayYmd
+  if (prevHour === null) return prevYmd
+  const curH = parseInt(h.time.split(':')[0], 10)
+  return curH < prevHour ? addCalendarDaysFromKstYmd(prevYmd, 1) : prevYmd
+}
+
+/**
+ * 오늘 조회 시: 시간별 예보 스트립에서 `지금`(todayYmd + currentHour)과 같은 셀을 고른다.
+ * 스트립에 전달되는 배열이 `>= currentHour`부터 잘린 경우, 우선 그 안에서 시각 일치를 찾고 없으면 첫 칸과 맞춘다.
+ */
+function pickHourlyForTodayStrip(
+  hourly: HourlyForecast[],
+  currentHour: number,
+  todayYmd: string,
+): HourlyForecast | null {
+  if (!hourly.length) return null
+  let prevYmd: string | null = null
+  let prevHour: number | null = null
+  for (let i = 0; i < hourly.length; i++) {
+    const h = hourly[i]!
+    const slotYmd = resolveSlotYmdForHourly(h, todayYmd, prevYmd, prevHour)
+    const hourNum = parseInt(h.time.split(':')[0], 10)
+    if (slotYmd === todayYmd && hourNum === currentHour) return h
+    prevYmd = slotYmd
+    prevHour = hourNum
+  }
+  return hourly[0] ?? null
+}
+
 /** 해당 달력일의 시간별 슬롯 하나(가능하면 12시 근처) */
 function pickHourlyForVisitDay(
   hourly: HourlyForecast[],
@@ -165,14 +202,17 @@ export function InterestLocationCard({
 
   const visitRepresentative: CurrentWeather | null = useMemo(() => {
     if (!weather) return null
-    // 오늘: 일별(min/max 중간값)은 실시간 기온과 무관하므로, API에서 내려준 보정된 current를 그대로 쓴다.
-    if (visitYmd === todayYmd) return weather
+    // 오늘: 상단 기온을 아래「시간별 예보」의 `지금` 열(동일 격자·동일 시각 슬롯)과 맞춘다. (API current는 초단기 보정이라 TMP와 어긋날 수 있음)
+    if (visitYmd === todayYmd) {
+      const slot = pickHourlyForTodayStrip(hourly, currentHour, todayYmd)
+      return slot ? hourlyToCurrent(slot, weather) : weather
+    }
     const row = daily.find((d) => d.date === visitYmd)
     if (row) return syntheticFromDaily(row, weather)
     const h = pickHourlyForVisitDay(hourly, visitYmd, todayYmd)
     if (h) return hourlyToCurrent(h, weather)
     return null
-  }, [weather, daily, hourly, visitYmd, todayYmd])
+  }, [weather, daily, hourly, visitYmd, todayYmd, currentHour])
 
   const handleVisitDateIso = (iso: string) => {
     if (!iso) return
