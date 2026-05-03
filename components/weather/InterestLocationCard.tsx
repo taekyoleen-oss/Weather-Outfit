@@ -210,24 +210,21 @@ export function InterestLocationCard({
     visitRepresentative?.ptyCode ?? weather.ptyCode,
   )
   const visitEmoji = weatherEmojiFromLabel(visitLabel)
+  /** 선택일 대표 슬롯 기준 체감(해당 슬롯의 풍속·습도 사용) */
   const visitFl = visitRepresentative
     ? feelsLike(
         visitRepresentative.temperature,
-        weather.windSpeed,
-        weather.humidity,
+        visitRepresentative.windSpeed,
+        visitRepresentative.humidity,
       )
     : null
 
-  const curFl = feelsLike(weather.temperature, weather.windSpeed, weather.humidity)
-  const windDir = windDirectionLabel(weather.windDirection)
+  const visitWindDir = visitRepresentative
+    ? windDirectionLabel(visitRepresentative.windDirection)
+    : null
 
   const visitDisplayTemp = visitRepresentative?.temperature
   const dailyForVisit = daily.find((d) => d.date === visitYmd)
-  const todayDailyRow = daily.find((d) => d.date === todayYmd)
-  const visitNote =
-    dailyForVisit && visitRepresentative
-      ? `${fmt(dailyForVisit.minTemp)} / ${fmt(dailyForVisit.maxTemp)}`
-      : null
 
   return (
     <div className="space-y-3">
@@ -334,61 +331,63 @@ export function InterestLocationCard({
                   </span>
                   <span className="text-2xl">{visitEmoji}</span>
                 </div>
-                {visitNote && (
-                  <p className="text-[10px] mt-0.5" style={{ color: 'var(--muted)' }}>
-                    최저 / 최고 {visitNote}
-                  </p>
-                )}
                 <p className="text-xs mt-1 font-medium truncate" style={{ color: 'var(--muted)' }}>{visitLabel}</p>
+                {visitFl != null && (
+                  <div className="mt-2">
+                    <p className="text-[10px] font-semibold" style={{ color: 'var(--muted)' }}>
+                      체감온도
+                    </p>
+                    <p className="text-xl font-bold tabular-nums leading-tight mt-0.5" style={{ color: 'var(--text)' }}>
+                      {fmt(visitFl)}
+                    </p>
+                  </div>
+                )}
               </>
             )}
           </div>
           <div className="w-px self-stretch shrink-0" style={{ background: 'var(--border)' }} aria-hidden />
           <div className="flex-1 min-w-0 text-right">
-            <p className="text-[10px] font-semibold mb-1" style={{ color: 'var(--muted)' }}>지금</p>
-            {todayDailyRow ? (
-              <>
-                <div className="flex items-baseline gap-1 justify-end flex-wrap">
-                  <span className="text-2xl sm:text-3xl font-bold tabular-nums leading-none" style={{ color: '#EF4444' }}>
-                    {fmt(todayDailyRow.maxTemp)}
-                  </span>
-                  <span className="text-base font-medium px-0.5" style={{ color: 'var(--muted)' }}>
-                    /
-                  </span>
-                  <span className="text-2xl sm:text-3xl font-bold tabular-nums leading-none" style={{ color: '#3B82F6' }}>
-                    {fmt(todayDailyRow.minTemp)}
-                  </span>
-                </div>
-                <p className="text-[10px] mt-1" style={{ color: 'var(--muted)' }}>최고 / 최저 (오늘)</p>
-              </>
-            ) : (
-              <p className="text-[11px] leading-snug mb-1" style={{ color: 'var(--muted)' }}>
-                오늘 일별 최고·최저 없음
+            <p className="text-[10px] font-semibold mb-1" style={{ color: 'var(--muted)' }} aria-hidden>
+              {'\u00A0'}
+            </p>
+            {!visitRepresentative ? (
+              <p className="text-[11px] leading-snug" style={{ color: 'var(--muted)' }}>
+                예보 없음
               </p>
+            ) : (
+              <>
+                {dailyForVisit ? (
+                  <>
+                    <div className="flex items-baseline gap-1 justify-end flex-wrap">
+                      <span className="text-xl font-bold tabular-nums leading-none" style={{ color: '#EF4444' }}>
+                        {fmt(dailyForVisit.maxTemp)}
+                      </span>
+                      <span className="text-sm font-medium px-0.5" style={{ color: 'var(--muted)' }}>/</span>
+                      <span className="text-xl font-bold tabular-nums leading-none" style={{ color: '#3B82F6' }}>
+                        {fmt(dailyForVisit.minTemp)}
+                      </span>
+                    </div>
+                    <p className="text-[10px] mt-1" style={{ color: 'var(--muted)' }}>최고 / 최저</p>
+                  </>
+                ) : (
+                  <p className="text-[11px] leading-snug" style={{ color: 'var(--muted)' }}>
+                    일별 최고·최저 없음
+                  </p>
+                )}
+
+                <p className="text-xs mt-3 leading-snug" style={{ color: 'var(--muted)' }}>
+                  💧 습도 {visitRepresentative.humidity}%
+                </p>
+                <p className="text-xs mt-1 leading-snug" style={{ color: 'var(--muted)' }}>
+                  💨 {visitWindDir ?? '—'} {visitRepresentative.windSpeed.toFixed(1)}m/s
+                </p>
+              </>
             )}
-            <p className="text-xs mt-2 leading-snug" style={{ color: 'var(--muted)' }}>
-              💧 습도 {weather.humidity}%
-            </p>
-            <p className="text-xs mt-1 leading-snug" style={{ color: 'var(--muted)' }}>
-              💨 {windDir} {weather.windSpeed.toFixed(1)}m/s
-            </p>
           </div>
         </div>
         <p className="text-[11px] mt-2 truncate" style={{ color: 'var(--muted)', opacity: 0.85 }}>
           {location.address ?? location.name}
         </p>
-        <div className="mt-3 pt-3 border-t grid grid-cols-2 gap-2 text-left" style={{ borderColor: 'var(--border)' }}>
-          <div>
-            <span className="text-[10px] block" style={{ color: 'var(--muted)' }}>선택일 체감</span>
-            <span className="text-sm font-bold" style={{ color: visitFl != null ? 'var(--text)' : 'var(--muted)' }}>
-              {visitFl != null ? fmt(visitFl) : '—'}
-            </span>
-          </div>
-          <div className="text-right">
-            <span className="text-[10px] block" style={{ color: 'var(--muted)' }}>지금 체감</span>
-            <span className="text-sm font-bold" style={{ color: 'var(--text)' }}>{fmt(curFl)}</span>
-          </div>
-        </div>
       </div>
 
       {hourly.length > 0 && (

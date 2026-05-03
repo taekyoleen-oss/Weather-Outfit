@@ -254,14 +254,24 @@ export default function HomePage() {
 
   // ── Tab 2: pinned interest location ──────────────────────────────────────
   const [tab2Location, setTab2Location] = useState<LocationInfo | null>(null)
+  // Tab 3·4 위치 소스 — 아래 hydrate에서 setTab3/4 호출하므로 tab2보다 먼저 선언
+  const [tab3Source, setTab3Source] = useState<Tab3Source>('tab1')
+  const [tab4Source, setTab4Source] = useState<Tab4Source>('tab1')
   useEffect(() => {
     try {
       const raw = localStorage.getItem(TAB2_STORAGE_KEY)
-      if (raw) setTab2Location(JSON.parse(raw) as LocationInfo)
+      if (raw) {
+        setTab2Location(JSON.parse(raw) as LocationInfo)
+        /** 저장된 관심지역이 있으면 외출옷·단기예측 위치 소스 기본값을 관심지역으로 */
+        setTab3Source('tab2')
+        setTab4Source('tab2')
+      }
     } catch { /* ignore */ }
   }, [])
   const handleSaveTab2Location = useCallback((loc: LocationInfo) => {
     setTab2Location(loc)
+    setTab3Source('tab2')
+    setTab4Source('tab2')
     try { localStorage.setItem(TAB2_STORAGE_KEY, JSON.stringify(loc)) } catch { /* ignore */ }
   }, [])
   const handleSelectInterestFromSearch = useCallback(
@@ -305,14 +315,10 @@ export default function HomePage() {
     if (!schedulesEqual(n, tab2VisitSchedule)) setTab2VisitSchedule(n)
   }, [hour, tab2VisitSchedule])
 
-  // ── Tab 3: outfit location source ─────────────────────────────────────────
-  const [tab3Source, setTab3Source] = useState<Tab3Source>('tab1')
   useEffect(() => {
     if (tab3Source === 'tab2' && !tab2Location) setTab3Source('tab1')
   }, [tab2Location, tab3Source])
 
-  // ── Tab 4: spot location source ────────────────────────────────────────────
-  const [tab4Source, setTab4Source] = useState<Tab4Source>('tab1')
   /** PC 상단 「초단기 기상정보」 접기(기본 접힘) */
   const [desktopUltraShortOpen, setDesktopUltraShortOpen] = useState(false)
   useEffect(() => {

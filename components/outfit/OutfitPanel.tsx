@@ -15,12 +15,12 @@ import type {
   WeatherAlert,
 } from '@/types/weather'
 import type { TerrainType } from '@/types/location'
-import { addCalendarDaysFromKstYmd, kstTodayYmd } from '@/lib/utils/timeOfDay'
+import { addCalendarDaysFromKstYmd, diffCalendarDaysYmd, kstTodayYmd } from '@/lib/utils/timeOfDay'
 import { OutfitDayChecklist } from './OutfitDayChecklist'
 import { weatherEmojiFromLabel, weatherLabel } from '@/lib/utils/formatWeather'
 import { buildHourlySlotYmds } from '@/lib/utils/resolveHourlyForPeriod'
 import type { VisitSchedule } from '@/lib/utils/visitSchedule'
-import { PERIOD_CHIP_LABELS_KO, TIME_PERIODS } from '@/lib/utils/timePeriods'
+import { getPeriodIndex, PERIOD_CHIP_LABELS_KO, TIME_PERIODS } from '@/lib/utils/timePeriods'
 
 function calendarMonthKstFromWeather(w: CurrentWeather | null): number | undefined {
   if (!w) return undefined
@@ -100,6 +100,17 @@ function visitSchedulePeriodLabel(s: VisitSchedule): string {
 function periodChipNameFromHours(startHour: number, endHour: number): string {
   const i = TIME_PERIODS.findIndex((p) => p.start === startHour && p.end === endHour)
   return i >= 0 ? PERIOD_CHIP_LABELS_KO[i] : '선택 구간'
+}
+
+/** 모바일 시간대 칩 맨 위 라벨 — 오늘은 구간명만, 미래는 「내일 새벽」「모레 아침」 등 */
+function mobileChipPeriodLineLabel(visitYmd: string, periodIdx: number): string {
+  const todayYmd = kstTodayYmd()
+  const base = PERIOD_CHIP_LABELS_KO[periodIdx]
+  const diff = diffCalendarDaysYmd(todayYmd, visitYmd)
+  if (diff <= 0) return base
+  if (diff === 1) return `내일 ${base}`
+  if (diff === 2) return `모레 ${base}`
+  return `${visitYmd.slice(4, 6)}/${visitYmd.slice(6, 8)} ${base}`
 }
 
 /** 일별 최저~최고만 있을 때 시간대별 대표 기온 비중(새벽·아침·점심·저녁) */
@@ -413,10 +424,24 @@ export function OutfitPanel({
     return null
   }, [hourly, daily, scheduleYmd, startHour, endHour])
 
+  /** 모바일 관심 일정 날짜는 입력값과 즉시 맞춤(페이지 scheduleYmd보다 앞설 수 있음) */
+  const periodChipPreviewYmd =
+    isMobileSheet && mobileInterestSchedule ? mobileInterestSchedule.visitDateYmd : scheduleYmd
+
   const periodChipPreviews = useMemo(
-    () => buildOutfitPeriodChipPreviews(scheduleYmd, hourly, daily),
-    [scheduleYmd, hourly, daily],
+    () => buildOutfitPeriodChipPreviews(periodChipPreviewYmd, hourly, daily),
+    [periodChipPreviewYmd, hourly, daily],
   )
+
+  /** 오늘: 현재 시간대 → 오른쪽으로 새벽·아침·점심·저녁 순(순환). 그 외 날짜: 새벽부터 */
+  const mobilePeriodChipIndices = useMemo(() => {
+    if (!isMobileSheet || !mobileInterestSchedule) return [0, 1, 2, 3] as number[]
+    const todayYmd = kstTodayYmd()
+    const visitYmd = mobileInterestSchedule.visitDateYmd
+    if (visitYmd !== todayYmd) return [0, 1, 2, 3]
+    const cur = getPeriodIndex(outfitCurrentKstHour)
+    return [0, 1, 2, 3].map((k) => (cur + k) % 4)
+  }, [isMobileSheet, mobileInterestSchedule?.visitDateYmd, outfitCurrentKstHour])
 
   const genderSensitivityBlock = (
     <>
@@ -492,12 +517,21 @@ export function OutfitPanel({
               }}
             />
           </label>
+          {diffCalendarDaysYmd(kstTodayYmd(), mobileInterestSchedule.visitDateYmd) === 1 ? (
+            <p
+              className="text-center text-xs font-bold py-1.5 px-2 rounded-lg"
+              style={{ background: 'var(--primary-tint-10)', color: 'var(--primary)' }}
+            >
+              내일
+            </p>
+          ) : null}
           <div className="grid grid-cols-4 gap-1">
-            {TIME_PERIODS.map((p, i) => {
+            {mobilePeriodChipIndices.map((periodIdx) => {
+              const p = TIME_PERIODS[periodIdx]!
               const selected =
                 mobileInterestSchedule.startHour === p.start &&
                 mobileInterestSchedule.endHour === p.end
-              const preview = periodChipPreviews[i]!
+              const preview = periodChipPreviews[periodIdx]!
               const wxEmoji =
                 preview.conditionLabel !== '—'
                   ? weatherEmojiFromLabel(preview.conditionLabel)
@@ -520,6 +554,12 @@ export function OutfitPanel({
                     })
                   }
                 >
+                  <span
+                    className="font-semibold leading-tight text-[9px] sm:text-[10px] break-keep line-clamp-2 w-full px-0.5"
+                    style={{ color: selected ? 'var(--primary)' : 'var(--text)' }}
+                  >
+                    {mobileChipPeriodLineLabel(mobileInterestSchedule.visitDateYmd, periodIdx)}
+                  </span>
                   <span className="text-[15px] sm:text-base leading-none" aria-hidden>
                     {wxEmoji}
                   </span>
@@ -528,12 +568,6 @@ export function OutfitPanel({
                     style={{ color: selected ? 'var(--primary)' : 'var(--muted)' }}
                   >
                     {preview.conditionLabel !== '—' ? preview.conditionLabel : '—'}
-                  </span>
-                  <span
-                    className="font-medium leading-tight text-[9px] sm:text-[10px] break-keep"
-                    style={{ color: selected ? 'var(--primary)' : 'var(--text)' }}
-                  >
-                    {PERIOD_CHIP_LABELS_KO[i]}
                   </span>
                   <span
                     className="text-[10px] sm:text-[11px] font-bold tabular-nums leading-none"
