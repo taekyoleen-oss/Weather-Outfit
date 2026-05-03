@@ -92,9 +92,9 @@ function computeDisplayWeather(
     getPeriodIndex(periodPreset.repHour) === getPeriodIndex(hour) &&
     scheduleYmd === todayYmdKst
   if (isPickerNowSlot) {
-    const hourStr = String(hour).padStart(2, '0') + ':00'
-    const entry = hourly.find((h) => h.time === hourStr) ?? null
-    return entry ? hourlyToCurrentWeather(entry, base) : base
+    // `/api/weather`의 `current`는 초단기 실황·예보로 보정된 기온·바람·습도다.
+    // 동일 시각의 단기예보 hourly는 보정되지 않으며, fcstDate 없이 time만 맞추면 다른 날과 오매칭될 수 있다.
+    return base
   }
   const { entry } = resolveHourlyForYmdBand(hourly, scheduleYmd, activityBand, todayYmdKst)
   if (entry) return hourlyToCurrentWeather(entry, { ...base, basisDateKst: scheduleYmd })

@@ -165,6 +165,8 @@ export function InterestLocationCard({
 
   const visitRepresentative: CurrentWeather | null = useMemo(() => {
     if (!weather) return null
+    // 오늘: 일별(min/max 중간값)은 실시간 기온과 무관하므로, API에서 내려준 보정된 current를 그대로 쓴다.
+    if (visitYmd === todayYmd) return weather
     const row = daily.find((d) => d.date === visitYmd)
     if (row) return syntheticFromDaily(row, weather)
     const h = pickHourlyForVisitDay(hourly, visitYmd, todayYmd)
