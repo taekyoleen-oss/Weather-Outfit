@@ -138,16 +138,17 @@ export function DashboardShell({ top, left, right }: Props) {
   return (
     <div
       className="hidden lg:block min-h-screen w-full min-w-0 max-w-full overflow-x-hidden box-border"
-      style={{ background: 'var(--background)' }}
+      style={{ background: 'var(--colors-cream-soft)' }}
     >
       <div
-        className="sticky top-0 z-50 flex flex-wrap items-center justify-end gap-2 px-1 py-2 border-b"
+        className="sticky top-0 z-50 flex flex-wrap items-center justify-end gap-2 px-3 py-2.5 border-b"
         style={{
-          background: 'var(--background)',
-          borderColor: 'var(--border)',
+          background: 'var(--colors-canvas)',
+          borderColor: 'var(--colors-hairline-soft)',
+          boxShadow: 'rgba(0, 0, 0, 0.03) 0px 1px 2px 0px',
         }}
       >
-        <span className="text-xs font-medium mr-auto pl-1" style={{ color: 'var(--muted)' }}>
+        <span className="text-xs font-medium mr-auto pl-1" style={{ color: 'var(--colors-slate)' }}>
           {supportsCssZoom ? (
             <>
               너비 맞춤 {fitPct}% · 표시 {appliedPct}%
@@ -159,8 +160,13 @@ export function DashboardShell({ top, left, right }: Props) {
         <button
           type="button"
           onClick={() => nudge(-ZOOM_STEP)}
-          className="text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-white/80"
-          style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
+          className="text-xs font-medium px-3 py-2 transition-opacity active:opacity-80"
+          style={{
+            color: 'var(--colors-ink)',
+            border: '1px solid var(--colors-hairline-strong)',
+            borderRadius: '8px',
+            minHeight: 40,
+          }}
           aria-label="축소"
         >
           −
@@ -168,8 +174,13 @@ export function DashboardShell({ top, left, right }: Props) {
         <button
           type="button"
           onClick={resetZoom}
-          className="text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-white/80"
-          style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
+          className="text-xs font-medium px-3 py-2 transition-opacity active:opacity-80"
+          style={{
+            color: 'var(--colors-ink)',
+            border: '1px solid var(--colors-hairline-strong)',
+            borderRadius: '8px',
+            minHeight: 40,
+          }}
           aria-label="사용자 확대 기본값"
         >
           기본
@@ -177,29 +188,34 @@ export function DashboardShell({ top, left, right }: Props) {
         <button
           type="button"
           onClick={() => nudge(ZOOM_STEP)}
-          className="text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-white/80"
-          style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
+          className="text-xs font-medium px-3 py-2 transition-opacity active:opacity-80"
+          style={{
+            color: 'var(--colors-ink)',
+            border: '1px solid var(--colors-hairline-strong)',
+            borderRadius: '8px',
+            minHeight: 40,
+          }}
           aria-label="확대"
         >
           +
         </button>
       </div>
 
-      <div className="w-full min-w-0 max-w-full px-0 box-border py-2">
+      <div className="w-full min-w-0 max-w-full px-0 box-border py-6">
         {top ? (
           <div
-            className="w-full min-w-0 max-w-full px-2 sm:px-3 pb-4 mb-1 border-b box-border"
-            style={{ borderColor: 'var(--border)' }}
+            className="w-full min-w-0 max-w-full px-4 sm:px-6 lg:px-8 pb-10 mb-0 box-border max-w-[1280px] mx-auto"
+            style={{ borderBottom: '1px solid var(--colors-hairline-light)' }}
           >
             {top}
           </div>
         ) : null}
         <div
           ref={rootRef}
-          className="w-full min-w-0 max-w-full grid gap-5 lg:gap-6 [grid-template-columns:minmax(0,clamp(270px,32vw,460px))_minmax(0,1fr)]"
+          className="w-full min-w-0 max-w-full px-4 sm:px-6 lg:px-8 pt-10 grid gap-8 lg:gap-10 [grid-template-columns:minmax(0,clamp(270px,32vw,460px))_minmax(0,1fr)] max-w-[1280px] mx-auto"
         >
-          <aside className="min-w-0 lg:sticky lg:top-14 lg:self-start space-y-4">{left}</aside>
-          <main className="min-w-0 w-full max-w-full space-y-4 overflow-x-hidden">{right}</main>
+          <aside className="min-w-0 lg:sticky lg:top-14 lg:self-start space-y-6">{left}</aside>
+          <main className="min-w-0 w-full max-w-full space-y-6 overflow-x-hidden">{right}</main>
         </div>
       </div>
     </div>

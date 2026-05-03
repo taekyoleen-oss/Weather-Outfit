@@ -1,32 +1,119 @@
 @import "tailwindcss";
 
+/* ═══ Mistral-inspired tokens + 날씨 앱 보정(순검 제거·스카이·선셋) + 레거시 별칭 ═══ */
 :root {
-  /* Modern vivid-blue theme tokens (image-inspired) */
-  --background: #DCE9FF;
-  --surface: rgba(255, 255, 255, 0.86);
-  --surface-blur: 20px;
-  --surface-border: rgba(255, 255, 255, 0.72);
-  --surface-shadow: 0 18px 38px rgba(26, 71, 168, 0.14);
+  /* Brand — Mistral Orange 계열 */
+  --colors-primary: #ea580c;
+  --colors-primary-deep: #c2410c;
+  --colors-primary-active: #9a3412;
+  --colors-on-primary: #ffffff;
 
-  --primary: #1745B3;
-  --accent: #2D7BFF;
-  --humidity: #0F6BFF;
-  --warm: #FF9E4A;
-  --cool: #38C8F5;
+  --colors-sunshine-300: #fdba74;
+  --colors-sunshine-500: #fb923c;
+  --colors-sunshine-700: #ea580c;
+  --colors-sunshine-800: #c2410c;
+  --colors-sunshine-900: #9a3412;
+  --colors-yellow-saturated: #facc15;
 
-  --text: #12306E;
-  --muted: #5D79B5;
-  --border: #C8D9FF;
+  --colors-block-5: #fef3c7;
+  --colors-block-6: #fde68a;
+  --colors-block-7: #fb923c;
 
-  --success: #16C47F;
-  --warning: #FFAE2B;
-  --danger: #FF5D6C;
+  /* Cream / neutral warm */
+  --colors-cream: #fffbeb;
+  --colors-cream-soft: #fffdf8;
+  --colors-cream-deeper: #fef3c7;
+  --colors-beige-deep: #e7e5e4;
+  --colors-footer-cream: #fffbeb;
 
-  /* Time-of-day background gradients */
-  --bg-morning: linear-gradient(180deg, #5F9CFF 0%, #DDE9FF 100%);
-  --bg-day: linear-gradient(180deg, #4C86F7 0%, #D9E7FF 100%);
-  --bg-evening: linear-gradient(180deg, #3E6ED8 0%, #BFD5FF 100%);
-  --bg-night: linear-gradient(180deg, #183E9E 0%, #0D235F 100%);
+  /* Surface */
+  --colors-canvas: #ffffff;
+  --colors-canvas-light: #ffffff;
+  --colors-surface: #fafaf9;
+  --colors-surface-cream: #fff7ed;
+  --colors-surface-cream-soft: #fffbeb;
+  --colors-surface-code: #1c1917;
+  --colors-hairline: #e7e5e4;
+  --colors-hairline-soft: #f5f5f4;
+  --colors-hairline-strong: #d6d3d1;
+
+  /* Text */
+  --colors-ink: #1c1917;
+  --colors-ink-tint: rgba(28, 25, 23, 0.88);
+  --colors-charcoal: #292524;
+  --colors-slate: #78716c;
+  --colors-steel: #a8a29e;
+  --colors-stone: #d6d3d1;
+  --colors-muted-ui: #78716c;
+
+  --colors-on-dark: #ffffff;
+  --colors-on-dark-muted: rgba(255, 255, 255, 0.72);
+
+  /* Semantic */
+  --colors-link: #ea580c;
+  --colors-warning: #c2410c;
+
+  /* Legacy aliases — 기존 컴포넌트 */
+  --background: var(--colors-cream-soft);
+  --primary: var(--colors-primary);
+  --primary-pressed: var(--colors-primary-deep);
+  --accent: var(--colors-primary);
+  --text: var(--colors-ink);
+  --muted: var(--colors-slate);
+  --humidity: var(--colors-link);
+  --border: var(--colors-hairline-soft);
+  --surface: var(--colors-canvas);
+  --card: var(--colors-canvas);
+  --glass: var(--colors-canvas);
+  --danger: #dc2626;
+  --warning: #ea580c;
+  --success: #059669;
+
+  --colors-body-light: rgba(28, 25, 23, 0.62);
+  --colors-mute-light: var(--colors-slate);
+  --colors-ash-light: var(--colors-stone);
+  --colors-hairline-light: var(--colors-hairline-soft);
+  --colors-hairline-dark: rgba(255, 255, 255, 0.14);
+  --colors-body-dark: rgba(255, 255, 255, 0.78);
+  --colors-mute-dark: rgba(255, 255, 255, 0.55);
+  --colors-on-dark-mute: rgba(255, 255, 255, 0.65);
+
+  --colors-surface-card: var(--colors-canvas);
+  --colors-surface-filter: rgba(234, 88, 12, 0.08);
+  --colors-link-light: var(--colors-primary);
+  --colors-link-dark: #fdba74;
+
+  /* 주황 계열 tint (기존 primary-tint 호환) */
+  --primary-tint-16: rgba(234, 88, 12, 0.14);
+  --primary-tint-12: rgba(234, 88, 12, 0.12);
+  --primary-tint-10: rgba(234, 88, 12, 0.1);
+  --primary-tint-08: rgba(234, 88, 12, 0.08);
+  --primary-tint-07: rgba(234, 88, 12, 0.07);
+
+  /* 시간대 밴드 — 검정 미사용: 아침·낮은 크림/스카이, 저녁 선셋, 밤은 야간 하늘 블루 */
+  --band-morning: linear-gradient(165deg, #fff7ed 0%, #fffbeb 40%, #fefce8 100%);
+  --band-day: linear-gradient(180deg, #f0f9ff 0%, #ffffff 50%, #fffbeb 100%);
+  --band-evening: linear-gradient(135deg, #ffedd5 0%, #fb923c 42%, #ea580c 88%, #c2410c 100%);
+  --band-night: linear-gradient(180deg, #1e3a5f 0%, #0f172a 55%, #0c1322 100%);
+
+  /* Radius — Mistral: 카드 12px, 버튼·입력 8px */
+  --rounded-xs: 4px;
+  --rounded-sm: 6px;
+  --rounded-md: 8px;
+  --rounded-lg: 12px;
+  --rounded-full: 9999px;
+
+  --spacing-section: 64px;
+  --spacing-xxl: 48px;
+  --spacing-xl: 32px;
+  --spacing-lg: 24px;
+  --spacing-md: 16px;
+  --spacing-sm: 12px;
+  --spacing-xs: 8px;
+  --spacing-xxs: 4px;
+
+  /* 카드 그림자 (레벨 2) */
+  --shadow-card: rgba(0, 0, 0, 0.04) 0px 4px 12px 0px;
 }
 
 @theme inline {
@@ -38,7 +125,8 @@
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   overflow-x: hidden;
 }
 
@@ -49,42 +137,142 @@ html, body {
 }
 
 body {
-  background: var(--background);
-  color: var(--text);
-  font-family: var(--font-noto-sans-kr), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--colors-cream-soft);
+  color: var(--colors-ink);
+  font-family: var(--font-noto-sans-kr), var(--font-inter), "Inter", "Noto Sans KR", system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Glassmorphism card base */
-.glass-card {
-  background: var(--surface);
-  backdrop-filter: blur(var(--surface-blur));
-  -webkit-backdrop-filter: blur(var(--surface-blur));
-  border: 1px solid var(--surface-border);
-  border-radius: 16px;   /* mobile-first: 16px */
-  box-shadow: var(--surface-shadow);
+/* 에디토리얼 디스플레이 (라틴/숫자 위주 — 한글은 본문과 동일 패밀리 유지) */
+.wf-display-xl {
+  font-family: var(--font-display), "Newsreader", Georgia, "Times New Roman", serif;
+  font-size: clamp(2rem, 5vw, 3.25rem);
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
 }
 
-/* Desktop: larger radius */
-@media (min-width: 1024px) {
-  .glass-card {
-    border-radius: 24px;
+.wf-display-lg {
+  font-family: var(--font-display), "Newsreader", Georgia, serif;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+}
+
+.wf-section-y {
+  padding-top: var(--spacing-section);
+  padding-bottom: var(--spacing-section);
+}
+
+@media (max-width: 767px) {
+  .wf-section-y {
+    padding-top: 3rem;
+    padding-bottom: 3rem;
   }
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-
-/* Focus ring */
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  border-radius: 4px;
+/* 카드 베이스 — rounded.lg 12px */
+.glass-card {
+  background: var(--colors-canvas);
+  border: 1px solid var(--colors-hairline-soft);
+  border-radius: var(--rounded-lg);
+  box-shadow: var(--shadow-card);
 }
 
-/* Horizontal scroll strip */
+.glass-card--dark {
+  background: var(--colors-surface-code);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+}
+
+/* 주요 CTA — rounded.md (필 아님) */
+.wf-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--colors-on-primary);
+  background: var(--colors-primary);
+  border: none;
+  border-radius: var(--rounded-md);
+  cursor: pointer;
+}
+
+.wf-btn-primary:active {
+  background: var(--colors-primary-deep);
+}
+
+.wf-btn-secondary-light {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--colors-ink);
+  background: transparent;
+  border: 1px solid var(--colors-hairline-strong);
+  border-radius: var(--rounded-md);
+  cursor: pointer;
+}
+
+.wf-btn-secondary-dark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--colors-on-dark);
+  background: transparent;
+  border: 1px solid var(--colors-hairline-dark);
+  border-radius: var(--rounded-md);
+  cursor: pointer;
+}
+
+/* 페이지 하단 시그니처 — 선셋 스트라이프 */
+.wf-sunset-stripe {
+  width: 100%;
+  height: 12px;
+  flex-shrink: 0;
+  background: linear-gradient(
+    90deg,
+    #dc2626 0%,
+    var(--colors-primary) 14%,
+    var(--colors-sunshine-700) 38%,
+    var(--colors-sunshine-500) 58%,
+    var(--colors-yellow-saturated) 78%,
+    var(--colors-cream) 100%
+  );
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--colors-stone);
+  border-radius: 3px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--colors-primary);
+  outline-offset: 2px;
+  border-radius: var(--rounded-xs);
+}
+
 .scroll-strip {
   overflow-x: auto;
   scrollbar-width: thin;

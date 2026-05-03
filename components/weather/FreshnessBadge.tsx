@@ -32,8 +32,8 @@ export function FreshnessBadge({ fetchedAt }: Props) {
     <span
       className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full"
       style={{
-        background: stale ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)',
-        color: stale ? 'var(--danger)' : 'var(--warning)',
+        background: stale ? 'rgba(200, 27, 58, 0.12)' : 'var(--primary-tint-10)',
+        color: stale ? 'var(--colors-warning)' : 'var(--colors-primary)',
       }}
     >
       <span>{stale ? '🔴' : '🟡'}</span>

@@ -54,13 +54,11 @@ interface Props {
 }
 
 const BG_MAP: Record<TimeOfDay, string> = {
-  morning: 'var(--bg-morning)',
-  day: 'var(--bg-day)',
-  evening: 'var(--bg-evening)',
-  night: 'var(--bg-night)',
+  morning: 'var(--band-morning)',
+  day: 'var(--band-day)',
+  evening: 'var(--band-evening)',
+  night: 'var(--band-night)',
 }
-
-const TEXT_NIGHT = 'rgba(226,232,240,0.9)'
 
 function extractDongUnit(locationName?: string, addressLine?: string | null): string | undefined {
   const sources = [addressLine ?? '', locationName ?? ''].filter(Boolean)
@@ -244,22 +242,25 @@ export function WeatherCard({
 }: Props) {
   const [modal, setModal] = useState<'uv' | 'heat' | null>(null)
 
-  const isNight = period === 'night'
-  const textColor = isNight ? TEXT_NIGHT : 'var(--text)'
-  // 모바일 유리배경에서 보조 텍스트 대비를 높여 가독성을 개선한다.
-  const mutedColor = isNight ? 'rgba(203,213,225,0.95)' : 'rgba(51,65,85,0.88)'
-  const infoBtnBg = isNight ? 'rgba(148,163,184,0.35)' : 'rgba(148,163,184,0.5)'
+  const isDark = period === 'night' || period === 'evening'
+  const textColor = isDark ? 'var(--colors-on-dark)' : 'var(--colors-ink)'
+  const mutedColor = isDark ? 'var(--colors-body-dark)' : 'var(--colors-body-light)'
+  const infoBtnBg = isDark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.08)'
 
   if (loading || !weather) {
+    const loadingDark = period === 'night' || period === 'evening'
     return (
       <div
         className="glass-card px-4 py-4 sm:px-6 sm:py-3 min-h-[160px] flex items-center justify-center"
-        style={{ background: BG_MAP[period] }}
+        style={{
+          background: BG_MAP[period],
+          border: loadingDark ? 'none' : undefined,
+        }}
       >
         <div className="animate-pulse flex flex-col items-center gap-2 w-full">
-          <div className="w-20 h-20 rounded-full bg-white/20" />
-          <div className="h-8 w-20 bg-white/20 rounded-lg" />
-          <div className="h-3 w-28 bg-white/20 rounded" />
+          <div className={`w-20 h-20 rounded-full ${loadingDark ? 'bg-white/15' : 'bg-black/10'}`} />
+          <div className={`h-8 w-20 rounded-lg ${loadingDark ? 'bg-white/15' : 'bg-black/10'}`} />
+          <div className={`h-3 w-28 rounded ${loadingDark ? 'bg-white/15' : 'bg-black/10'}`} />
         </div>
       </div>
     )
@@ -292,12 +293,15 @@ export function WeatherCard({
   return (
     <div
       className="glass-card px-4 py-3 sm:px-6 overflow-hidden"
-      style={{ background: BG_MAP[period] }}
+      style={{
+        background: BG_MAP[period],
+        border: isDark ? 'none' : undefined,
+      }}
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-2 mb-1">
         <div className="min-w-0 flex-1 pr-1">
-          <p className="text-sm font-semibold leading-tight" style={{ color: textColor }}>
+          <p className="text-sm font-semibold leading-tight tracking-wide" style={{ color: textColor }}>
             {locationTitle}
           </p>
           {showAddress && (
@@ -327,7 +331,7 @@ export function WeatherCard({
       <div className="mt-1">
         <div className="flex items-end justify-between gap-2">
           <div className="flex items-end gap-1.5">
-            <span className="text-5xl font-bold leading-none tabular-nums" style={{ color: textColor }}>
+            <span className="wf-display-xl tabular-nums leading-none block" style={{ color: textColor }}>
               {formatTemp1(weather.temperature)}°
             </span>
             <span className="text-lg mb-0.5" style={{ color: mutedColor }}>C</span>
@@ -357,10 +361,10 @@ export function WeatherCard({
 
       {previousPeriodWeather && (
         <div
-          className="mt-2 rounded-xl px-2.5 py-2 text-left"
+          className="mt-2 rounded-lg px-2.5 py-2 text-left"
           style={{
-            background: isNight ? 'rgba(148,163,184,0.12)' : 'rgba(91,141,238,0.08)',
-            border: `1px solid ${isNight ? 'rgba(148,163,184,0.2)' : 'rgba(91,141,238,0.15)'}`,
+            background: isDark ? 'rgba(255,255,255,0.08)' : 'var(--primary-tint-08)',
+            border: `1px solid ${isDark ? 'var(--colors-hairline-dark)' : 'rgba(0, 112, 209, 0.2)'}`,
           }}
         >
           <p className="text-[10px] font-medium leading-tight" style={{ color: mutedColor }}>
@@ -379,10 +383,10 @@ export function WeatherCard({
 
       {morningSummary && (
         <div
-          className="mt-2 rounded-xl px-2.5 py-2 text-left"
+          className="mt-2 rounded-lg px-2.5 py-2 text-left"
           style={{
-            background: isNight ? 'rgba(148,163,184,0.10)' : 'rgba(251,191,36,0.08)',
-            border: `1px solid ${isNight ? 'rgba(148,163,184,0.18)' : 'rgba(251,191,36,0.25)'}`,
+            background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(245, 166, 35, 0.12)',
+            border: `1px solid ${isDark ? 'var(--colors-hairline-dark)' : 'rgba(245, 166, 35, 0.35)'}`,
           }}
         >
           <p className="text-[10px] font-medium leading-tight" style={{ color: mutedColor }}>
@@ -447,9 +451,9 @@ export function WeatherCard({
       {/* 열지수 (습도 기반) — 기온 27°C↑, 습도 40%↑ 조건에서만 표시 */}
       {heatIdx != null && heatIdxDiff != null && heatIdxDiff >= 2 && (
         <div
-          className="mt-2.5 rounded-xl px-2.5 py-2"
+          className="mt-2.5 rounded-lg px-2.5 py-2"
           style={{
-            background: isNight
+            background: isDark
               ? `${heatIndexColor(heatIdx)}18`
               : `${heatIndexColor(heatIdx)}12`,
             border: `1px solid ${heatIndexColor(heatIdx)}40`,
@@ -486,7 +490,9 @@ export function WeatherCard({
       {/* UV + 오존 + 기상특보 하단 전용 섹션 */}
       <div
         className="mt-2.5 pt-2 flex items-start gap-1"
-        style={{ borderTop: `1px solid ${isNight ? 'rgba(148,163,184,0.2)' : 'rgba(0,0,0,0.06)'}` }}
+        style={{
+          borderTop: `1px solid ${isDark ? 'var(--colors-hairline-dark)' : 'var(--colors-hairline-light)'}`,
+        }}
       >
         {/* 자외선 */}
         <div className="flex-[0.9] flex items-center gap-2 min-w-0">
@@ -539,7 +545,7 @@ export function WeatherCard({
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[10px] mt-0.5 inline-block leading-none underline underline-offset-2"
-                style={{ color: 'var(--humidity)' }}
+                style={{ color: isDark ? 'var(--colors-link-dark)' : 'var(--colors-link-light)' }}
               >
                 특보 상세보기
               </a>

@@ -14,7 +14,7 @@ import { HourlyWeatherStrip } from '@/components/weather/HourlyWeatherStrip'
 import dynamic from 'next/dynamic'
 const WeeklyForecastInline = dynamic(
   () => import('@/components/weather/WeeklyForecastInline').then((m) => m.WeeklyForecastInline),
-  { ssr: false, loading: () => <div className="h-24 animate-pulse rounded-2xl" style={{ background: 'var(--border)' }} /> }
+  { ssr: false, loading: () => <div className="h-24 animate-pulse rounded-lg" style={{ background: 'var(--colors-surface-soft)' }} /> }
 )
 import { HighlightsGrid } from '@/components/weather/HighlightsGrid'
 import { TimePeriodPicker } from '@/components/weather/TimePeriodPicker'
@@ -49,17 +49,18 @@ import type {
 } from '@/types/weather'
 import type { LocationInfo } from '@/types/location'
 import type { OpenMeteoDailyCompare } from '@/lib/weather/openMeteoCompare'
+import type { VisitSchedule } from '@/lib/utils/visitSchedule'
+import {
+  defaultVisitSchedule,
+  normalizeVisitScheduleIfPast,
+  schedulesEqual,
+} from '@/lib/utils/visitSchedule'
+
+export type { VisitSchedule } from '@/lib/utils/visitSchedule'
 
 // ── Tab 3/4 source types ──────────────────────────────────────────────────────
-type Tab3Source = 'tab1' | 'tab2' | 'custom'
-type Tab4Source = 'tab1' | 'tab2' | 'tab3'
-
-// ── Visit schedule (Tab 2 → shared with Tab 3) ────────────────────────────────
-export interface VisitSchedule {
-  dateOffset: 0 | 1 | 2
-  startHour: number
-  endHour: number
-}
+type Tab3Source = 'tab1' | 'tab2'
+type Tab4Source = 'tab1' | 'tab2'
 
 // ── Weather data shape (same as useWeather return) ───────────────────────────
 interface WeatherData {
@@ -214,6 +215,7 @@ function extractDongName(locationName?: string, address?: string): string | unde
 }
 
 const TAB2_STORAGE_KEY = 'weatherfit:interestLocation'
+const INTEREST_SCHEDULE_KEY = 'weatherfit:interestSchedule'
 
 // ── Rough KMA station ID approximation from KMA grid coords ─────────────────
 function getRegCodeForLocation(nx: number, ny: number): string {
@@ -232,6 +234,7 @@ export default function HomePage() {
   const { location, gpsLoading, gpsError, requestGps, setManualLocation } = useAutoLocation()
   const { data: weatherData, loading: weatherLoading } = useWeather(location)
   const { data: weekly, loading: weeklyLoading } = useWeeklyForecast(location)
+  const hour = useNowMinute()
 
   const [dust, setDust] = useState<DustData | null>(null)
   const [pollen, setPollen] = useState<PollenData | null>(null)
@@ -256,13 +259,36 @@ export default function HomePage() {
   const [tab2Alerts, setTab2Alerts] = useState<WeatherAlert[]>([])
   const [tab2VisitSchedule, setTab2VisitSchedule] = useState<VisitSchedule | null>(null)
 
+  // ── 관심 일정: 저장소 로드·과거 구간 보정 ───────────────────────────────────
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(INTEREST_SCHEDULE_KEY)
+      if (raw) {
+        const p = JSON.parse(raw) as VisitSchedule
+        if (p && typeof p.startHour === 'number') {
+          setTab2VisitSchedule(normalizeVisitScheduleIfPast(p, kstTodayYmd(), hour))
+          return
+        }
+      }
+    } catch { /* ignore */ }
+    setTab2VisitSchedule(defaultVisitSchedule(hour))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- 초기 하이드레이션만
+
+  useEffect(() => {
+    if (!tab2VisitSchedule) return
+    try {
+      localStorage.setItem(INTEREST_SCHEDULE_KEY, JSON.stringify(tab2VisitSchedule))
+    } catch { /* ignore */ }
+  }, [tab2VisitSchedule])
+
+  useEffect(() => {
+    if (!tab2VisitSchedule) return
+    const n = normalizeVisitScheduleIfPast(tab2VisitSchedule, kstTodayYmd(), hour)
+    if (!schedulesEqual(n, tab2VisitSchedule)) setTab2VisitSchedule(n)
+  }, [hour, tab2VisitSchedule])
+
   // ── Tab 3: outfit location source ─────────────────────────────────────────
   const [tab3Source, setTab3Source] = useState<Tab3Source>('tab1')
-  const [tab3CustomLocation, setTab3CustomLocation] = useState<LocationInfo | null>(null)
-  const { data: tab3CustomWeatherData, loading: tab3CustomWeatherLoading } = useWeather(
-    tab3Source === 'custom' ? tab3CustomLocation : null,
-  )
-  // Reset tab3 source if Tab2 location cleared
   useEffect(() => {
     if (tab3Source === 'tab2' && !tab2Location) setTab3Source('tab1')
   }, [tab2Location, tab3Source])
@@ -278,26 +304,21 @@ export default function HomePage() {
   // ── Outfit effective location + weather ───────────────────────────────────
   const outfitLocation = useMemo((): LocationInfo => {
     if (tab3Source === 'tab2' && tab2Location) return tab2Location
-    if (tab3Source === 'custom' && tab3CustomLocation) return tab3CustomLocation
     return location
-  }, [tab3Source, tab2Location, tab3CustomLocation, location])
+  }, [tab3Source, tab2Location, location])
 
   const outfitWeatherData = useMemo((): WeatherData | null => {
     if (tab3Source === 'tab2') return tab2WeatherData ?? weatherData
-    if (tab3Source === 'custom') return tab3CustomWeatherData ?? weatherData
     return weatherData
-  }, [tab3Source, tab2WeatherData, tab3CustomWeatherData, weatherData])
+  }, [tab3Source, tab2WeatherData, weatherData])
 
   // ── Spot effective location (Tab 4) ──────────────────────────────────────
   const spotLocation = useMemo((): LocationInfo => {
     if (tab4Source === 'tab2' && tab2Location) return tab2Location
-    if (tab4Source === 'tab3') return outfitLocation
     return location
-  }, [tab4Source, tab2Location, outfitLocation, location])
+  }, [tab4Source, tab2Location, location])
 
   // ── Time / period state ───────────────────────────────────────────────────
-  const hour = useNowMinute()
-
   const [periodPreset, setPeriodPreset] = useState(() => ({
     repHour: TIME_PERIODS[getPeriodIndex(hour)].repHour,
     dayOffset: 0,
@@ -359,6 +380,15 @@ export default function HomePage() {
     setWxActivityHours(null)
   }
 
+  /** 관심지역 탭 일정 → 복장 기준일·시간대 동기화 (날씨 최초 로드 시 기간 리셋 이후에도 다시 맞춤) */
+  useEffect(() => {
+    if (!tab2VisitSchedule) return
+    const ymd = addCalendarDaysFromKstYmd(kstTodayYmd(), tab2VisitSchedule.dateOffset)
+    setScheduleYmd(ymd)
+    setPeriodPreset({ repHour: tab2VisitSchedule.startHour, dayOffset: tab2VisitSchedule.dateOffset })
+    setWxActivityHours({ start: tab2VisitSchedule.startHour, end: tab2VisitSchedule.endHour })
+  }, [tab2VisitSchedule, weatherData])
+
   const period = getTimeOfDay(activityStartHour, sunriseSunset?.sunrise, sunriseSunset?.sunset)
 
   // ── Display weather: Tab 1 (period-adjusted from Tab 1 location) ──────────
@@ -373,7 +403,7 @@ export default function HomePage() {
     [outfitWeatherData, hour, periodPreset, scheduleYmd, activityBand, todayYmdKst],
   )
 
-  const outfitScheduleSyncKey = `${periodPreset.repHour}|${periodPreset.dayOffset}`
+  const outfitScheduleSyncKey = `${periodPreset.repHour}|${periodPreset.dayOffset}|${tab2VisitSchedule?.startHour ?? ''}|${tab2VisitSchedule?.dateOffset ?? ''}`
 
   // ── Displayed hourly: Tab 1 ───────────────────────────────────────────────
   const displayedHourly = useMemo(
@@ -414,22 +444,6 @@ export default function HomePage() {
     const idx = hourly.findIndex(h => toHourNum(h.time) >= hour)
     return idx >= 0 ? hourly.slice(idx) : hourly
   }, [tab2Location, tab2WeatherData, weatherData, hour])
-
-  // ── Auto-reset Tab 2 visit schedule when its time has passed ─────────────
-  useEffect(() => {
-    if (!tab2VisitSchedule) return
-    const { dateOffset, endHour } = tab2VisitSchedule
-    if (dateOffset === 0 && hour >= endHour) {
-      setTab2VisitSchedule(null)
-    }
-  }, [hour, tab2VisitSchedule])
-
-  // ── Apply Tab 2 visit schedule to Tab 3 outfit ────────────────────────────
-  const applyTab2VisitSchedule = useCallback(() => {
-    if (!tab2VisitSchedule) return
-    handleSelectPreset(tab2VisitSchedule.startHour, tab2VisitSchedule.dateOffset)
-    setWxActivityHours({ start: tab2VisitSchedule.startHour, end: tab2VisitSchedule.endHour })
-  }, [tab2VisitSchedule]) // handleSelectPreset and setWxActivityHours are stable
 
   // ── Previous period / morning summary ────────────────────────────────────
   const previousPeriodSummary = useMemo((): PreviousPeriodWeatherSummary | null => {
@@ -677,6 +691,8 @@ export default function HomePage() {
     onScheduleYmdChange: setScheduleYmd,
     activityStartHourMin: outfitIsNowPeriod ? (hour + 1) % 24 : 0,
     onActivityHoursChange: (s: number, e: number) => setWxActivityHours({ start: s, end: e }),
+    mobileInterestSchedule: tab2VisitSchedule,
+    onMobileInterestScheduleChange: setTab2VisitSchedule,
   }
   const outfitPanel = <OutfitPanel {...outfitPanelProps} variant="default" />
   const outfitPanelMobile = <OutfitPanel {...outfitPanelProps} variant="mobileSheet" />
@@ -691,8 +707,16 @@ export default function HomePage() {
         <button
           onClick={() => requestGps()}
           disabled={gpsLoading}
-          className="glass-card flex items-center justify-center transition-all active:scale-95 flex-shrink-0"
-          style={{ width: 44, height: 44, borderRadius: 12, fontSize: 20, color: gpsLoading ? 'var(--muted)' : 'var(--humidity)' }}
+          className="flex items-center justify-center transition-all active:opacity-80 flex-shrink-0"
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 8,
+            fontSize: 20,
+            color: gpsLoading ? 'var(--muted)' : 'var(--humidity)',
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+          }}
           aria-label="내 위치로 설정"
         >
           {gpsLoading ? '⟳' : '📍'}
@@ -723,62 +747,23 @@ export default function HomePage() {
     </div>
   )
 
-  // Tab 3 header: source picker + optional custom search
+  // Tab 3: 날씨 소스만 선택 (직접 설정·일정 적용 버튼 없음 — 관심 일정은 관심지역 탭에서 관리)
   const tab3Header = (
     <div className="px-3 pt-2 pb-2 space-y-2">
       <LocationSourcePicker
         options={[
           { key: 'tab1', label: '현재 위치', sublabel: location.name },
           { key: 'tab2', label: '관심지역', sublabel: tab2Location?.name ?? '미설정', available: !!tab2Location },
-          { key: 'custom', label: '직접 설정', sublabel: tab3CustomLocation?.name ?? '검색' },
         ]}
         selected={tab3Source}
         onChange={key => setTab3Source(key as Tab3Source)}
       />
-      {tab3Source === 'custom' && (
-        <div className="space-y-1.5">
-          <CompactLocationBar
-            currentLocation={tab3CustomLocation}
-            onSelect={loc => setTab3CustomLocation(loc)}
-            placeholder="외출 지역 검색"
-          />
-          {tab3CustomLocation && (
-            <button
-              onClick={() => handleSaveTab2Location(tab3CustomLocation)}
-              className="w-full text-xs py-1.5 rounded-xl font-medium transition-all active:scale-95"
-              style={{ background: 'rgba(91,141,238,0.1)', color: 'var(--humidity)', border: '1px solid var(--border)' }}
-            >
-              📌 관심지역에 저장 ({tab3CustomLocation.name})
-            </button>
-          )}
-        </div>
-      )}
-      {tab3Source !== 'custom' && (
-        <div className="px-2 py-1 rounded-lg" style={{ background: 'rgba(91,141,238,0.06)' }}>
-          <p className="text-xs truncate" style={{ color: 'var(--muted)' }}>
-            📍 {outfitLocation.name}
-            {outfitLocation.address ? ` · ${outfitLocation.address}` : ''}
-          </p>
-        </div>
-      )}
-      {/* 관심지역 일정 → 외출옷 시간대 반영 */}
-      {tab2VisitSchedule && (
-        <button
-          onClick={applyTab2VisitSchedule}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left transition-all active:scale-95"
-          style={{ background: 'rgba(91,141,238,0.1)', border: '1px solid rgba(91,141,238,0.25)' }}
-        >
-          <span className="text-sm flex-shrink-0">🗓</span>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold" style={{ color: 'var(--humidity)' }}>관심지역 일정 시간 적용</p>
-            <p className="text-[10px]" style={{ color: 'var(--muted)' }}>
-              {tab2VisitSchedule.dateOffset === 0 ? '오늘' : tab2VisitSchedule.dateOffset === 1 ? '내일' : '모레'}{' '}
-              {String(tab2VisitSchedule.startHour).padStart(2, '0')}:00 ~ {String(tab2VisitSchedule.endHour).padStart(2, '0')}:00
-            </p>
-          </div>
-          <span className="text-xs font-bold flex-shrink-0" style={{ color: 'var(--humidity)' }}>→</span>
-        </button>
-      )}
+      <div className="px-2 py-1 rounded-md" style={{ background: 'var(--primary-tint-08)' }}>
+        <p className="text-xs truncate" style={{ color: 'var(--muted)' }}>
+          📍 {outfitLocation.name}
+          {outfitLocation.address ? ` · ${outfitLocation.address}` : ''}
+        </p>
+      </div>
     </div>
   )
 
@@ -788,14 +773,13 @@ export default function HomePage() {
       options={[
         { key: 'tab1', label: '현재 위치', sublabel: location.name },
         { key: 'tab2', label: '관심지역', sublabel: tab2Location?.name ?? '미설정', available: !!tab2Location },
-        { key: 'tab3', label: '외출 위치', sublabel: outfitLocation.name },
       ]}
       selected={tab4Source}
       onChange={key => setTab4Source(key as Tab4Source)}
     />
   )
   const tab4AnchorSummary = (
-    <div className="px-2 py-1 rounded-lg" style={{ background: 'rgba(91,141,238,0.06)' }}>
+    <div className="px-2 py-1 rounded-md" style={{ background: 'var(--primary-tint-08)' }}>
       <p className="text-xs truncate" style={{ color: 'var(--muted)' }}>
         📍 {spotLocation.name}
         {spotLocation.address ? ` · ${spotLocation.address}` : ''}
@@ -818,8 +802,8 @@ export default function HomePage() {
         <GpsButton loading={gpsLoading} error={gpsError} onClick={requestGps} />
         {currentDongName && (
           <span
-            className="text-xs font-medium px-2 py-1 rounded-full"
-            style={{ color: 'var(--muted)', background: 'rgba(255,255,255,0.75)', border: '1px solid var(--border)' }}
+            className="text-xs font-medium px-2 py-1 rounded-md"
+            style={{ color: 'var(--muted)', background: 'var(--colors-canvas)', border: '1px solid var(--border)' }}
             title={`현재 조회 위치: ${currentDongName}`}
           >
             {currentDongName}
@@ -827,8 +811,8 @@ export default function HomePage() {
         )}
         {currentPlaceName && (
           <span
-            className="text-xs font-medium px-2 py-1 rounded-full"
-            style={{ color: 'var(--humidity)', background: 'rgba(91,141,238,0.12)', border: '1px solid var(--border)' }}
+            className="text-xs font-medium px-2 py-1 rounded-md"
+            style={{ color: 'var(--humidity)', background: 'var(--primary-tint-12)', border: '1px solid var(--border)' }}
             title={`조회 장소: ${currentPlaceName}`}
           >
             {currentPlaceName}
@@ -842,7 +826,7 @@ export default function HomePage() {
       </div>
 
       <div
-        className="rounded-xl overflow-hidden w-full min-w-0"
+        className="rounded-lg overflow-hidden w-full min-w-0"
         style={{ border: '1px solid var(--border)', background: 'var(--surface)' }}
       >
         <button
@@ -877,8 +861,8 @@ export default function HomePage() {
       {/* Fallback notice */}
       {tab2IsFallback && (
         <div
-          className="flex items-start gap-2 px-3 py-2 rounded-xl"
-          style={{ background: 'rgba(91,141,238,0.07)', border: '1px dashed var(--border)' }}
+          className="flex items-start gap-2 px-3 py-2 rounded-lg"
+          style={{ background: 'var(--primary-tint-07)', border: '1px dashed var(--border)' }}
         >
           <span className="text-sm flex-shrink-0 mt-0.5">💡</span>
           <p className="text-xs leading-relaxed" style={{ color: 'var(--muted)' }}>
@@ -895,20 +879,21 @@ export default function HomePage() {
         location={tab2EffectiveLocation}
         currentHour={hour}
         loading={(tab2Location ? tab2WeatherLoading : weatherLoading) && !tab2EffectiveWeather}
-        visitSchedule={tab2VisitSchedule}
-        onVisitScheduleChange={setTab2VisitSchedule}
+        schedule={tab2VisitSchedule ?? defaultVisitSchedule(hour)}
+        onScheduleChange={setTab2VisitSchedule}
+        pinnedLocation={tab2Location}
+        onLocationSelect={handleSaveTab2Location}
       />
     </>
   )
 
   // ── Tab 3 content ─────────────────────────────────────────────────────────
-  const tab3OutfitLoading = tab3Source === 'tab2' ? tab2WeatherLoading : tab3Source === 'custom' ? tab3CustomWeatherLoading : weatherLoading
+  const tab3OutfitLoading = tab3Source === 'tab2' ? tab2WeatherLoading : weatherLoading
   const tab3Content = (
     <>
       {tab3OutfitLoading && !outfitWeatherData && (
-        <div className="h-8 animate-pulse rounded-xl" style={{ background: 'var(--border)' }} />
+        <div className="h-8 animate-pulse rounded-lg" style={{ background: 'var(--colors-surface-soft)' }} />
       )}
-      {timePeriodPicker}
       {outfitPanelMobile}
     </>
   )

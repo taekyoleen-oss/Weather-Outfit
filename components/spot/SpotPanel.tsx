@@ -175,7 +175,7 @@ export function SpotPanel({
               type="button"
               onClick={() => setSpot(m)}
               className="text-[11px] px-2 py-1 rounded-full"
-              style={{ background: 'rgba(91,141,238,0.1)', color: 'var(--humidity)', border: '1px solid var(--border)' }}
+              style={{ background: 'var(--primary-tint-10)', color: 'var(--humidity)', border: '1px solid var(--border)' }}
             >
               ⛰ {m.name}
             </button>

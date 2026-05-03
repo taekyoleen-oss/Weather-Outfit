@@ -12,8 +12,13 @@ export function GpsButton({ loading, error, onClick }: Props) {
       <button
         onClick={onClick}
         disabled={loading}
-        className="glass-card flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-opacity hover:opacity-80 w-full"
-        style={{ borderRadius: '14px', color: loading ? 'var(--muted)' : 'var(--humidity)' }}
+        className="flex items-center justify-center gap-2 px-7 py-3 text-sm font-bold transition-opacity active:opacity-90 w-full border bg-transparent"
+        style={{
+          borderRadius: 'var(--rounded-md)',
+          minHeight: 44,
+          borderColor: 'var(--colors-hairline-strong)',
+          color: loading ? 'var(--muted)' : 'var(--colors-ink)',
+        }}
         aria-label="내 위치로 설정"
       >
         <span>{loading ? '⟳' : '📍'}</span>

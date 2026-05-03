@@ -13,6 +13,8 @@ import { addCalendarDaysFromKstYmd, kstTodayYmd } from '@/lib/utils/timeOfDay'
 import { OutfitDayChecklist } from './OutfitDayChecklist'
 import { weatherLabel } from '@/lib/utils/formatWeather'
 import { buildHourlySlotYmds } from '@/lib/utils/resolveHourlyForPeriod'
+import type { VisitSchedule } from '@/lib/utils/visitSchedule'
+import { shiftVisitScheduleHours } from '@/lib/utils/visitSchedule'
 
 function calendarMonthKstFromWeather(w: CurrentWeather | null): number | undefined {
   if (!w) return undefined
@@ -46,6 +48,9 @@ interface Props {
   onActivityHoursChange?: (startHour: number, endHour: number) => void
   /** 모바일 탭: 긴 블록은 바텀시트로 분리 */
   variant?: 'default' | 'mobileSheet'
+  /** 모바일: 관심지역 탭 일정과 동기화·±4h 조정 */
+  mobileInterestSchedule?: VisitSchedule | null
+  onMobileInterestScheduleChange?: (s: VisitSchedule) => void
 }
 
 type SensitivityLevel = -2 | 0 | 2
@@ -166,6 +171,8 @@ export function OutfitPanel({
   activityStartHourMin,
   onActivityHoursChange,
   variant = 'default',
+  mobileInterestSchedule,
+  onMobileInterestScheduleChange,
 }: Props) {
   const isMobileSheet = variant === 'mobileSheet'
   const [sheetSettings, setSheetSettings] = useState(false)
@@ -232,6 +239,17 @@ export function OutfitPanel({
     const f = (outfitCurrentKstHour + 1) % 24
     setStartHour((s) => (s < f ? f : s))
   }, [outfitCurrentKstHour, outfitIsNowPeriod])
+
+  useEffect(() => {
+    if (!isMobileSheet || !mobileInterestSchedule) return
+    setStartHour(mobileInterestSchedule.startHour)
+    setEndHour(mobileInterestSchedule.endHour)
+  }, [
+    isMobileSheet,
+    mobileInterestSchedule?.startHour,
+    mobileInterestSchedule?.endHour,
+    mobileInterestSchedule?.dateOffset,
+  ])
 
   const result = useMemo(() => {
     if (!weather) return null
@@ -327,9 +345,67 @@ export function OutfitPanel({
         isMobileSheet ? 'p-3 space-y-3' : 'p-4 sm:p-6 space-y-4 sm:space-y-5'
       }`}
     >
-      <h2 className={`font-bold ${isMobileSheet ? 'text-sm' : 'text-base'}`} style={{ color: 'var(--primary)' }}>
-        {isMobileSheet ? '👔 외출 복장' : '복장 추천 설정'}
-      </h2>
+      <div className={`flex items-start justify-between gap-2 ${isMobileSheet ? '' : 'flex-col'}`}>
+        <h2
+          className={`font-bold min-w-0 flex-1 ${isMobileSheet ? 'text-sm' : 'text-base'}`}
+          style={{ color: 'var(--primary)' }}
+        >
+          {isMobileSheet ? '복장 추천' : '복장 추천 설정'}
+        </h2>
+        {isMobileSheet && (
+          <button
+            type="button"
+            onClick={() => setSheetSettings(true)}
+            className="shrink-0 max-w-[55%] text-right text-[10px] font-semibold py-1.5 px-2 rounded-lg transition-colors active:scale-[0.99]"
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              color: 'var(--text)',
+            }}
+          >
+            <span className="block mb-0.5" style={{ color: 'var(--muted)' }}>
+              세부 옵션
+            </span>
+            <span className="block truncate leading-snug">
+              성별 · 체감 ({SENSITIVITY_LABEL_MAP[sensitivity]})
+            </span>
+          </button>
+        )}
+      </div>
+
+      {isMobileSheet && mobileInterestSchedule && onMobileInterestScheduleChange && (
+        <div className="space-y-2">
+          <p className="text-[10px] leading-snug" style={{ color: 'var(--muted)' }}>
+            기준 {scheduleYmd.slice(0, 4)}.{scheduleYmd.slice(4, 6)}.{scheduleYmd.slice(6, 8)} ·{' '}
+            {String(startHour).padStart(2, '0')}:00–{String(endHour).padStart(2, '0')}:00
+          </p>
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              className="flex-1 text-xs font-semibold py-2 rounded-lg transition-opacity active:opacity-90"
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
+              onClick={() =>
+                onMobileInterestScheduleChange(shiftVisitScheduleHours(mobileInterestSchedule, -4))
+              }
+            >
+              −4시간
+            </button>
+            <span className="text-[11px] font-medium px-1 text-center" style={{ color: 'var(--muted)' }}>
+              중심 {mobileInterestSchedule.startHour}시
+            </span>
+            <button
+              type="button"
+              className="flex-1 text-xs font-semibold py-2 rounded-lg transition-opacity active:opacity-90"
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
+              onClick={() =>
+                onMobileInterestScheduleChange(shiftVisitScheduleHours(mobileInterestSchedule, 4))
+              }
+            >
+              +4시간
+            </button>
+          </div>
+        </div>
+      )}
 
       <ActivitySelector
         value={activity}
@@ -343,23 +419,11 @@ export function OutfitPanel({
         endHour={endHour}
         onStartHourChange={handleStartHour}
         onEndHourChange={handleEndHour}
+        variant={isMobileSheet ? 'mobileSimple' : 'default'}
+        hideScheduleFields={isMobileSheet}
       />
 
-      {isMobileSheet ? (
-        <button
-          type="button"
-          onClick={() => setSheetSettings(true)}
-          className="w-full text-left text-xs font-semibold py-2.5 px-3 rounded-xl transition-colors active:scale-[0.99]"
-          style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            color: 'var(--text)',
-          }}
-        >
-          <span className="text-[10px] block mb-0.5" style={{ color: 'var(--muted)' }}>세부 옵션</span>
-          성별 · 체감 민감도 ({SENSITIVITY_LABEL_MAP[sensitivity]})
-        </button>
-      ) : (
+      {isMobileSheet ? null : (
         <>
           <div className="border-t" style={{ borderColor: 'var(--border)' }} />
           {genderSensitivityBlock}
@@ -382,6 +446,7 @@ export function OutfitPanel({
             result={result}
             schedule={{ startHour, endHour, durationHour: selectedDuration }}
             periodWeather={periodWeather}
+            resultTitle={isMobileSheet ? '복장 추천' : undefined}
             gender={gender}
             calendarMonth={calendarMonthKstFromWeather(weather)}
             showSunshine={

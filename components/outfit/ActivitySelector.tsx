@@ -19,6 +19,10 @@ interface Props {
   endHour: number
   onStartHourChange: (hour: number) => void
   onEndHourChange: (hour: number) => void
+  /** 모바일: 산책·달리기·골프 고정 + 나머지 콤보 */
+  variant?: 'default' | 'mobileSimple'
+  /** 모바일: 기준일·시작·종료는 상위에서만 표시 */
+  hideScheduleFields?: boolean
 }
 
 function ymdToDateInput(ymd: string): string {
@@ -44,6 +48,8 @@ const ACTIVITIES: { id: ActivityType; label: string; icon: string }[] = [
   { id: 'hiking', label: '등산', icon: '🏔️' },
   { id: 'golf', label: '골프', icon: '⛳' },
 ]
+
+const MOBILE_PRIMARY_IDS: ActivityType[] = ['urban_walk', 'running', 'golf']
 
 const RISK_COLORS: Record<RiskGuide['level'], { bg: string; text: string; border: string; badge: string }> = {
   cancel:  { bg: 'rgba(239,68,68,0.06)',  text: '#B91C1C', border: 'rgba(239,68,68,0.25)',  badge: '#EF4444' },
@@ -256,12 +262,129 @@ export function ActivitySelector({
   endHour,
   onStartHourChange,
   onEndHourChange,
+  variant = 'default',
+  hideScheduleFields = false,
 }: Props) {
   const [guideActivity, setGuideActivity] = useState<ActivityType | null>(null)
   const guideData = guideActivity ? ACTIVITY_GUIDES[guideActivity] : null
   const minH = Math.min(23, Math.max(0, Math.floor(startHourMin)))
   const hourOptions = Array.from({ length: 24 - minH }, (_, i) => minH + i)
   const hh = (h: number) => `${String(h).padStart(2, '0')}:00`
+
+  const mobileExtras = ACTIVITIES.filter((a) => !MOBILE_PRIMARY_IDS.includes(a.id))
+
+  if (variant === 'mobileSimple') {
+    return (
+      <div>
+        <p className="text-sm font-semibold mb-2" style={{ color: 'var(--text)' }}>
+          활동
+        </p>
+        <div className="flex gap-1.5 items-stretch">
+          {MOBILE_PRIMARY_IDS.map((id) => {
+            const a = ACTIVITIES.find((x) => x.id === id)!
+            const selected = value === id
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => onChange(id)}
+                className="min-w-0 flex-1 flex flex-col items-center justify-center gap-0.5 py-2 px-0.5 rounded-lg text-center transition-all"
+                style={{
+                  background: selected ? 'var(--primary-tint-12)' : 'var(--surface)',
+                  border: `2px solid ${selected ? 'var(--primary)' : 'var(--border)'}`,
+                }}
+              >
+                <span className="text-lg leading-none">{a.icon}</span>
+                <span
+                  className="font-medium leading-tight text-[11px] break-keep"
+                  style={{ color: selected ? 'var(--primary)' : 'var(--muted)' }}
+                >
+                  {a.label}
+                </span>
+              </button>
+            )
+          })}
+          <label className="flex min-w-[92px] max-w-[38%] flex-[1.1] flex-col justify-end gap-0.5">
+            <span className="text-[10px] font-semibold leading-tight" style={{ color: 'var(--muted)' }}>
+              그 외 활동
+            </span>
+            <select
+              value={MOBILE_PRIMARY_IDS.includes(value) ? '' : value}
+              onChange={(e) => {
+                const v = e.target.value as ActivityType
+                if (v) onChange(v)
+              }}
+              className="w-full min-w-0 text-[10px] sm:text-[11px] rounded-lg px-1.5 py-1.5 outline-none"
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
+              aria-label="그 외 활동 선택"
+            >
+              <option value="">선택…</option>
+              {mobileExtras.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.icon} {a.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        {!hideScheduleFields && (
+          <div className="mt-3 space-y-2">
+            <label className="block space-y-1">
+              <span className="text-[11px] font-semibold" style={{ color: 'var(--muted)' }}>
+                기준일 (KST)
+              </span>
+              <input
+                type="date"
+                className="w-full text-xs rounded-lg px-2 py-1.5 outline-none"
+                style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
+                value={ymdToDateInput(scheduleYmd)}
+                min={ymdToDateInput(scheduleYmdMin)}
+                max={ymdToDateInput(scheduleYmdMax)}
+                onChange={(e) => {
+                  const v = e.target.value
+                  if (!v) return
+                  onScheduleYmdChange(dateInputToYmd(v))
+                }}
+              />
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="space-y-1">
+                <span className="text-[11px] font-semibold" style={{ color: 'var(--muted)' }}>시작</span>
+                <select
+                  value={String(startHour)}
+                  onChange={(e) => onStartHourChange(Number(e.target.value))}
+                  className="w-full text-xs rounded-lg px-2 py-1.5 outline-none"
+                  style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
+                >
+                  {hourOptions.map((h) => (
+                    <option key={`start-${h}`} value={String(h)}>{hh(h)}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-1">
+                <span className="text-[11px] font-semibold" style={{ color: 'var(--muted)' }}>종료</span>
+                <select
+                  value={String(endHour)}
+                  onChange={(e) => onEndHourChange(Number(e.target.value))}
+                  className="w-full text-xs rounded-lg px-2 py-1.5 outline-none"
+                  style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
+                >
+                  {hourOptions.map((h) => (
+                    <option key={`end-${h}`} value={String(h)}>{hh(h)}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </div>
+        )}
+
+        {guideData && (
+          <ActivityGuideModal guide={guideData} onClose={() => setGuideActivity(null)} />
+        )}
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -311,6 +434,7 @@ export function ActivitySelector({
         })}
       </div>
 
+      {!hideScheduleFields && (
       <div className="mt-3 space-y-2">
         <label className="block space-y-1">
           <span className="text-[11px] font-semibold" style={{ color: 'var(--muted)' }}>
@@ -365,6 +489,7 @@ export function ActivitySelector({
         </label>
         </div>
       </div>
+      )}
 
       {/* Guide Modal */}
       {guideData && (

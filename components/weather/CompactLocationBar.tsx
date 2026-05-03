@@ -89,8 +89,12 @@ export function CompactLocationBar({ currentLocation, onSelect, placeholder }: P
   return (
     <div ref={containerRef} className="relative">
       <div
-        className="flex items-center gap-2 px-3 py-2 rounded-xl"
-        style={{ background: 'var(--glass)', border: '1px solid var(--border)' }}
+        className="flex items-center gap-2 px-3 py-2 min-h-[48px]"
+        style={{
+          background: 'var(--glass)',
+          border: '1px solid var(--colors-ash-light)',
+          borderRadius: 'var(--rounded-md)',
+        }}
       >
         <span style={{ color: 'var(--muted)', fontSize: 14 }}>🔍</span>
         <input
@@ -117,13 +121,13 @@ export function CompactLocationBar({ currentLocation, onSelect, placeholder }: P
       </div>
 
       {open && (
-        <div className="absolute top-full left-0 right-0 mt-1 glass-card py-1 z-50" style={{ borderRadius: 12 }} role="listbox">
+        <div className="absolute top-full left-0 right-0 mt-1 glass-card py-1 z-50" role="listbox">
           {results.slice(0, 8).map((loc, i) => (
             <button
               key={i}
               onClick={() => handleSelect(loc)}
               className="w-full flex items-center gap-2 px-3 py-2 text-left transition-colors"
-              style={activeIndex === i ? { background: 'rgba(91,141,238,0.12)' } : undefined}
+              style={activeIndex === i ? { background: 'var(--primary-tint-12)' } : undefined}
               role="option"
               aria-selected={activeIndex === i}
             >
@@ -139,8 +143,7 @@ export function CompactLocationBar({ currentLocation, onSelect, placeholder }: P
 
       {confirmOpen && confirmList.length > 0 && (
         <div
-          className="absolute top-full left-0 right-0 mt-1 z-50"
-          style={{ background: 'var(--glass)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}
+          className="absolute top-full left-0 right-0 mt-1 z-50 glass-card"
           role="listbox"
         >
           <div className="px-3 py-2 border-b" style={{ borderColor: 'var(--border)' }}>
@@ -151,8 +154,11 @@ export function CompactLocationBar({ currentLocation, onSelect, placeholder }: P
               <button
                 key={i}
                 onClick={() => handleSelect(loc)}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left transition-all active:scale-[0.98]"
-                style={{ background: activeIndex === i ? 'rgba(91,141,238,0.1)' : 'rgba(255,255,255,0.6)', border: '1px solid var(--border)' }}
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left transition-all active:opacity-95"
+                style={{
+                  background: activeIndex === i ? 'var(--primary-tint-10)' : 'transparent',
+                  border: '1px solid var(--border)',
+                }}
                 role="option"
                 aria-selected={activeIndex === i}
               >

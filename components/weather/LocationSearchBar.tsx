@@ -194,17 +194,17 @@ export function LocationSearchBar({ onSelect }: Props) {
           <button
             key={m.key}
             onClick={() => { setMode(m.key); setQuery(''); setError(null); setResults([]); setConfirmOpen(false); setActiveIndex(-1) }}
-            className="text-xs px-2.5 py-1 rounded-full transition-all"
+            className="text-xs px-2.5 py-1 rounded-md transition-all"
             style={{
               background:
                 mode === m.key
-                  ? 'var(--humidity)'
-                  : 'rgba(91,141,238,0.1)',
+                  ? 'var(--primary)'
+                  : 'var(--primary-tint-10)',
               color:
                 mode === m.key
-                  ? 'white'
+                  ? 'var(--colors-on-primary)'
                   : 'var(--humidity)',
-              fontWeight: mode === m.key ? 600 : 400,
+              fontWeight: mode === m.key ? 700 : 400,
             }}
           >
             {m.label}
@@ -214,8 +214,8 @@ export function LocationSearchBar({ onSelect }: Props) {
 
       {/* Input */}
       <div
-        className="glass-card flex items-center gap-2 px-3 py-2.5"
-        style={{ borderRadius: '14px' }}
+        className="glass-card flex items-center gap-2 px-3 py-2.5 min-h-[48px]"
+        style={{ borderRadius: 'var(--rounded-md)', borderColor: 'var(--colors-hairline-strong)' }}
       >
         <span style={{ color: 'var(--muted)', fontSize: 16 }}>🔍</span>
         <input
@@ -270,7 +270,6 @@ export function LocationSearchBar({ onSelect }: Props) {
       {open && (
         <div
           className="absolute top-full left-0 right-0 mt-1.5 glass-card py-1.5 z-50"
-          style={{ borderRadius: '14px' }}
           role="listbox"
           aria-label="검색 결과"
         >
@@ -282,7 +281,7 @@ export function LocationSearchBar({ onSelect }: Props) {
               className="w-full flex items-start gap-2.5 px-3 py-2.5 text-left hover:bg-white/60 transition-colors"
               role="option"
               aria-selected={activeIndex === i}
-              style={activeIndex === i ? { background: 'rgba(91,141,238,0.12)' } : undefined}
+              style={activeIndex === i ? { background: 'var(--primary-tint-12)' } : undefined}
             >
               <span className="mt-0.5 flex-shrink-0 text-sm">{terrainIcon(loc)}</span>
               <div className="flex-1 min-w-0">
@@ -307,7 +306,7 @@ export function LocationSearchBar({ onSelect }: Props) {
               </div>
               <span
                 className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 mt-0.5"
-                style={{ background: 'rgba(91,141,238,0.1)', color: 'var(--humidity)' }}
+                style={{ background: 'var(--primary-tint-10)', color: 'var(--humidity)' }}
               >
                 {loc.nx},{loc.ny}
               </span>
@@ -318,17 +317,7 @@ export function LocationSearchBar({ onSelect }: Props) {
 
       {/* ── Address confirmation popup (≤5 results, non-golf) ── */}
       {confirmOpen && confirmList.length > 0 && (
-        <div
-          className="absolute top-full left-0 right-0 mt-1.5 z-50"
-          style={{
-            background: 'var(--glass)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            border: '1px solid var(--border)',
-            borderRadius: '16px',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-          }}
-          role="listbox"
+        <div className="absolute top-full left-0 right-0 mt-1.5 z-50 glass-card" role="listbox"
           aria-label="주소 확인"
         >
           {/* Header */}
@@ -356,17 +345,17 @@ export function LocationSearchBar({ onSelect }: Props) {
                 key={i}
                 id={`loc-option-${i}`}
                 onClick={() => handleSelect(loc)}
-                className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-all active:scale-[0.98]"
+                className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left transition-all active:opacity-95"
                 style={{
-                  background: activeIndex === i ? 'rgba(91,141,238,0.1)' : 'rgba(255,255,255,0.6)',
+                  background: activeIndex === i ? 'var(--primary-tint-10)' : 'transparent',
                   border: '1px solid var(--border)',
                 }}
                 role="option"
                 aria-selected={activeIndex === i}
               >
                 <span
-                  className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-lg"
-                  style={{ background: 'rgba(91,141,238,0.08)' }}
+                  className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-lg"
+                  style={{ background: 'var(--primary-tint-08)' }}
                 >
                   {terrainIcon(loc)}
                 </span>
@@ -387,7 +376,7 @@ export function LocationSearchBar({ onSelect }: Props) {
                 <div className="flex flex-col items-end gap-1 flex-shrink-0">
                   <span
                     className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                    style={{ background: 'rgba(91,141,238,0.1)', color: 'var(--humidity)' }}
+                    style={{ background: 'var(--primary-tint-10)', color: 'var(--humidity)' }}
                   >
                     {loc.nx},{loc.ny}
                   </span>

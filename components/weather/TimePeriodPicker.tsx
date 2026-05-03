@@ -194,10 +194,10 @@ export function TimePeriodPicker({
             key={period.id + (isTomorrow ? '-t' : '')}
             type="button"
             onClick={() => onSelectPreset(period.repHour, dayOffset)}
-            className="flex flex-col items-center gap-0.5 max-lg:gap-1 py-2 px-1 rounded-xl transition-all"
+            className="flex flex-col items-center gap-0.5 max-lg:gap-1 py-2 px-1 rounded-lg transition-all"
             style={{
-              background: isSelected ? 'rgba(255,181,71,0.15)' : 'var(--surface)',
-              border: `1.5px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`,
+              background: isSelected ? 'var(--colors-canvas-light)' : 'var(--colors-surface-filter)',
+              border: `1.5px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}`,
             }}
             aria-pressed={isSelected}
           >
@@ -213,7 +213,7 @@ export function TimePeriodPicker({
               {isTomorrow && (
                 <span
                   className="text-[9px] max-lg:text-[10px] px-1.5 max-lg:px-2 py-0.5 rounded-full font-semibold leading-none max-lg:tracking-wide"
-                  style={{ background: 'rgba(91,141,238,0.1)', color: 'var(--humidity)' }}
+                  style={{ background: 'var(--primary-tint-10)', color: 'var(--humidity)' }}
                 >
                   내일
                 </span>

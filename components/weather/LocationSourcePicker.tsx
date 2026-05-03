@@ -24,10 +24,14 @@ export function LocationSourcePicker({ options, selected, onChange }: Props) {
             key={opt.key}
             onClick={() => !disabled && onChange(opt.key)}
             disabled={disabled}
-            className="flex-1 flex flex-col items-center py-1.5 px-1 rounded-xl transition-all"
+            className="flex-1 flex flex-col items-center py-2 px-2 rounded-md transition-all"
             style={{
-              background: active ? 'var(--primary)' : disabled ? 'rgba(0,0,0,0.04)' : 'rgba(91,141,238,0.08)',
-              color: active ? 'white' : disabled ? 'var(--muted)' : 'var(--humidity)',
+              background: active
+                ? 'var(--primary)'
+                : disabled
+                  ? 'rgba(0,0,0,0.06)'
+                  : 'var(--colors-surface-filter)',
+              color: active ? 'var(--colors-on-primary)' : disabled ? 'var(--muted)' : 'var(--humidity)',
               border: `1px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
               opacity: disabled ? 0.55 : 1,
               cursor: disabled ? 'not-allowed' : 'pointer',

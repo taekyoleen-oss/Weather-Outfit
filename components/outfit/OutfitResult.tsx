@@ -15,6 +15,8 @@ interface Props {
   result: OutfitResultType
   schedule?: { startHour: number; endHour: number; durationHour: number }
   periodWeather?: { label: string; minTemp: number; maxTemp: number } | null
+  /** 기본: 「오늘의 복장 추천」— 모바일 등에서 「복장 추천」으로 변경 */
+  resultTitle?: string
   gender?: GenderType
   /** KST 달력 월 1–12. 히어로 `fall-layered` 문구용 */
   calendarMonth?: number
@@ -32,6 +34,7 @@ export function OutfitResult({
   result,
   schedule,
   periodWeather,
+  resultTitle = '오늘의 복장 추천',
   gender = 'male',
   calendarMonth,
   showSunshine,
@@ -61,7 +64,7 @@ export function OutfitResult({
       {/* Header: title + layer info (no illustration here) */}
       <div>
         <h2 className="text-lg font-bold" style={{ color: 'var(--primary)' }}>
-          {result.cancelActivity ? '⚠️ 활동 재검토 권고' : '오늘의 복장 추천'}
+          {result.cancelActivity ? '⚠️ 활동 재검토 권고' : resultTitle}
         </h2>
         {schedule && optionalItems.length > 0 && (
           <div className="text-[13px] sm:text-xs mt-1" style={{ color: 'var(--muted)' }}>
