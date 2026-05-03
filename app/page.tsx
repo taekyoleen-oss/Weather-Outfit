@@ -355,18 +355,32 @@ export default function HomePage() {
     [todayYmdKst, scheduleYmd],
   )
 
-  // ── Forecast date bounds (for outfit) ────────────────────────────────────
-  const outfitForecastYmdBounds = useMemo(() => {
-    const slotYmds = buildHourlySlotYmds(outfitWeatherData?.hourly ?? [])
-    if (!slotYmds.length) return { min: todayYmdKst, max: todayYmdKst }
-    const uniq = [...new Set(slotYmds)].sort()
-    return { min: uniq[0]!, max: uniq[uniq.length - 1]! }
-  }, [outfitWeatherData?.hourly, todayYmdKst])
-
   const outfitMergedDaily = useMemo(
     () => mergeWeeklyDailyStartingTomorrow(outfitWeeklyRaw, outfitWeatherData?.hourly ?? [], todayYmdKst),
     [outfitWeeklyRaw, outfitWeatherData?.hourly, todayYmdKst],
   )
+
+  /** 시간별만 있을 때보다 일별이 길면 날짜 선택 범위 확장 */
+  const outfitForecastYmdBounds = useMemo(() => {
+    const slotYmds = buildHourlySlotYmds(outfitWeatherData?.hourly ?? [], todayYmdKst)
+    let min = todayYmdKst
+    let max = todayYmdKst
+    if (slotYmds.length) {
+      const uniq = [...new Set(slotYmds)].sort()
+      min = uniq[0]!
+      max = uniq[uniq.length - 1]!
+    }
+    for (const row of outfitMergedDaily) {
+      if (row.date?.length === 8) {
+        if (row.date < min) min = row.date
+        if (row.date > max) max = row.date
+      }
+    }
+    if (min < todayYmdKst) min = todayYmdKst
+    const cap = addCalendarDaysFromKstYmd(todayYmdKst, 14)
+    if (max > cap) max = cap
+    return { min, max }
+  }, [outfitWeatherData?.hourly, outfitMergedDaily, todayYmdKst])
 
   // ── Auto GPS refresh on mount ─────────────────────────────────────────────
   useEffect(() => {

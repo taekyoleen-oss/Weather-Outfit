@@ -17,7 +17,7 @@ import type {
 import type { TerrainType } from '@/types/location'
 import { addCalendarDaysFromKstYmd, kstTodayYmd } from '@/lib/utils/timeOfDay'
 import { OutfitDayChecklist } from './OutfitDayChecklist'
-import { weatherLabel } from '@/lib/utils/formatWeather'
+import { weatherEmojiFromLabel, weatherLabel } from '@/lib/utils/formatWeather'
 import { buildHourlySlotYmds } from '@/lib/utils/resolveHourlyForPeriod'
 import type { VisitSchedule } from '@/lib/utils/visitSchedule'
 import { PERIOD_CHIP_LABELS_KO, TIME_PERIODS } from '@/lib/utils/timePeriods'
@@ -100,6 +100,66 @@ function visitSchedulePeriodLabel(s: VisitSchedule): string {
 function periodChipNameFromHours(startHour: number, endHour: number): string {
   const i = TIME_PERIODS.findIndex((p) => p.start === startHour && p.end === endHour)
   return i >= 0 ? PERIOD_CHIP_LABELS_KO[i] : '선택 구간'
+}
+
+/** 일별 최저~최고만 있을 때 시간대별 대표 기온 비중(새벽·아침·점심·저녁) */
+const DAILY_EST_TEMP_WEIGHTS = [0.12, 0.38, 0.88, 0.45] as const
+
+function buildOutfitPeriodChipPreviews(
+  scheduleYmd: string,
+  hourly: HourlyForecast[],
+  daily: DailyForecast[],
+): { source: 'hourly' | 'daily_est'; conditionLabel: string; tempLine: string }[] {
+  const todayYmd = kstTodayYmd()
+  const slotYmds = buildHourlySlotYmds(hourly, todayYmd)
+  const nextYmd = addCalendarDaysFromKstYmd(scheduleYmd, 1)
+  const dayRow = daily.find((d) => d.date === scheduleYmd)
+
+  return TIME_PERIODS.map((p, idx) => {
+    const inRange = hourly.filter((h, i) => {
+      const slotYmd = slotYmds[i]
+      if (!slotYmd) return false
+      const hourNum = parseInt(h.time.slice(0, 2), 10)
+      if (Number.isNaN(hourNum)) return false
+      if (p.start <= p.end) {
+        return slotYmd === scheduleYmd && hourNum >= p.start && hourNum <= p.end
+      }
+      return (
+        (slotYmd === scheduleYmd && hourNum >= p.start) ||
+        (slotYmd === nextYmd && hourNum <= p.end)
+      )
+    })
+
+    if (inRange.length > 0) {
+      const minT = Math.min(...inRange.map((x) => x.temperature))
+      const maxT = Math.max(...inRange.map((x) => x.temperature))
+      const labelCounts = new Map<string, number>()
+      for (const h of inRange) {
+        const lab = weatherLabel(h.skyCode, h.ptyCode)
+        labelCounts.set(lab, (labelCounts.get(lab) ?? 0) + 1)
+      }
+      const conditionLabel =
+        [...labelCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ??
+        weatherLabel(inRange[0]!.skyCode, inRange[0]!.ptyCode)
+      const tempLine =
+        Math.round(minT) === Math.round(maxT)
+          ? `${Math.round(minT)}°`
+          : `${Math.round(minT)}°/${Math.round(maxT)}°`
+      return { source: 'hourly', conditionLabel, tempLine }
+    }
+
+    if (dayRow) {
+      const span = dayRow.maxTemp - dayRow.minTemp
+      const rep = Math.round(dayRow.minTemp + span * DAILY_EST_TEMP_WEIGHTS[idx])
+      return {
+        source: 'daily_est',
+        conditionLabel: weatherLabel(dayRow.skyCode, dayRow.ptyCode),
+        tempLine: `~${rep}°`,
+      }
+    }
+
+    return { source: 'daily_est', conditionLabel: '—', tempLine: '—' }
+  })
 }
 
 function ymdToDateInput(ymd: string): string {
@@ -353,6 +413,11 @@ export function OutfitPanel({
     return null
   }, [hourly, daily, scheduleYmd, startHour, endHour])
 
+  const periodChipPreviews = useMemo(
+    () => buildOutfitPeriodChipPreviews(scheduleYmd, hourly, daily),
+    [scheduleYmd, hourly, daily],
+  )
+
   const genderSensitivityBlock = (
     <>
       <div className="flex items-end gap-3">
@@ -455,11 +520,17 @@ export function OutfitPanel({
               const selected =
                 mobileInterestSchedule.startHour === p.start &&
                 mobileInterestSchedule.endHour === p.end
+              const preview = periodChipPreviews[i]!
+              const wxEmoji =
+                preview.conditionLabel !== '—'
+                  ? weatherEmojiFromLabel(preview.conditionLabel)
+                  : p.emoji
               return (
                 <button
                   key={p.id}
                   type="button"
-                  className="flex flex-col items-center justify-center gap-0.5 py-1.5 px-0.5 rounded-lg text-center transition-all active:scale-95 min-w-0"
+                  title={`${preview.conditionLabel} · ${preview.tempLine}`}
+                  className="flex flex-col items-center justify-center gap-0.5 py-1 px-0.5 rounded-lg text-center transition-all active:scale-95 min-w-0 min-h-[76px]"
                   style={{
                     background: selected ? 'var(--primary-tint-12)' : 'var(--surface)',
                     border: `2px solid ${selected ? 'var(--primary)' : 'var(--border)'}`,
@@ -472,13 +543,32 @@ export function OutfitPanel({
                     })
                   }
                 >
-                  <span className="text-sm leading-none">{p.emoji}</span>
+                  <span className="text-[15px] sm:text-base leading-none" aria-hidden>
+                    {wxEmoji}
+                  </span>
+                  <span
+                    className="font-medium leading-tight text-[8px] sm:text-[9px] break-keep line-clamp-1 w-full px-0.5"
+                    style={{ color: selected ? 'var(--primary)' : 'var(--muted)' }}
+                  >
+                    {preview.conditionLabel !== '—' ? preview.conditionLabel : '—'}
+                  </span>
                   <span
                     className="font-medium leading-tight text-[9px] sm:text-[10px] break-keep"
-                    style={{ color: selected ? 'var(--primary)' : 'var(--muted)' }}
+                    style={{ color: selected ? 'var(--primary)' : 'var(--text)' }}
                   >
                     {PERIOD_CHIP_LABELS_KO[i]}
                   </span>
+                  <span
+                    className="text-[10px] sm:text-[11px] font-bold tabular-nums leading-none"
+                    style={{ color: selected ? 'var(--primary)' : 'var(--text)' }}
+                  >
+                    {preview.tempLine}
+                  </span>
+                  {preview.source === 'daily_est' && preview.conditionLabel !== '—' && (
+                    <span className="text-[7px] leading-none" style={{ color: 'var(--muted)' }}>
+                      일별추정
+                    </span>
+                  )}
                 </button>
               )
             })}
