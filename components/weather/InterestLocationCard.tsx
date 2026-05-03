@@ -27,6 +27,8 @@ interface Props {
   onScheduleChange: (s: VisitSchedule) => void
   pinnedLocation: LocationInfo | null
   onLocationSelect: (loc: LocationInfo) => void
+  /** false면 상단 헤더에서 검색할 때 — 카드 내 CompactLocationBar·GPS 숨김 */
+  showLocationBar?: boolean
   /** GPS로 관심지역·일정을 현재 위치/시간으로 맞출 때(탭1과 로딩 공유) */
   gpsLoading?: boolean
   onUseCurrentLocation?: () => void
@@ -143,6 +145,7 @@ export function InterestLocationCard({
   onScheduleChange,
   pinnedLocation,
   onLocationSelect,
+  showLocationBar = true,
   gpsLoading = false,
   onUseCurrentLocation,
 }: Props) {
@@ -215,13 +218,12 @@ export function InterestLocationCard({
       )
     : null
 
-  const curLabel = weatherLabel(weather.skyCode, weather.ptyCode)
-  const curEmoji = weatherEmojiFromLabel(curLabel)
   const curFl = feelsLike(weather.temperature, weather.windSpeed, weather.humidity)
   const windDir = windDirectionLabel(weather.windDirection)
 
   const visitDisplayTemp = visitRepresentative?.temperature
   const dailyForVisit = daily.find((d) => d.date === visitYmd)
+  const todayDailyRow = daily.find((d) => d.date === todayYmd)
   const visitNote =
     dailyForVisit && visitRepresentative
       ? `${fmt(dailyForVisit.minTemp)} / ${fmt(dailyForVisit.maxTemp)}`
@@ -256,40 +258,44 @@ export function InterestLocationCard({
       )}
 
       <div className="glass-card rounded-lg px-3 py-3 space-y-3">
-        <p className="text-xs font-semibold" style={{ color: 'var(--muted)' }}>관심 지역</p>
-        <div className="flex gap-2 items-end">
-          <div className="flex-1 min-w-0">
-            <CompactLocationBar
-              currentLocation={pinnedLocation}
-              onSelect={onLocationSelect}
-              placeholder={pinnedLocation ? pinnedLocation.name : '관심 지역 검색'}
-            />
-          </div>
-          {onUseCurrentLocation && (
-            <button
-              type="button"
-              onClick={onUseCurrentLocation}
-              disabled={gpsLoading}
-              className="flex items-center justify-center transition-all active:opacity-80 flex-shrink-0"
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 8,
-                fontSize: 20,
-                color: gpsLoading ? 'var(--muted)' : 'var(--humidity)',
-                background: 'var(--surface)',
-                border: '1px solid var(--border)',
-              }}
-              aria-label="현재 위치로 관심지역·조회 일정을 맞추기"
-              title="현재 GPS 위치로 고정하고, 조회 날짜·시간대를 지금으로"
-            >
-              {gpsLoading ? '⟳' : '📍'}
-            </button>
-          )}
-        </div>
+        {showLocationBar ? (
+          <>
+            <p className="text-xs font-semibold" style={{ color: 'var(--muted)' }}>관심 지역</p>
+            <div className="flex gap-2 items-end">
+              <div className="flex-1 min-w-0">
+                <CompactLocationBar
+                  currentLocation={pinnedLocation}
+                  onSelect={onLocationSelect}
+                  placeholder={pinnedLocation ? pinnedLocation.name : '관심 지역 검색'}
+                />
+              </div>
+              {onUseCurrentLocation && (
+                <button
+                  type="button"
+                  onClick={onUseCurrentLocation}
+                  disabled={gpsLoading}
+                  className="flex items-center justify-center transition-all active:opacity-80 flex-shrink-0"
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 8,
+                    fontSize: 20,
+                    color: gpsLoading ? 'var(--muted)' : 'var(--humidity)',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                  }}
+                  aria-label="현재 위치로 관심지역·조회 일정을 맞추기"
+                  title="현재 GPS 위치로 고정하고, 조회 날짜·시간대를 지금으로"
+                >
+                  {gpsLoading ? '⟳' : '📍'}
+                </button>
+              )}
+            </div>
+          </>
+        ) : null}
 
         <label className="block space-y-1">
-          <span className="text-[10px] font-semibold" style={{ color: 'var(--muted)' }}>
+          <span className="text-xs font-semibold leading-snug" style={{ color: 'var(--muted)' }}>
             조회 날짜 (저장되어 앱을 다시 열어도 유지)
           </span>
           <input
@@ -340,13 +346,32 @@ export function InterestLocationCard({
           <div className="w-px self-stretch shrink-0" style={{ background: 'var(--border)' }} aria-hidden />
           <div className="flex-1 min-w-0 text-right">
             <p className="text-[10px] font-semibold mb-1" style={{ color: 'var(--muted)' }}>지금</p>
-            <div className="flex items-baseline gap-1.5 justify-end">
-              <span className="text-4xl font-bold leading-none" style={{ color: 'var(--text)' }}>
-                {fmt(weather.temperature)}
-              </span>
-              <span className="text-2xl">{curEmoji}</span>
-            </div>
-            <p className="text-xs mt-1 font-medium truncate" style={{ color: 'var(--muted)' }}>{curLabel}</p>
+            {todayDailyRow ? (
+              <>
+                <div className="flex items-baseline gap-1 justify-end flex-wrap">
+                  <span className="text-2xl sm:text-3xl font-bold tabular-nums leading-none" style={{ color: '#EF4444' }}>
+                    {fmt(todayDailyRow.maxTemp)}
+                  </span>
+                  <span className="text-base font-medium px-0.5" style={{ color: 'var(--muted)' }}>
+                    /
+                  </span>
+                  <span className="text-2xl sm:text-3xl font-bold tabular-nums leading-none" style={{ color: '#3B82F6' }}>
+                    {fmt(todayDailyRow.minTemp)}
+                  </span>
+                </div>
+                <p className="text-[10px] mt-1" style={{ color: 'var(--muted)' }}>최고 / 최저 (오늘)</p>
+              </>
+            ) : (
+              <p className="text-[11px] leading-snug mb-1" style={{ color: 'var(--muted)' }}>
+                오늘 일별 최고·최저 없음
+              </p>
+            )}
+            <p className="text-xs mt-2 leading-snug" style={{ color: 'var(--muted)' }}>
+              💧 습도 {weather.humidity}%
+            </p>
+            <p className="text-xs mt-1 leading-snug" style={{ color: 'var(--muted)' }}>
+              💨 {windDir} {weather.windSpeed.toFixed(1)}m/s
+            </p>
           </div>
         </div>
         <p className="text-[11px] mt-2 truncate" style={{ color: 'var(--muted)', opacity: 0.85 }}>
@@ -363,12 +388,6 @@ export function InterestLocationCard({
             <span className="text-[10px] block" style={{ color: 'var(--muted)' }}>지금 체감</span>
             <span className="text-sm font-bold" style={{ color: 'var(--text)' }}>{fmt(curFl)}</span>
           </div>
-        </div>
-        <div className="mt-2 pt-2 border-t flex flex-wrap gap-3 justify-between" style={{ borderColor: 'var(--border)' }}>
-          <span className="text-xs" style={{ color: 'var(--muted)' }}>
-            💨 {windDir} {weather.windSpeed.toFixed(1)}m/s
-          </span>
-          <span className="text-xs" style={{ color: 'var(--muted)' }}>💧 {weather.humidity}%</span>
         </div>
       </div>
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import type {
   OutfitResult as OutfitResultType,
   OutfitWeatherSnapshot,
@@ -39,6 +39,8 @@ interface Props {
   showSunshine?: boolean
   /** 상단 하늘 밴드 라인 아이콘(하늘·강수형태) */
   weatherSky?: OutfitWeatherSnapshot
+  /** 모바일 등 제목행 우측 액션(예: 세부 옵션 버튼) */
+  headerEnd?: ReactNode
 }
 
 const LAYER_BAR_COLORS = ['#22C55E', '#FFB547', '#EF4444']
@@ -54,6 +56,7 @@ export function OutfitResult({
   calendarMonth,
   showSunshine,
   weatherSky,
+  headerEnd,
 }: Props) {
   const [tab, setTab] = useState<TabId>('illust')
 
@@ -78,9 +81,12 @@ export function OutfitResult({
 
       {/* Header: title + layer info (no illustration here) */}
       <div>
-        <h2 className="text-lg font-bold" style={{ color: 'var(--primary)' }}>
-          {result.cancelActivity ? '⚠️ 활동 재검토 권고' : resultTitle}
-        </h2>
+        <div className="flex items-start justify-between gap-2">
+          <h2 className="text-lg font-bold flex-1 min-w-0" style={{ color: 'var(--primary)' }}>
+            {result.cancelActivity ? '⚠️ 활동 재검토 권고' : resultTitle}
+          </h2>
+          {headerEnd ? <div className="shrink-0 pt-0.5">{headerEnd}</div> : null}
+        </div>
         {schedule && optionalItems.length > 0 && (
           <div className="text-[13px] sm:text-xs mt-1" style={{ color: 'var(--muted)' }}>
             <p>선택 아이템 착용 가이드 ({hh(schedule.startHour)} ~ {hh(schedule.endHour)}):</p>

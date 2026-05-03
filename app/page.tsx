@@ -249,6 +249,8 @@ export default function HomePage() {
   const [sunriseSunset, setSunriseSunset] = useState<SunriseSunset | null>(null)
   const [alerts, setAlerts] = useState<WeatherAlert[]>([])
   const [openMeteoCompare, setOpenMeteoCompare] = useState<OpenMeteoDailyCompare | null>(null)
+  /** 모바일 하단 탭 — 관심지역에서 「현재 위치를 여기로」 시 첫 탭으로 이동 */
+  const [mobileLayoutTab, setMobileLayoutTab] = useState<string>('current')
 
   // ── Tab 2: pinned interest location ──────────────────────────────────────
   const [tab2Location, setTab2Location] = useState<LocationInfo | null>(null)
@@ -262,6 +264,13 @@ export default function HomePage() {
     setTab2Location(loc)
     try { localStorage.setItem(TAB2_STORAGE_KEY, JSON.stringify(loc)) } catch { /* ignore */ }
   }, [])
+  const handleSelectInterestFromSearch = useCallback(
+    (loc: LocationInfo) => {
+      handleSaveTab2Location(loc)
+      saveRecentLocation(loc)
+    },
+    [handleSaveTab2Location],
+  )
   const { data: tab2WeatherData, loading: tab2WeatherLoading } = useWeather(tab2Location)
   const { data: tab2Weekly } = useWeeklyForecast(tab2Location ?? location)
   const [tab2Alerts, setTab2Alerts] = useState<WeatherAlert[]>([])
@@ -452,6 +461,13 @@ export default function HomePage() {
   const tab2EffectiveWeather = tab2WeatherData ?? (tab2Location ? null : weatherData)
   const tab2IsFallback = !tab2Location
 
+  /** 관심지역 기준 좌표를 「현재위치」탭(탭1)에 적용 후 첫 탭으로 이동 */
+  const handleCopyInterestToCurrentTab = useCallback(() => {
+    setManualLocation(tab2EffectiveLocation)
+    saveRecentLocation(tab2EffectiveLocation)
+    setMobileLayoutTab('current')
+  }, [tab2EffectiveLocation, setManualLocation])
+
   // ── Tab 2: weekly display ─────────────────────────────────────────────────
   const tab2WeeklyDisplay = useMemo(
     () => mergeWeeklyDailyStartingTomorrow(tab2Weekly, tab2EffectiveWeather?.hourly ?? [], todayYmdKst),
@@ -628,8 +644,32 @@ export default function HomePage() {
     })
   }, [requestGps, handleSaveTab2Location])
 
+  /** 단기예측 탭 검색·GPS: 소스(현재위치|관심지역)에 맞춰 탭1 또는 탭2 좌표 갱신 */
+  const handleSpotTabSearchSelect = useCallback(
+    (loc: LocationInfo) => {
+      if (tab4Source === 'tab2') {
+        handleSaveTab2Location(loc)
+        saveRecentLocation(loc)
+      } else {
+        setManualLocation(loc)
+        saveRecentLocation(loc)
+      }
+    },
+    [tab4Source, handleSaveTab2Location, setManualLocation],
+  )
+
+  const handleSpotTabGps = useCallback(() => {
+    if (tab4Source === 'tab2') {
+      handleInterestTabUseCurrentGps()
+    } else {
+      requestGps({ reason: 'manual' })
+    }
+  }, [tab4Source, handleInterestTabUseCurrentGps, requestGps])
+
   // ── Shared nodes ──────────────────────────────────────────────────────────
   const locationSearch = <LocationSearchBar onSelect={handleSelectLocation} />
+  const interestLocationSearch = <LocationSearchBar onSelect={handleSelectInterestFromSearch} />
+  const spotTabLocationSearch = <LocationSearchBar onSelect={handleSpotTabSearchSelect} />
   const recentChips = <RecentChips onSelect={handleSelectLocation} currentName={location.name} />
   const nearbyChips = (
     <NearbyWeatherChips
@@ -773,35 +813,52 @@ export default function HomePage() {
     </div>
   )
 
-  // Tab 2 header: 제목만 (지역 검색은 카드 안 한 곳에서만)
+  // Tab 2 header: 탭1과 동일한 검색 줄 → 아래 제목·「현재 위치를 여기로」
   const tab2Header = (
-    <div className="px-3 pt-2 pb-2">
-      <div className="flex items-center gap-1.5">
-        <span className="text-sm font-bold" style={{ color: tab2Location ? 'var(--primary)' : 'var(--muted)' }}>
-          {tab2Location ? '📌' : '📍'}
-        </span>
-        <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text)' }}>관심지역</span>
-        <span className="text-xs truncate flex-1 min-w-0" style={{ color: 'var(--muted)' }}>
-          {tab2Location ? `— ${tab2Location.name}` : '— 현재 위치 기준'}
-        </span>
+    <div className="px-3 pt-3 pb-2 space-y-2">
+      <div className="flex gap-2 items-end">
+        <div className="flex-1 min-w-0">{interestLocationSearch}</div>
         <button
           type="button"
-          onClick={() => requestGps({ reason: 'manual' })}
+          onClick={handleInterestTabUseCurrentGps}
           disabled={gpsLoading}
           className="flex items-center justify-center transition-all active:opacity-80 flex-shrink-0"
           style={{
-            width: 40,
-            height: 40,
+            width: 44,
+            height: 44,
             borderRadius: 8,
-            fontSize: 18,
+            fontSize: 20,
             color: gpsLoading ? 'var(--muted)' : 'var(--humidity)',
             background: 'var(--surface)',
             border: '1px solid var(--border)',
           }}
-          aria-label="날씨·위치 탭을 현재 GPS 위치로 맞추기"
-          title="날씨/위치 탭을 현재 위치로"
+          aria-label="현재 GPS로 관심지역·조회 일정을 맞추기"
+          title="현재 GPS 위치로 고정하고, 조회 일정을 지금 시각으로"
         >
           {gpsLoading ? '⟳' : '📍'}
+        </button>
+      </div>
+      {gpsError && <p className="text-xs mt-0 px-1" style={{ color: 'var(--danger)' }}>{gpsError}</p>}
+      <div className="flex items-center gap-2 min-h-[40px]">
+        <span className="text-sm font-bold shrink-0" style={{ color: tab2Location ? 'var(--primary)' : 'var(--muted)' }}>
+          {tab2Location ? '📌' : '📍'}
+        </span>
+        <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text)' }}>관심지역</span>
+        <span className="text-xs truncate flex-1 min-w-0" style={{ color: 'var(--muted)' }}>
+          {tab2Location ? `— ${tab2Location.name}` : '— 현재위치 탭과 동일'}
+        </span>
+        <button
+          type="button"
+          onClick={handleCopyInterestToCurrentTab}
+          className="shrink-0 text-[11px] font-semibold px-2.5 py-2 rounded-lg transition-all active:opacity-80 leading-tight text-center max-w-[min(44vw,9rem)]"
+          style={{
+            color: 'var(--colors-on-primary)',
+            background: 'var(--primary)',
+            border: '1px solid var(--primary)',
+          }}
+          aria-label="현재위치 탭의 조회 지역을 이 관심지역으로 바꾸고 첫 탭으로 이동"
+        >
+          현재 위치를 여기로
         </button>
       </div>
     </div>
@@ -812,7 +869,7 @@ export default function HomePage() {
     <div className="px-3 pt-2 pb-2 space-y-2">
       <LocationSourcePicker
         options={[
-          { key: 'tab1', label: '현재 위치', sublabel: location.name },
+          { key: 'tab1', label: '현재위치', sublabel: location.name },
           { key: 'tab2', label: '관심지역', sublabel: tab2Location?.name ?? '미설정', available: !!tab2Location },
         ]}
         selected={tab3Source}
@@ -831,7 +888,7 @@ export default function HomePage() {
   const tab4SourcePicker = (
     <LocationSourcePicker
       options={[
-        { key: 'tab1', label: '현재 위치', sublabel: location.name },
+        { key: 'tab1', label: '현재위치', sublabel: location.name },
         { key: 'tab2', label: '관심지역', sublabel: tab2Location?.name ?? '미설정', available: !!tab2Location },
       ]}
       selected={tab4Source}
@@ -848,7 +905,30 @@ export default function HomePage() {
   )
 
   const tab4Header = (
-    <div className="px-3 pt-2 pb-2 space-y-2">
+    <div className="px-3 pt-3 pb-2 space-y-2">
+      <div className="flex gap-2 items-end">
+        <div className="flex-1 min-w-0">{spotTabLocationSearch}</div>
+        <button
+          type="button"
+          onClick={handleSpotTabGps}
+          disabled={gpsLoading}
+          className="flex items-center justify-center transition-all active:opacity-80 flex-shrink-0"
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 8,
+            fontSize: 20,
+            color: gpsLoading ? 'var(--muted)' : 'var(--humidity)',
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+          }}
+          aria-label={tab4Source === 'tab2' ? '현재 GPS로 관심지역·조회 일정을 맞추기' : '내 위치로 설정'}
+          title={tab4Source === 'tab2' ? '관심지역용 GPS' : '현재위치 탭과 동일 GPS'}
+        >
+          {gpsLoading ? '⟳' : '📍'}
+        </button>
+      </div>
+      {gpsError && <p className="text-xs mt-0 px-1" style={{ color: 'var(--danger)' }}>{gpsError}</p>}
       {tab4SourcePicker}
       {tab4AnchorSummary}
     </div>
@@ -904,7 +984,7 @@ export default function HomePage() {
         {desktopUltraShortOpen ? (
           <div className="px-3 pb-3 pt-1 space-y-3 border-t" style={{ borderColor: 'var(--border)' }}>
             <p className="text-[11px] leading-relaxed" style={{ color: 'var(--muted)' }}>
-              모바일 「단기 예측」 탭과 같은 내용입니다. 상단 검색으로 고른 <strong style={{ color: 'var(--text)' }}>현재 위치</strong>를 기준으로 외출·관심지역 등을 아래에서 골라 초단기 산악·낙뢰·강수 정보를 봅니다.
+              모바일 「단기 예측」 탭과 같은 내용입니다. 상단 검색으로 고른 <strong style={{ color: 'var(--text)' }}>현재위치</strong>를 기준으로 외출·관심지역 등을 아래에서 골라 초단기 산악·낙뢰·강수 정보를 봅니다.
             </p>
             {tab4SourcePicker}
             {tab4AnchorSummary}
@@ -927,7 +1007,7 @@ export default function HomePage() {
           <span className="text-sm flex-shrink-0 mt-0.5">💡</span>
           <p className="text-xs leading-relaxed" style={{ color: 'var(--muted)' }}>
             관심지역이 설정되지 않아 <strong style={{ color: 'var(--text)' }}>현재 위치({location.name})</strong> 기준으로 표시됩니다.
-            위의 검색창에서 지역을 고정하면 독립적으로 관리됩니다.
+            상단 검색에서 지역을 고정하면 독립적으로 관리됩니다.
           </p>
         </div>
       )}
@@ -943,8 +1023,7 @@ export default function HomePage() {
         onScheduleChange={setTab2VisitSchedule}
         pinnedLocation={tab2Location}
         onLocationSelect={handleSaveTab2Location}
-        gpsLoading={gpsLoading}
-        onUseCurrentLocation={handleInterestTabUseCurrentGps}
+        showLocationBar={false}
       />
     </>
   )
@@ -969,11 +1048,13 @@ export default function HomePage() {
       {/* ── Mobile (< lg) ── */}
       <div className="lg:hidden">
         <MobileLayout
+          selectedTab={mobileLayoutTab}
+          onTabChange={setMobileLayoutTab}
           tabs={[
             {
               key: 'current',
               icon: '🌤',
-              label: '날씨 / 위치',
+              label: '현재위치',
               header: tab1Header,
               content: (
                 <>
@@ -1003,7 +1084,7 @@ export default function HomePage() {
               icon: '⛳',
               label: '단기 예측',
               header: tab4Header,
-              content: <SpotPanel anchorLocation={spotLocation} />,
+              content: <SpotPanel anchorLocation={spotLocation} showLocationSearch={false} />,
             },
           ]}
         />

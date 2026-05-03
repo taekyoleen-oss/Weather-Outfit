@@ -14,12 +14,25 @@ interface TabConfig {
 interface Props {
   tabs: readonly TabConfig[]
   defaultTab?: string
+  /** 부모에서 탭을 제어할 때(예: 다른 탭으로 프로그램 이동) */
+  selectedTab?: string
+  onTabChange?: (key: string) => void
 }
 
 const SWIPE_MIN_PX = 56
 
-export function MobileLayout({ tabs, defaultTab }: Props) {
-  const [activeTab, setActiveTab] = useState<string>(defaultTab ?? tabs[0]?.key ?? '')
+export function MobileLayout({ tabs, defaultTab, selectedTab, onTabChange }: Props) {
+  const [internalTab, setInternalTab] = useState<string>(defaultTab ?? tabs[0]?.key ?? '')
+  const isControlled = selectedTab !== undefined && onTabChange !== undefined
+  const activeTab = isControlled ? selectedTab! : internalTab
+  const setActiveTab = useCallback(
+    (key: string) => {
+      onTabChange?.(key)
+      if (!isControlled) setInternalTab(key)
+    },
+    [isControlled, onTabChange],
+  )
+
   const current = tabs.find(t => t.key === activeTab) ?? tabs[0]
 
   const touchStartRef = useRef<{ x: number; y: number } | null>(null)
@@ -45,14 +58,14 @@ export function MobileLayout({ tabs, defaultTab }: Props) {
       const idx = tabs.findIndex((x) => x.key === activeTab)
       if (idx < 0) return
 
-      // 손가락을 왼쪽으로 밀면(dx < 0) 왼쪽 탭, 오른쪽으로 밀면 오른쪽 탭
-      if (dx < 0 && idx > 0) {
-        setActiveTab(tabs[idx - 1]!.key)
-      } else if (dx > 0 && idx < tabs.length - 1) {
+      // 왼쪽으로 스와이프(dx < 0) → 다음 탭, 오른쪽(dx > 0) → 이전 탭
+      if (dx < 0 && idx < tabs.length - 1) {
         setActiveTab(tabs[idx + 1]!.key)
+      } else if (dx > 0 && idx > 0) {
+        setActiveTab(tabs[idx - 1]!.key)
       }
     },
-    [activeTab, tabs],
+    [activeTab, setActiveTab, tabs],
   )
 
   if (!current) return null

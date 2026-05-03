@@ -459,39 +459,16 @@ export function OutfitPanel({
         isMobileSheet ? 'p-3 space-y-3' : 'p-4 sm:p-6 space-y-4 sm:space-y-5'
       }`}
     >
-      <div className={`flex items-start justify-between gap-2 ${isMobileSheet ? '' : 'flex-col'}`}>
-        <h2
-          className={`font-bold min-w-0 flex-1 ${isMobileSheet ? 'text-sm' : 'text-base'}`}
-          style={{ color: 'var(--primary)' }}
-        >
-          {isMobileSheet ? '복장 추천' : '복장 추천 설정'}
-        </h2>
-        {isMobileSheet && (
-          <button
-            type="button"
-            onClick={() => setSheetSettings(true)}
-            className="shrink-0 max-w-[55%] text-right text-[10px] font-semibold py-1.5 px-2 rounded-lg transition-colors active:scale-[0.99]"
-            style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              color: 'var(--text)',
-            }}
-          >
-            <span className="block mb-0.5" style={{ color: 'var(--muted)' }}>
-              세부 옵션
-            </span>
-            <span className="block truncate leading-snug">
-              성별 · 체감 ({SENSITIVITY_LABEL_MAP[sensitivity]})
-            </span>
-          </button>
-        )}
-      </div>
+      {!isMobileSheet && (
+        <div className="flex items-start justify-between gap-2 flex-col">
+          <h2 className="font-bold min-w-0 flex-1 text-base" style={{ color: 'var(--primary)' }}>
+            복장 추천 설정
+          </h2>
+        </div>
+      )}
 
       {isMobileSheet && mobileInterestSchedule && onMobileInterestScheduleChange && (
         <div className="space-y-2">
-          <p className="text-[10px] font-semibold" style={{ color: 'var(--muted)' }}>
-            관심 지역 · 날짜·시간대
-          </p>
           <label className="block space-y-1">
             <span className="text-[10px]" style={{ color: 'var(--muted)' }}>날짜</span>
             <input
@@ -647,6 +624,27 @@ export function OutfitPanel({
               weather
                 ? { skyCode: weather.skyCode, ptyCode: weather.ptyCode }
                 : undefined
+            }
+            headerEnd={
+              isMobileSheet ? (
+                <button
+                  type="button"
+                  onClick={() => setSheetSettings(true)}
+                  className="max-w-[55vw] sm:max-w-[55%] text-right text-[10px] font-semibold py-1.5 px-2 rounded-lg transition-colors active:scale-[0.99]"
+                  style={{
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text)',
+                  }}
+                >
+                  <span className="block mb-0.5" style={{ color: 'var(--muted)' }}>
+                    세부 옵션
+                  </span>
+                  <span className="block truncate leading-snug">
+                    성별 · 체감 ({SENSITIVITY_LABEL_MAP[sensitivity]})
+                  </span>
+                </button>
+              ) : undefined
             }
           />
           {isMobileSheet ? (
