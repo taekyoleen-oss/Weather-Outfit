@@ -27,6 +27,9 @@ interface Props {
   onScheduleChange: (s: VisitSchedule) => void
   pinnedLocation: LocationInfo | null
   onLocationSelect: (loc: LocationInfo) => void
+  /** GPS로 관심지역·일정을 현재 위치/시간으로 맞출 때(탭1과 로딩 공유) */
+  gpsLoading?: boolean
+  onUseCurrentLocation?: () => void
 }
 
 const DAY_KOR = ['일', '월', '화', '수', '목', '금', '토']
@@ -140,6 +143,8 @@ export function InterestLocationCard({
   onScheduleChange,
   pinnedLocation,
   onLocationSelect,
+  gpsLoading = false,
+  onUseCurrentLocation,
 }: Props) {
   const todayYmd = kstTodayYmd()
   const visitYmd = schedule.visitDateYmd
@@ -252,11 +257,36 @@ export function InterestLocationCard({
 
       <div className="glass-card rounded-lg px-3 py-3 space-y-3">
         <p className="text-xs font-semibold" style={{ color: 'var(--muted)' }}>관심 지역</p>
-        <CompactLocationBar
-          currentLocation={pinnedLocation}
-          onSelect={onLocationSelect}
-          placeholder={pinnedLocation ? pinnedLocation.name : '관심 지역 검색'}
-        />
+        <div className="flex gap-2 items-end">
+          <div className="flex-1 min-w-0">
+            <CompactLocationBar
+              currentLocation={pinnedLocation}
+              onSelect={onLocationSelect}
+              placeholder={pinnedLocation ? pinnedLocation.name : '관심 지역 검색'}
+            />
+          </div>
+          {onUseCurrentLocation && (
+            <button
+              type="button"
+              onClick={onUseCurrentLocation}
+              disabled={gpsLoading}
+              className="flex items-center justify-center transition-all active:opacity-80 flex-shrink-0"
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 8,
+                fontSize: 20,
+                color: gpsLoading ? 'var(--muted)' : 'var(--humidity)',
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+              }}
+              aria-label="현재 위치로 관심지역·조회 일정을 맞추기"
+              title="현재 GPS 위치로 고정하고, 조회 날짜·시간대를 지금으로"
+            >
+              {gpsLoading ? '⟳' : '📍'}
+            </button>
+          )}
+        </div>
 
         <label className="block space-y-1">
           <span className="text-[10px] font-semibold" style={{ color: 'var(--muted)' }}>

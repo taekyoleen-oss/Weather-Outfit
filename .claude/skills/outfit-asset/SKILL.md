@@ -1,4 +1,4 @@
-# Skill: outfit-asset — WeatherFit 복장 자산 생성 & 최적화
+# Skill: outfit-asset — Weather Outfit 복장 자산 생성 & 최적화
 
 ## 트리거 조건
 
@@ -13,7 +13,7 @@
 
 ## 스킬 목적
 
-WeatherFit의 `public/outfit/` 자산을 **동일한 스타일**로 제작·변환·앱 연동하는 전 과정을 자동화합니다.
+Weather Outfit의 `public/outfit/` 자산을 **동일한 스타일**로 제작·변환·앱 연동하는 전 과정을 자동화합니다.
 
 1. **스타일 가이드** — 새 PNG를 생성할 때 사용하는 프롬프트 규칙
 2. **PNG → WebP 변환** — `scripts/convert-outfit-to-webp.mjs` 실행

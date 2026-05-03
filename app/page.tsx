@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { DashboardShell } from '@/components/layout/DashboardShell'
 import { MobileLayout } from '@/components/layout/MobileLayout'
 import { LocationSearchBar } from '@/components/weather/LocationSearchBar'
@@ -241,6 +241,8 @@ export default function HomePage() {
   const { data: weatherData, loading: weatherLoading } = useWeather(location)
   const { data: weekly, loading: weeklyLoading } = useWeeklyForecast(location)
   const hour = useNowMinute()
+  const hourRef = useRef(hour)
+  hourRef.current = hour
 
   const [dust, setDust] = useState<DustData | null>(null)
   const [pollen, setPollen] = useState<PollenData | null>(null)
@@ -615,6 +617,17 @@ export default function HomePage() {
     saveRecentLocation(loc)
   }
 
+  /** 관심지역 탭: GPS로 고정 + 관심 일정을 지금 시각 기준으로 초기화 */
+  const handleInterestTabUseCurrentGps = useCallback(() => {
+    requestGps({
+      reason: 'manual',
+      onResolved: (loc) => {
+        handleSaveTab2Location(loc)
+        setTab2VisitSchedule(defaultVisitSchedule(hourRef.current))
+      },
+    })
+  }, [requestGps, handleSaveTab2Location])
+
   // ── Shared nodes ──────────────────────────────────────────────────────────
   const locationSearch = <LocationSearchBar onSelect={handleSelectLocation} />
   const recentChips = <RecentChips onSelect={handleSelectLocation} currentName={location.name} />
@@ -767,10 +780,29 @@ export default function HomePage() {
         <span className="text-sm font-bold" style={{ color: tab2Location ? 'var(--primary)' : 'var(--muted)' }}>
           {tab2Location ? '📌' : '📍'}
         </span>
-        <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>관심지역</span>
-        <span className="text-xs truncate flex-1" style={{ color: 'var(--muted)' }}>
+        <span className="text-sm font-semibold shrink-0" style={{ color: 'var(--text)' }}>관심지역</span>
+        <span className="text-xs truncate flex-1 min-w-0" style={{ color: 'var(--muted)' }}>
           {tab2Location ? `— ${tab2Location.name}` : '— 현재 위치 기준'}
         </span>
+        <button
+          type="button"
+          onClick={() => requestGps({ reason: 'manual' })}
+          disabled={gpsLoading}
+          className="flex items-center justify-center transition-all active:opacity-80 flex-shrink-0"
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 8,
+            fontSize: 18,
+            color: gpsLoading ? 'var(--muted)' : 'var(--humidity)',
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+          }}
+          aria-label="날씨·위치 탭을 현재 GPS 위치로 맞추기"
+          title="날씨/위치 탭을 현재 위치로"
+        >
+          {gpsLoading ? '⟳' : '📍'}
+        </button>
       </div>
     </div>
   )
@@ -911,6 +943,8 @@ export default function HomePage() {
         onScheduleChange={setTab2VisitSchedule}
         pinnedLocation={tab2Location}
         onLocationSelect={handleSaveTab2Location}
+        gpsLoading={gpsLoading}
+        onUseCurrentLocation={handleInterestTabUseCurrentGps}
       />
     </>
   )

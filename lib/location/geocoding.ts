@@ -15,7 +15,7 @@ export async function searchNominatim(query: string): Promise<LocationInfo[]> {
 
   const res = await safeFetch(url, {
     headers: {
-      'User-Agent': 'WeatherFit/1.0 (weather-outfit-suggestion)',
+      'User-Agent': 'Weather-Outfit/1.0 (weather-outfit-suggestion)',
       'Accept-Language': 'ko,en',
     },
     next: { revalidate: 1800 },

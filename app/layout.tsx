@@ -26,9 +26,9 @@ const notoSansKR = Noto_Sans_KR({
 })
 
 export const metadata: Metadata = {
-  title: 'WeatherFit — 날씨 기반 복장 추천',
+  title: 'Weather Outfit — 날씨 기반 복장 추천',
   description: '오늘 날씨에 딱 맞는 복장을 추천해드립니다.',
-  applicationName: 'WeatherFit',
+  applicationName: 'Weather Outfit',
 }
 
 export const viewport: Viewport = {

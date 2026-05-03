@@ -98,9 +98,15 @@ export function useAutoLocation() {
     if (stored) setLocation(stored)
   }, [])
 
-  const requestGps = useCallback((opts?: { reason?: 'manual' | 'auto'; silent?: boolean }) => {
+  const requestGps = useCallback((opts?: {
+    reason?: 'manual' | 'auto'
+    silent?: boolean
+    /** GPS·역지오코딩으로 `location`이 갱신된 직후 (수동 조회 성공 시에만 호출) */
+    onResolved?: (loc: LocationInfo) => void
+  }) => {
     const reason = opts?.reason ?? 'manual'
     const silent = opts?.silent ?? reason === 'auto'
+    const onResolved = opts?.onResolved
     if (!navigator.geolocation) {
       if (!silent) setGpsError('이 브라우저는 위치 서비스를 지원하지 않습니다.')
       return
@@ -133,6 +139,7 @@ export function useAutoLocation() {
         if (!Number.isFinite(loc.nx) || !Number.isFinite(loc.ny)) throw new Error('invalid grid')
         setLocation(loc)
         storeLocation(loc)
+        onResolved?.(loc)
       }
 
       let pos: GeolocationPosition | null = null
