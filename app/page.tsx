@@ -34,7 +34,6 @@ import { feelsLike, weatherLabel, weatherEmojiFromLabel, pickIllustKey, illustFi
 import {
   TIME_PERIODS,
   getPeriodIndex,
-  getPreviousCompletedPeriod,
   samePeriodHourlySliceFloor,
   orderHourlyStripBeforeNoon,
   type TimePeriod,
@@ -48,7 +47,6 @@ import type {
   WeatherAlert,
   CurrentWeather,
   HourlyForecast,
-  PreviousPeriodWeatherSummary,
   MorningSummary,
 } from '@/types/weather'
 import type { LocationInfo } from '@/types/location'
@@ -465,6 +463,12 @@ export default function HomePage() {
   // ── Tab 2: effective location + weather (Tab 1 fallback when not pinned) ──
   const tab2EffectiveLocation = tab2Location ?? location
   const tab2EffectiveWeather = tab2WeatherData ?? (tab2Location ? null : weatherData)
+  /** 동일 격자면 탭1 응답으로 통일(이중 fetch·초단기 보정 불일치 방지) */
+  const tab2SameGridAsTab1 =
+    weatherData != null &&
+    tab2EffectiveLocation.nx === location.nx &&
+    tab2EffectiveLocation.ny === location.ny
+  const tab2DisplayWeather = tab2SameGridAsTab1 ? weatherData : tab2EffectiveWeather
   const tab2IsFallback = !tab2Location
 
   /** 관심지역 기준 좌표를 「현재위치」탭(탭1)에 적용 후 첫 탭으로 이동 */
@@ -476,8 +480,8 @@ export default function HomePage() {
 
   // ── Tab 2: weekly display ─────────────────────────────────────────────────
   const tab2WeeklyDisplay = useMemo(
-    () => mergeWeeklyDailyStartingTomorrow(tab2Weekly, tab2EffectiveWeather?.hourly ?? [], todayYmdKst),
-    [tab2Weekly, tab2EffectiveWeather?.hourly, todayYmdKst],
+    () => mergeWeeklyDailyStartingTomorrow(tab2Weekly, tab2DisplayWeather?.hourly ?? [], todayYmdKst),
+    [tab2Weekly, tab2DisplayWeather?.hourly, todayYmdKst],
   )
 
   // ── Tab 2: alerts ─────────────────────────────────────────────────────────
@@ -494,39 +498,12 @@ export default function HomePage() {
 
   // ── Tab 2 hourly: upcoming from current hour (Tab 1 fallback) ─────────────
   const tab2HourlyDisplay = useMemo(() => {
-    const hourly = (tab2Location ? tab2WeatherData : weatherData)?.hourly ?? []
+    const hourly = tab2DisplayWeather?.hourly ?? []
     if (!hourly.length) return []
     const toHourNum = (t: string) => parseInt(t.split(':')[0], 10)
     const idx = hourly.findIndex(h => toHourNum(h.time) >= hour)
     return idx >= 0 ? hourly.slice(idx) : hourly
-  }, [tab2Location, tab2WeatherData, weatherData, hour])
-
-  // ── Previous period / morning summary ────────────────────────────────────
-  const previousPeriodSummary = useMemo((): PreviousPeriodWeatherSummary | null => {
-    const hourly = weatherData?.hourly ?? []
-    if (!hourly.length) return null
-    const prev = getPreviousCompletedPeriod(hour)
-    if (!prev) return null
-    const toHourNum = (t: string) => parseInt(t.split(':')[0], 10)
-    const repStr = String(prev.repHour).padStart(2, '0') + ':00'
-    let entry = hourly.find((h) => h.time === repStr) ?? null
-    if (!entry) {
-      const candidates = hourly.filter((h) => {
-        const t = toHourNum(h.time)
-        return t >= prev.start && t <= prev.end && t < hour
-      })
-      entry = candidates.length ? candidates[candidates.length - 1]! : null
-    }
-    if (!entry) return null
-    const wl = weatherLabel(entry.skyCode, entry.ptyCode)
-    return {
-      periodLabel: prev.label,
-      weatherLabel: wl,
-      emoji: weatherEmojiFromLabel(wl),
-      temperature: entry.temperature,
-      feelsLike: feelsLike(entry.temperature, entry.windSpeed, entry.humidity),
-    }
-  }, [weatherData, hour])
+  }, [tab2DisplayWeather?.hourly, hour])
 
   const morningSummary = useMemo((): MorningSummary | null => {
     if (hour < 12) return null
@@ -737,7 +714,6 @@ export default function HomePage() {
       uvDisplay={uvForCard}
       dust={dust}
       alerts={alerts}
-      previousPeriodWeather={previousPeriodSummary}
       openMeteoCompare={openMeteoCompare}
       morningSummary={morningSummary}
       futureDaily={weeklyDisplayDaily.slice(0, 2)}
@@ -1018,13 +994,13 @@ export default function HomePage() {
         </div>
       )}
       <InterestLocationCard
-        weather={tab2EffectiveWeather?.current ?? null}
+        weather={tab2DisplayWeather?.current ?? null}
         hourly={tab2HourlyDisplay}
         daily={tab2WeeklyDisplay}
         alerts={tab2Alerts}
         location={tab2EffectiveLocation}
         currentHour={hour}
-        loading={(tab2Location ? tab2WeatherLoading : weatherLoading) && !tab2EffectiveWeather}
+        loading={(tab2Location ? tab2WeatherLoading : weatherLoading) && !tab2DisplayWeather}
         schedule={tab2VisitSchedule ?? defaultVisitSchedule(hour)}
         onScheduleChange={setTab2VisitSchedule}
         pinnedLocation={tab2Location}

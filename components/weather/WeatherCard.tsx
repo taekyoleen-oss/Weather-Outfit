@@ -9,7 +9,6 @@ import type {
   TimeOfDay,
   DustData,
   WeatherAlert,
-  PreviousPeriodWeatherSummary,
   MorningSummary,
   DailyForecast,
 } from '@/types/weather'
@@ -43,8 +42,6 @@ interface Props {
   uvDisplay?: number
   dust?: DustData | null
   alerts?: WeatherAlert[]
-  /** 직전에 끝난 시간대(예: 새벽) 대표 날씨 */
-  previousPeriodWeather?: PreviousPeriodWeatherSummary | null
   /** 어제 동시간대·오늘 일 최저·최고 (Open-Meteo) */
   openMeteoCompare?: OpenMeteoDailyCompare | null
   /** 오전(6–11시) 날씨 요약 — 오후에만 전달 */
@@ -235,7 +232,6 @@ export function WeatherCard({
   uvDisplay,
   dust,
   alerts,
-  previousPeriodWeather,
   openMeteoCompare,
   morningSummary,
   futureDaily,
@@ -358,28 +354,6 @@ export function WeatherCard({
           ) : null}
         </p>
       </div>
-
-      {previousPeriodWeather && (
-        <div
-          className="mt-2 rounded-lg px-2.5 py-2 text-left"
-          style={{
-            background: isDark ? 'rgba(255,255,255,0.08)' : 'var(--primary-tint-08)',
-            border: `1px solid ${isDark ? 'var(--colors-hairline-dark)' : 'rgba(0, 112, 209, 0.2)'}`,
-          }}
-        >
-          <p className="text-[10px] font-medium leading-tight" style={{ color: mutedColor }}>
-            직전 시간대 · {previousPeriodWeather.periodLabel}
-          </p>
-          <p className="text-xs font-semibold mt-1 tabular-nums leading-snug" style={{ color: textColor }}>
-            <span className="mr-1">{previousPeriodWeather.emoji}</span>
-            {previousPeriodWeather.weatherLabel}
-            <span className="mx-1 font-normal" style={{ color: mutedColor }}>·</span>
-            {formatTemp1(previousPeriodWeather.temperature)}°
-            <span className="font-normal mx-1" style={{ color: mutedColor }}>/</span>
-            체감 {formatTemp1(previousPeriodWeather.feelsLike)}°
-          </p>
-        </div>
-      )}
 
       {morningSummary && (
         <div
