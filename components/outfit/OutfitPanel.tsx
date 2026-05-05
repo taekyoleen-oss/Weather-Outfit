@@ -102,12 +102,25 @@ function periodChipNameFromHours(startHour: number, endHour: number): string {
   return i >= 0 ? PERIOD_CHIP_LABELS_KO[i] : '선택 구간'
 }
 
-/** 모바일 시간대 칩 맨 위 라벨 — 오늘은 구간명만, 미래는 「내일 새벽」「모레 아침」 등 */
-function mobileChipPeriodLineLabel(visitYmd: string, periodIdx: number): string {
+/**
+ * 모바일 시간대 칩 맨 위 라벨.
+ * - 조회일이 오늘: 현재 구간 이후에 이어지는(자정을 넘기는) 슬롯은 「내일 새벽」 등
+ * - 조회일이 모레 이상: 날짜+구간
+ * - 조회일이 내일: 전부 「내일 …」
+ */
+function mobileChipPeriodLineLabel(
+  visitYmd: string,
+  periodIdx: number,
+  currentPeriodIdx: number,
+): string {
   const todayYmd = kstTodayYmd()
   const base = PERIOD_CHIP_LABELS_KO[periodIdx]
   const diff = diffCalendarDaysYmd(todayYmd, visitYmd)
-  if (diff <= 0) return base
+  if (diff < 0) return base
+  if (diff === 0) {
+    if (periodIdx < currentPeriodIdx) return `내일 ${base}`
+    return base
+  }
   if (diff === 1) return `내일 ${base}`
   if (diff === 2) return `모레 ${base}`
   return `${visitYmd.slice(4, 6)}/${visitYmd.slice(6, 8)} ${base}`
@@ -120,23 +133,30 @@ function buildOutfitPeriodChipPreviews(
   scheduleYmd: string,
   hourly: HourlyForecast[],
   daily: DailyForecast[],
+  currentPeriodIdx: number,
 ): { source: 'hourly' | 'daily_est'; conditionLabel: string; tempLine: string }[] {
   const todayYmd = kstTodayYmd()
   const slotYmds = buildHourlySlotYmds(hourly, todayYmd)
-  const nextYmd = addCalendarDaysFromKstYmd(scheduleYmd, 1)
-  const dayRow = daily.find((d) => d.date === scheduleYmd)
 
   return TIME_PERIODS.map((p, idx) => {
+    /** 오늘 조회일에서 구간 순서가 자정을 넘기면 해당 칸은 다음날 달력 기준 예보 */
+    const periodDayYmd =
+      scheduleYmd === todayYmd && idx < currentPeriodIdx
+        ? addCalendarDaysFromKstYmd(scheduleYmd, 1)
+        : scheduleYmd
+    const nextYmd = addCalendarDaysFromKstYmd(periodDayYmd, 1)
+    const dayRow = daily.find((d) => d.date === periodDayYmd)
+
     const inRange = hourly.filter((h, i) => {
       const slotYmd = slotYmds[i]
       if (!slotYmd) return false
       const hourNum = parseInt(h.time.slice(0, 2), 10)
       if (Number.isNaN(hourNum)) return false
       if (p.start <= p.end) {
-        return slotYmd === scheduleYmd && hourNum >= p.start && hourNum <= p.end
+        return slotYmd === periodDayYmd && hourNum >= p.start && hourNum <= p.end
       }
       return (
-        (slotYmd === scheduleYmd && hourNum >= p.start) ||
+        (slotYmd === periodDayYmd && hourNum >= p.start) ||
         (slotYmd === nextYmd && hourNum <= p.end)
       )
     })
@@ -428,9 +448,17 @@ export function OutfitPanel({
   const periodChipPreviewYmd =
     isMobileSheet && mobileInterestSchedule ? mobileInterestSchedule.visitDateYmd : scheduleYmd
 
+  const currentPeriodIdxForChips = getPeriodIndex(outfitCurrentKstHour)
+
   const periodChipPreviews = useMemo(
-    () => buildOutfitPeriodChipPreviews(periodChipPreviewYmd, hourly, daily),
-    [periodChipPreviewYmd, hourly, daily],
+    () =>
+      buildOutfitPeriodChipPreviews(
+        periodChipPreviewYmd,
+        hourly,
+        daily,
+        currentPeriodIdxForChips,
+      ),
+    [periodChipPreviewYmd, hourly, daily, currentPeriodIdxForChips],
   )
 
   /** 오늘: 현재 시간대 → 오른쪽으로 새벽·아침·점심·저녁 순(순환). 그 외 날짜: 새벽부터 */
@@ -510,9 +538,14 @@ export function OutfitPanel({
               onChange={(e) => {
                 const v = e.target.value
                 if (!v) return
+                let ymd = isoToYmd(v)
+                const today = kstTodayYmd()
+                if (diffCalendarDaysYmd(today, ymd) < 0) {
+                  ymd = today
+                }
                 onMobileInterestScheduleChange({
                   ...mobileInterestSchedule,
-                  visitDateYmd: isoToYmd(v),
+                  visitDateYmd: ymd,
                 })
               }}
             />
@@ -558,7 +591,11 @@ export function OutfitPanel({
                     className="font-semibold leading-tight text-[9px] sm:text-[10px] break-keep line-clamp-2 w-full px-0.5"
                     style={{ color: selected ? 'var(--primary)' : 'var(--text)' }}
                   >
-                    {mobileChipPeriodLineLabel(mobileInterestSchedule.visitDateYmd, periodIdx)}
+                    {mobileChipPeriodLineLabel(
+                      mobileInterestSchedule.visitDateYmd,
+                      periodIdx,
+                      currentPeriodIdxForChips,
+                    )}
                   </span>
                   <span className="text-[15px] sm:text-base leading-none" aria-hidden>
                     {wxEmoji}

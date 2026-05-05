@@ -1,4 +1,4 @@
-import { addCalendarDaysFromKstYmd, kstTodayYmd } from '@/lib/utils/timeOfDay'
+import { addCalendarDaysFromKstYmd, diffCalendarDaysYmd, kstTodayYmd } from '@/lib/utils/timeOfDay'
 import { TIME_PERIODS, getPeriodIndex } from '@/lib/utils/timePeriods'
 
 export interface VisitScheduleShape {
@@ -61,8 +61,8 @@ export function migrateLegacyVisitSchedule(raw: unknown, todayYmd: string): Visi
 }
 
 /**
- * 형식 보정·당일이면 이미 지난 시간대만 현재 구간으로 갱신.
- * 날짜 자체(과거·미래)는 사용자 선택을 유지합니다.
+ * 형식 보정·과거 날짜는 오늘로 올림·당일이면 이미 지난 시간대만 현재 구간으로 갱신.
+ * 미래 날짜는 유지합니다.
  */
 export function normalizeVisitScheduleIfPast(
   s: VisitScheduleShape,
@@ -72,6 +72,9 @@ export function normalizeVisitScheduleIfPast(
   let next = snapScheduleToPeriodBounds(s)
   if (!/^\d{8}$/.test(next.visitDateYmd)) {
     return defaultVisitSchedule(nowHour)
+  }
+  if (diffCalendarDaysYmd(todayYmd, next.visitDateYmd) < 0) {
+    next = { ...next, visitDateYmd: todayYmd }
   }
   if (next.visitDateYmd === todayYmd && next.endHour <= nowHour) {
     const i = getPeriodIndex(nowHour)

@@ -260,8 +260,7 @@ export default function HomePage() {
       const raw = localStorage.getItem(TAB2_STORAGE_KEY)
       if (raw) {
         setTab2Location(JSON.parse(raw) as LocationInfo)
-        /** 저장된 관심지역이 있으면 외출옷·단기예측 위치 소스 기본값을 관심지역으로 */
-        setTab3Source('tab2')
+        /** 단기예측 탭: 저장된 관심지역이 있으면 위치 소스 기본값을 관심지역으로 (외출옷 탭은 현재위치 기본 유지) */
         setTab4Source('tab2')
       }
     } catch { /* ignore */ }
