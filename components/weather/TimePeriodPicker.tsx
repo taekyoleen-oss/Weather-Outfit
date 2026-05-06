@@ -168,7 +168,8 @@ export function TimePeriodPicker({
     }
 
     const isSelected =
-      selectedRepHour === period.repHour && targetYmd === selectedScheduleYmd
+      getPeriodIndex(selectedRepHour) === getPeriodIndex(period.repHour) &&
+      targetYmd === selectedScheduleYmd
 
     return {
       period,

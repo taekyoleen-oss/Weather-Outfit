@@ -23,7 +23,9 @@ export function snapScheduleToPeriodBounds(s: VisitScheduleShape): VisitSchedule
 /** 시간대별 대표 시각(시간별 예보 슬롯 선택용) */
 export function repHourForVisitSchedule(s: VisitScheduleShape): number {
   const m = TIME_PERIODS.find((p) => p.start === s.startHour && p.end === s.endHour)
-  return m?.repHour ?? s.startHour
+  if (m) return m.repHour
+  const i = getPeriodIndex(Math.min(Math.max(s.startHour, 0), 23))
+  return TIME_PERIODS[i]!.repHour
 }
 
 export function defaultVisitSchedule(nowHour: number): VisitScheduleShape {

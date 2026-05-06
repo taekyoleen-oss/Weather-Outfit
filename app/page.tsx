@@ -351,7 +351,7 @@ export default function HomePage() {
 
   const todayYmdKst = kstTodayYmd()
   const presetChipPeriod = useMemo(
-    () => TIME_PERIODS.find((p) => p.repHour === periodPreset.repHour) ?? TIME_PERIODS[2],
+    () => TIME_PERIODS[getPeriodIndex(periodPreset.repHour)],
     [periodPreset.repHour],
   )
   const outfitIsNowPeriod =
