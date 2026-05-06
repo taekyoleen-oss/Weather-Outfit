@@ -422,6 +422,13 @@ export default function HomePage() {
     setWxActivityHours(null)
   }
 
+  const handleScheduleYmdChange = useCallback((ymd: string) => {
+    setScheduleYmd(ymd)
+    const off = Math.max(0, diffCalendarDaysYmd(kstTodayYmd(), ymd))
+    setPeriodPreset((prev) => ({ ...prev, dayOffset: off }))
+    setWxActivityHours(null)
+  }, [])
+
   /** 관심지역 탭 일정 → 복장 기준일·시간대 동기화 (날씨 최초 로드 시 기간 리셋 이후에도 다시 맞춤) */
   useEffect(() => {
     if (!tab2VisitSchedule) return
@@ -734,7 +741,7 @@ export default function HomePage() {
       }
       hourly={outfitWeatherData?.hourly ?? []}
       selectedRepHour={periodPreset.repHour}
-      selectedDayOffset={periodPreset.dayOffset}
+      selectedScheduleYmd={scheduleYmd}
       sunsetTime={sunriseSunset?.sunset}
       onSelectPreset={handleSelectPreset}
     />
@@ -755,7 +762,7 @@ export default function HomePage() {
     scheduleYmd,
     scheduleYmdMin: outfitForecastYmdBounds.min,
     scheduleYmdMax: outfitForecastYmdBounds.max,
-    onScheduleYmdChange: setScheduleYmd,
+    onScheduleYmdChange: handleScheduleYmdChange,
     activityStartHourMin: outfitIsNowPeriod ? (hour + 1) % 24 : 0,
     onActivityHoursChange: (s: number, e: number) => setWxActivityHours({ start: s, end: e }),
     mobileInterestSchedule: tab2VisitSchedule,

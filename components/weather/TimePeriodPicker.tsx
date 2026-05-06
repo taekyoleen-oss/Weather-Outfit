@@ -49,7 +49,8 @@ interface Props {
   currentConditions?: { temperature: number; skyCode: SkyCode; ptyCode: PtyCode } | null
   hourly: HourlyForecast[]
   selectedRepHour: number
-  selectedDayOffset: number
+  /** 복장·날씨 기준일(KST yyyymmdd). 칩 선택 표시는 달력 일자와 대표 시각으로 맞춘다 */
+  selectedScheduleYmd: string
   sunsetTime?: string
   onSelectPreset: (repHour: number, dayOffset: number) => void
 }
@@ -99,7 +100,7 @@ export function TimePeriodPicker({
   currentConditions,
   hourly,
   selectedRepHour,
-  selectedDayOffset,
+  selectedScheduleYmd,
   sunsetTime,
   onSelectPreset,
 }: Props) {
@@ -166,7 +167,8 @@ export function TimePeriodPicker({
       temperature = atStart?.temperature
     }
 
-    const isSelected = selectedRepHour === period.repHour && selectedDayOffset === dayOffset
+    const isSelected =
+      selectedRepHour === period.repHour && targetYmd === selectedScheduleYmd
 
     return {
       period,
