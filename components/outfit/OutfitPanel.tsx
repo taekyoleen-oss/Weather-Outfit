@@ -561,9 +561,17 @@ export function OutfitPanel({
           <div className="grid grid-cols-4 gap-1">
             {mobilePeriodChipIndices.map((periodIdx) => {
               const p = TIME_PERIODS[periodIdx]!
+              const todayYmd = kstTodayYmd()
+              const visitYmd = mobileInterestSchedule.visitDateYmd
+              /** 오늘 조회일에서 칩 순서가 자정 넘김이면 이 칸은 다음날 달력(내일 …) */
+              const chipTargetYmd =
+                visitYmd === todayYmd && periodIdx < currentPeriodIdxForChips
+                  ? addCalendarDaysFromKstYmd(todayYmd, 1)
+                  : visitYmd
               const selected =
                 mobileInterestSchedule.startHour === p.start &&
-                mobileInterestSchedule.endHour === p.end
+                mobileInterestSchedule.endHour === p.end &&
+                mobileInterestSchedule.visitDateYmd === chipTargetYmd
               const preview = periodChipPreviews[periodIdx]!
               const wxEmoji =
                 preview.conditionLabel !== '—'
@@ -582,6 +590,7 @@ export function OutfitPanel({
                   onClick={() =>
                     onMobileInterestScheduleChange({
                       ...mobileInterestSchedule,
+                      visitDateYmd: chipTargetYmd,
                       startHour: p.start,
                       endHour: p.end,
                     })
