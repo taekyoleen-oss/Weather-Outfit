@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback, type TouchEvent } from 'react'
+import { useState, useCallback } from 'react'
 import type { ReactNode } from 'react'
 
 interface TabConfig {
@@ -19,8 +19,6 @@ interface Props {
   onTabChange?: (key: string) => void
 }
 
-const SWIPE_MIN_PX = 56
-
 export function MobileLayout({ tabs, defaultTab, selectedTab, onTabChange }: Props) {
   const [internalTab, setInternalTab] = useState<string>(defaultTab ?? tabs[0]?.key ?? '')
   const isControlled = selectedTab !== undefined && onTabChange !== undefined
@@ -35,48 +33,11 @@ export function MobileLayout({ tabs, defaultTab, selectedTab, onTabChange }: Pro
 
   const current = tabs.find(t => t.key === activeTab) ?? tabs[0]
 
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
-
-  const onSwipeZoneTouchStart = useCallback((e: TouchEvent) => {
-    const t = e.targetTouches[0]
-    if (!t) return
-    touchStartRef.current = { x: t.clientX, y: t.clientY }
-  }, [])
-
-  const onSwipeZoneTouchEnd = useCallback(
-    (e: TouchEvent) => {
-      const start = touchStartRef.current
-      touchStartRef.current = null
-      if (!start || tabs.length < 2) return
-      const t = e.changedTouches[0]
-      if (!t) return
-      const dx = t.clientX - start.x
-      const dy = t.clientY - start.y
-      if (Math.abs(dx) < SWIPE_MIN_PX) return
-      if (Math.abs(dx) < Math.abs(dy) * 1.25) return
-
-      const idx = tabs.findIndex((x) => x.key === activeTab)
-      if (idx < 0) return
-
-      // 왼쪽으로 스와이프(dx < 0) → 다음 탭, 오른쪽(dx > 0) → 이전 탭
-      if (dx < 0 && idx < tabs.length - 1) {
-        setActiveTab(tabs[idx + 1]!.key)
-      } else if (dx > 0 && idx > 0) {
-        setActiveTab(tabs[idx - 1]!.key)
-      }
-    },
-    [activeTab, setActiveTab, tabs],
-  )
-
   if (!current) return null
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--colors-cream-soft)' }}>
-      <div
-        className="flex flex-col flex-1 min-h-0"
-        onTouchStart={onSwipeZoneTouchStart}
-        onTouchEnd={onSwipeZoneTouchEnd}
-      >
+      <div className="flex flex-col flex-1 min-h-0">
         {/* 마케팅형 상단 바 — 화이트 캔버스 + 헤어라인 (검정 바 제거) */}
         <div
           className="sticky top-0 z-40"

@@ -17,7 +17,7 @@ import type {
 import type { TerrainType } from '@/types/location'
 import { addCalendarDaysFromKstYmd, diffCalendarDaysYmd, kstTodayYmd } from '@/lib/utils/timeOfDay'
 import { OutfitDayChecklist } from './OutfitDayChecklist'
-import { weatherEmojiFromLabel, weatherLabel } from '@/lib/utils/formatWeather'
+import { feelsLike, weatherEmojiFromLabel, weatherLabel } from '@/lib/utils/formatWeather'
 import { buildHourlySlotYmds } from '@/lib/utils/resolveHourlyForPeriod'
 import type { VisitSchedule } from '@/lib/utils/visitSchedule'
 import { getPeriodIndex, PERIOD_CHIP_LABELS_KO, TIME_PERIODS } from '@/lib/utils/timePeriods'
@@ -302,6 +302,8 @@ export function OutfitPanel({
   /** SSR·첫 클라이언트 페인트는 서버와 동일한 기본값 → hydration 일치 후 localStorage 복원 */
   const [gender, setGender] = useState<GenderType>('male')
   const [sensitivity, setSensitivity] = useState<SensitivityLevel>(0)
+  /** 모바일 외출옷 칩으로 선택된 실질 날짜 — visitDateYmd 변경 없이 내일 구간 추천 가능 */
+  const [outfitEffectiveYmd, setOutfitEffectiveYmd] = useState<string | null>(null)
 
   useEffect(() => {
     const g = loadPref<GenderType>('wf:gender', 'male')
@@ -370,20 +372,57 @@ export function OutfitPanel({
     mobileInterestSchedule?.visitDateYmd,
   ])
 
-  const result = useMemo(() => {
+  // visitDateYmd가 날짜 입력으로 변경되면 effectiveYmd를 동기화
+  useEffect(() => {
+    if (!isMobileSheet || !mobileInterestSchedule) return
+    setOutfitEffectiveYmd(mobileInterestSchedule.visitDateYmd)
+  }, [isMobileSheet, mobileInterestSchedule?.visitDateYmd])
+
+  /** 칩 선택·날씨 계산에 사용할 실질 날짜: 칩 클릭 시 내일로 갱신, 날짜 입력 시 초기화 */
+  const effectiveOutfitYmd = useMemo(() => {
+    if (isMobileSheet) {
+      if (outfitEffectiveYmd) return outfitEffectiveYmd
+      if (mobileInterestSchedule) return mobileInterestSchedule.visitDateYmd
+    }
+    return scheduleYmd
+  }, [isMobileSheet, outfitEffectiveYmd, mobileInterestSchedule?.visitDateYmd, scheduleYmd])
+
+  /** 칩으로 선택된 날짜·시간대에 맞는 날씨 — 다른 날(내일 등)이면 hourly에서 도출 */
+  const effectiveWeatherForOutfit = useMemo(() => {
     if (!weather) return null
-    // 민감도 보정:
-    // - 더위에 강함(-2) => 체감 온도를 낮춰(더 춥게) 따뜻한 복장 추천
-    // - 추위에 강함(+2) => 체감 온도를 높여(더 덥게) 시원한 복장 추천
-    const adjustedFeelsLike = weather.feelsLike + sensitivity
+    if (effectiveOutfitYmd === scheduleYmd || !hourly.length) return weather
+    const todayYmd = kstTodayYmd()
+    const slotYmds = buildHourlySlotYmds(hourly, todayYmd)
+    const entry = hourly.find((h, i) => {
+      const slotYmd = slotYmds[i]
+      const hourNum = parseInt(h.time.slice(0, 2), 10)
+      return slotYmd === effectiveOutfitYmd && hourNum >= startHour
+    })
+    if (!entry) return weather
+    return {
+      ...weather,
+      temperature: entry.temperature,
+      feelsLike: feelsLike(entry.temperature, entry.windSpeed, entry.humidity),
+      humidity: entry.humidity,
+      windSpeed: entry.windSpeed,
+      skyCode: entry.skyCode,
+      ptyCode: entry.ptyCode,
+      precipitation: entry.precipitation,
+      basisDateKst: effectiveOutfitYmd,
+    }
+  }, [weather, effectiveOutfitYmd, scheduleYmd, hourly, startHour])
+
+  const result = useMemo(() => {
+    if (!effectiveWeatherForOutfit) return null
+    const adjustedFeelsLike = effectiveWeatherForOutfit.feelsLike + sensitivity
     return recommendOutfit({
-      temperature: weather.temperature,
+      temperature: effectiveWeatherForOutfit.temperature,
       feelsLike: adjustedFeelsLike,
-      humidity: weather.humidity,
-      windSpeed: weather.windSpeed,
-      uvIndex: weather.uvIndex,
-      ptyCode: weather.ptyCode,
-      precipitation: weather.precipitation,
+      humidity: effectiveWeatherForOutfit.humidity,
+      windSpeed: effectiveWeatherForOutfit.windSpeed,
+      uvIndex: effectiveWeatherForOutfit.uvIndex,
+      ptyCode: effectiveWeatherForOutfit.ptyCode,
+      precipitation: effectiveWeatherForOutfit.precipitation,
       dustGrade: dust?.pm10Grade ?? '2',
       o3Grade: dust?.o3Grade,
       activity,
@@ -392,22 +431,22 @@ export function OutfitPanel({
       duration: selectedDuration,
       terrain,
     })
-  }, [weather, dust, activity, gender, terrain, sensitivity, startHour, selectedDuration])
+  }, [effectiveWeatherForOutfit, dust, activity, gender, terrain, sensitivity, startHour, selectedDuration])
 
   const periodWeather = useMemo(() => {
     const todayYmd = kstTodayYmd()
     const slotYmds = buildHourlySlotYmds(hourly, todayYmd)
-    const nextYmd = addCalendarDaysFromKstYmd(scheduleYmd, 1)
+    const nextYmd = addCalendarDaysFromKstYmd(effectiveOutfitYmd, 1)
     const inRange = hourly.filter((h, i) => {
       const slotYmd = slotYmds[i]
       if (!slotYmd) return false
       const hourNum = parseInt(h.time.slice(0, 2), 10)
       if (Number.isNaN(hourNum)) return false
       if (startHour <= endHour) {
-        return slotYmd === scheduleYmd && hourNum >= startHour && hourNum <= endHour
+        return slotYmd === effectiveOutfitYmd && hourNum >= startHour && hourNum <= endHour
       }
       return (
-        (slotYmd === scheduleYmd && hourNum >= startHour) ||
+        (slotYmd === effectiveOutfitYmd && hourNum >= startHour) ||
         (slotYmd === nextYmd && hourNum <= endHour)
       )
     })
@@ -432,7 +471,7 @@ export function OutfitPanel({
       }
     }
 
-    const dayRow = daily.find((d) => d.date === scheduleYmd)
+    const dayRow = daily.find((d) => d.date === effectiveOutfitYmd)
     if (dayRow) {
       return {
         source: 'day_daily' as const,
@@ -442,7 +481,7 @@ export function OutfitPanel({
       }
     }
     return null
-  }, [hourly, daily, scheduleYmd, startHour, endHour])
+  }, [hourly, daily, effectiveOutfitYmd, startHour, endHour])
 
   /** 모바일 관심 일정 날짜는 입력값과 즉시 맞춤(페이지 scheduleYmd보다 앞설 수 있음) */
   const periodChipPreviewYmd =
@@ -568,10 +607,11 @@ export function OutfitPanel({
                 visitYmd === todayYmd && periodIdx < currentPeriodIdxForChips
                   ? addCalendarDaysFromKstYmd(todayYmd, 1)
                   : visitYmd
+              // 로컬 startHour/endHour 및 effectiveOutfitYmd 기준으로 선택 여부 판단
               const selected =
-                mobileInterestSchedule.startHour === p.start &&
-                mobileInterestSchedule.endHour === p.end &&
-                mobileInterestSchedule.visitDateYmd === chipTargetYmd
+                startHour === p.start &&
+                endHour === p.end &&
+                effectiveOutfitYmd === chipTargetYmd
               const preview = periodChipPreviews[periodIdx]!
               const wxEmoji =
                 preview.conditionLabel !== '—'
@@ -587,14 +627,12 @@ export function OutfitPanel({
                     background: selected ? 'var(--primary-tint-12)' : 'var(--surface)',
                     border: `2px solid ${selected ? 'var(--primary)' : 'var(--border)'}`,
                   }}
-                  onClick={() =>
-                    onMobileInterestScheduleChange({
-                      ...mobileInterestSchedule,
-                      visitDateYmd: chipTargetYmd,
-                      startHour: p.start,
-                      endHour: p.end,
-                    })
-                  }
+                  onClick={() => {
+                    // visitDateYmd를 변경하지 않고 로컬에서만 시간대·날짜 갱신
+                    setStartHour(p.start)
+                    setEndHour(p.end)
+                    setOutfitEffectiveYmd(chipTargetYmd)
+                  }}
                 >
                   <span
                     className="font-semibold leading-tight text-[9px] sm:text-[10px] break-keep line-clamp-2 w-full px-0.5"
@@ -631,9 +669,19 @@ export function OutfitPanel({
             })}
           </div>
           <div className="space-y-1">
+            {effectiveOutfitYmd !== mobileInterestSchedule.visitDateYmd && (
+              <div className="flex justify-center">
+                <span
+                  className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-0.5 rounded-full"
+                  style={{ background: 'var(--primary-tint-12)', color: 'var(--primary)' }}
+                >
+                  📅 내일 기준 복장 추천
+                </span>
+              </div>
+            )}
             <p className="text-[10px] text-center leading-snug" style={{ color: 'var(--muted)' }}>
-              기준 {scheduleYmd.slice(0, 4)}.{scheduleYmd.slice(4, 6)}.{scheduleYmd.slice(6, 8)} ·{' '}
-              {visitSchedulePeriodLabel(mobileInterestSchedule)}
+              기준 {effectiveOutfitYmd.slice(0, 4)}.{effectiveOutfitYmd.slice(4, 6)}.{effectiveOutfitYmd.slice(6, 8)} ·{' '}
+              {periodChipNameFromHours(startHour, endHour)}
             </p>
             {periodWeather ? (
               <p
@@ -696,13 +744,15 @@ export function OutfitPanel({
             periodWeather={periodWeather}
             resultTitle={isMobileSheet ? '복장 추천' : undefined}
             gender={gender}
-            calendarMonth={calendarMonthKstFromWeather(weather)}
+            calendarMonth={calendarMonthKstFromWeather(effectiveWeatherForOutfit ?? weather)}
             showSunshine={
-              !!weather && weather.ptyCode === '0' && weather.skyCode === '1'
+              !!effectiveWeatherForOutfit &&
+              effectiveWeatherForOutfit.ptyCode === '0' &&
+              effectiveWeatherForOutfit.skyCode === '1'
             }
             weatherSky={
-              weather
-                ? { skyCode: weather.skyCode, ptyCode: weather.ptyCode }
+              effectiveWeatherForOutfit
+                ? { skyCode: effectiveWeatherForOutfit.skyCode, ptyCode: effectiveWeatherForOutfit.ptyCode }
                 : undefined
             }
             headerEnd={
@@ -756,7 +806,7 @@ export function OutfitPanel({
             </div>
           ) : (
             <OutfitLlmSuggest
-              weather={weather}
+              weather={effectiveWeatherForOutfit ?? weather}
               dust={dust}
               activity={activity}
               gender={gender}
@@ -791,7 +841,7 @@ export function OutfitPanel({
       {isMobileSheet && sheetAi && result && weather && (
         <MobileBottomSheet title="AI 복장 코멘트" onClose={() => setSheetAi(false)}>
           <OutfitLlmSuggest
-            weather={weather}
+            weather={effectiveWeatherForOutfit ?? weather}
             dust={dust}
             activity={activity}
             gender={gender}
