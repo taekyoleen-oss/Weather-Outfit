@@ -42,7 +42,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ko" className={`${inter.variable} ${newsreader.variable} ${notoSansKR.variable}`}>
       <body>
         {children}
-        <Footer />
+        <div className="hidden lg:block">
+          <Footer />
+        </div>
       </body>
     </html>
   )

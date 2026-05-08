@@ -157,16 +157,16 @@ export function HourlyWeatherStrip({
             <span className="text-[10px] leading-none select-none opacity-0" aria-hidden>기온</span>
           </div>
           <div className="h-[14px] flex items-center">
-            <span className="text-[10px] font-semibold leading-none" style={{ color: 'var(--muted)' }}>강수(%)</span>
+            <span className="font-semibold leading-none" style={{ fontSize: 10, color: 'var(--muted)' }}>강수(%)</span>
           </div>
           <div className="h-[14px] flex items-center">
-            <span className="text-[10px] font-semibold leading-none" style={{ color: 'var(--muted)' }}>강수량(mm)</span>
+            <span className="font-semibold leading-none" style={{ fontSize: 10, color: 'var(--muted)' }}>강수량(mm)</span>
           </div>
           <div className="h-[14px] flex items-center">
-            <span className="text-[10px] font-semibold leading-none" style={{ color: 'var(--muted)' }}>습도(%)</span>
+            <span className="font-semibold leading-none" style={{ fontSize: 10, color: 'var(--muted)' }}>습도(%)</span>
           </div>
           <div className="h-[14px] flex items-center">
-            <span className="text-[10px] font-semibold leading-none" style={{ color: 'var(--muted)' }}>바람(m/s)</span>
+            <span className="font-semibold leading-none" style={{ fontSize: 10, color: 'var(--muted)' }}>바람(m/s)</span>
           </div>
         </div>
 
@@ -277,10 +277,10 @@ export function HourlyWeatherStrip({
               >
                 {formatTemp1(h.temperature)}°
               </span>
-              <span className="h-[14px] flex items-center justify-center text-xs" style={{ color: 'var(--humidity)' }}>{h.pop > 0 ? h.pop : '-'}</span>
-              <span className="h-[14px] flex items-center justify-center text-xs" style={{ color: 'var(--humidity)' }}>{h.precipitation > 0 ? h.precipitation.toFixed(1) : '-'}</span>
-              <span className="h-[14px] flex items-center justify-center text-xs" style={{ color: 'var(--muted)' }}>{Math.round(h.humidity)}</span>
-              <span className="h-[14px] flex items-center justify-center text-xs" style={{ color: 'var(--muted)' }}>{h.windSpeed.toFixed(1)}</span>
+              <span className="h-[14px] flex items-center justify-center" style={{ fontSize: 11, color: 'var(--humidity)' }}>{h.pop > 0 ? h.pop : '-'}</span>
+              <span className="h-[14px] flex items-center justify-center" style={{ fontSize: 11, color: 'var(--humidity)' }}>{h.precipitation > 0 ? h.precipitation.toFixed(1) : '-'}</span>
+              <span className="h-[14px] flex items-center justify-center" style={{ fontSize: 11, color: 'var(--muted)' }}>{Math.round(h.humidity)}</span>
+              <span className="h-[14px] flex items-center justify-center" style={{ fontSize: 11, color: 'var(--muted)' }}>{h.windSpeed.toFixed(1)}</span>
             </div>
             </div>
             )
