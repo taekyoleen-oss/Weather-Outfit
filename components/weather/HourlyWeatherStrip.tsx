@@ -132,7 +132,7 @@ export function HourlyWeatherStrip({
 
   return (
     <div
-      className="glass-card p-3 sm:p-4"
+      className="glass-card wf-hourly-strip p-3 sm:p-4"
       style={
         fadeNonMatchingTargetYmd && highlightTargetYmd && !hasAnySlotForTarget
           ? { opacity: 0.45 }

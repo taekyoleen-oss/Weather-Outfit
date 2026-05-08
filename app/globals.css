@@ -279,3 +279,21 @@ body {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
 }
+
+/* 모바일 가독성: 1.5배 폰트 확대 (text-xl 이상 이미 큰 요소는 제외)
+   Tailwind utilities(@layer)보다 비-레이어 규칙이 CSS cascade 상 우선 적용됨 */
+@media (max-width: 639px) {
+  .text-\[8px\]  { font-size: 12px; }
+  .text-\[9px\]  { font-size: 14px; }
+  .text-\[10px\] { font-size: 15px; }
+  .text-\[11px\] { font-size: 16px; }
+  .text-xs { font-size: 18px; line-height: 1.4; }
+  .text-sm { font-size: 20px; line-height: 1.45; }
+
+  /* 시간별 예보 스트립: 픽셀 단위 고정 행 높이 — 예외적으로 compact 유지 */
+  .wf-hourly-strip .text-\[8px\]  { font-size: 10px; }
+  .wf-hourly-strip .text-\[10px\] { font-size: 11px; }
+  .wf-hourly-strip .text-\[11px\] { font-size: 12px; }
+  .wf-hourly-strip .text-xs { font-size: 12px; line-height: 1; }
+  .wf-hourly-strip .text-sm { font-size: 13px; line-height: 1.3; }
+}

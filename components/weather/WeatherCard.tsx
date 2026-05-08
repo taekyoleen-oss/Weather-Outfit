@@ -288,7 +288,7 @@ export function WeatherCard({
 
   return (
     <div
-      className="glass-card px-4 py-3 sm:px-6 overflow-hidden"
+      className="glass-card px-3 py-2.5 sm:px-6 sm:py-3 overflow-hidden"
       style={{
         background: BG_MAP[period],
         border: isDark ? 'none' : undefined,
@@ -383,7 +383,7 @@ export function WeatherCard({
       )}
 
       {/* Stats grid: row1 = 체감/습도/바람, row2 = 가시거리/일출/일몰 */}
-      <div className="mt-2.5 grid grid-cols-3 gap-x-2 gap-y-2 text-xs sm:text-sm">
+      <div className="mt-2 grid grid-cols-3 gap-x-2 gap-y-2 text-xs sm:text-sm">
         {/* 체감온도 with ℹ — 폭염/한파 기준 안내 */}
         <div className="text-center min-w-0 relative">
           <p className="text-xs" style={{ color: mutedColor }}>체감</p>
@@ -425,7 +425,7 @@ export function WeatherCard({
       {/* 열지수 (습도 기반) — 기온 27°C↑, 습도 40%↑ 조건에서만 표시 */}
       {heatIdx != null && heatIdxDiff != null && heatIdxDiff >= 2 && (
         <div
-          className="mt-2.5 rounded-lg px-2.5 py-2"
+          className="mt-2 rounded-lg px-2 py-1.5 sm:px-2.5 sm:py-2"
           style={{
             background: isDark
               ? `${heatIndexColor(heatIdx)}18`
@@ -463,7 +463,7 @@ export function WeatherCard({
 
       {/* UV + 오존 + 기상특보 하단 전용 섹션 */}
       <div
-        className="mt-2.5 pt-2 flex items-start gap-1"
+        className="mt-2 pt-2 flex items-start gap-1"
         style={{
           borderTop: `1px solid ${isDark ? 'var(--colors-hairline-dark)' : 'var(--colors-hairline-light)'}`,
         }}

@@ -36,33 +36,31 @@ export function MobileLayout({ tabs, defaultTab, selectedTab, onTabChange }: Pro
   if (!current) return null
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'var(--colors-cream-soft)' }}>
-      <div className="flex flex-col flex-1 min-h-0">
-        {/* 마케팅형 상단 바 — 화이트 캔버스 + 헤어라인 (검정 바 제거) */}
-        <div
-          className="sticky top-0 z-40"
-          style={{
-            background: 'var(--colors-canvas)',
-            borderBottom: '1px solid var(--colors-hairline-soft)',
-            boxShadow: 'rgba(0, 0, 0, 0.03) 0px 1px 2px 0px',
-          }}
-        >
-          {current.header}
-        </div>
-
-        <main
-          className="flex-1 px-3 pt-4 space-y-6 max-w-[1280px] mx-auto w-full"
-          style={{ paddingBottom: 'calc(76px + env(safe-area-inset-bottom))' }}
-        >
-          {current.content}
-        </main>
+    <div className="flex flex-col" style={{ height: '100dvh', background: 'var(--colors-cream-soft)' }}>
+      {/* 상단 헤더 — 항상 최상단 */}
+      <div
+        className="flex-shrink-0 z-40"
+        style={{
+          background: 'var(--colors-canvas)',
+          borderBottom: '1px solid var(--colors-hairline-soft)',
+          boxShadow: 'rgba(0, 0, 0, 0.03) 0px 1px 2px 0px',
+        }}
+      >
+        {current.header}
       </div>
 
-      {/* 하단 탭 — 라이트 서피스 + 오렌지 액센트 */}
+      {/* 스크롤 가능한 콘텐츠 */}
+      <main
+        className="flex-1 overflow-y-auto px-3 pt-4 pb-6 space-y-6 max-w-[1280px] mx-auto w-full"
+      >
+        {current.content}
+      </main>
+
+      {/* 하단 탭 — 항상 최하단에 고정 */}
       <nav
         role="tablist"
         aria-label="섹션 전환"
-        className="fixed bottom-0 inset-x-0 z-50 flex"
+        className="flex-shrink-0 flex z-50"
         style={{
           background: 'var(--colors-canvas)',
           borderTop: '1px solid var(--colors-hairline-soft)',
@@ -86,8 +84,8 @@ export function MobileLayout({ tabs, defaultTab, selectedTab, onTabChange }: Pro
                 minHeight: 56,
               }}
             >
-              <span className="text-lg leading-none" aria-hidden>{t.icon}</span>
-              <span className="text-[11px] leading-tight">{t.label}</span>
+              <span className="text-xl leading-none" aria-hidden>{t.icon}</span>
+              <span className="text-xs leading-tight">{t.label}</span>
               <span
                 className="block h-0.5 mt-0.5 rounded-full transition-all"
                 style={{

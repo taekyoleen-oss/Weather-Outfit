@@ -254,7 +254,7 @@ function WeekView({
                 <div className="px-3 pb-2">
                   <div className="flex gap-2 overflow-x-auto scroll-strip pb-1">
                     {d.hourly.map((h, i) => (
-                      <div key={i} className="flex flex-col items-center gap-1 min-w-[44px] text-center">
+                      <div key={i} className="flex flex-col items-center gap-1 min-w-[56px] text-center">
                         <span className="text-xs" style={{ color: 'var(--muted)' }}>{h.time.slice(0, 2)}시</span>
                         <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{formatTemp1(h.temperature)}°</span>
                         {h.pop > 0 && (
