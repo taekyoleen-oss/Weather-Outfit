@@ -22,7 +22,7 @@ export function HighlightCard({ icon, label, value, sub, accent, compact, href, 
         <div className="flex items-center gap-1 min-w-0">
           <span className={compact ? 'text-sm leading-none flex-shrink-0' : 'text-xl flex-shrink-0'}>{icon}</span>
           <span
-            className={compact ? 'text-xs font-medium leading-tight line-clamp-2' : 'text-xs font-medium'}
+            className={compact ? 'text-xs sm:text-sm font-medium leading-tight line-clamp-2' : 'text-sm font-medium'}
             style={{ color: 'var(--muted)' }}
           >
             {label}
@@ -43,7 +43,7 @@ export function HighlightCard({ icon, label, value, sub, accent, compact, href, 
         <p
           className={
             compact
-              ? 'text-sm font-bold leading-tight line-clamp-2'
+              ? 'text-base font-bold leading-tight line-clamp-2'
               : 'text-xl font-bold leading-tight'
           }
           style={{ color: accent ?? 'var(--primary)' }}
@@ -52,7 +52,7 @@ export function HighlightCard({ icon, label, value, sub, accent, compact, href, 
         </p>
         {sub && (
           <p
-            className={compact ? 'text-xs mt-0.5 line-clamp-2' : 'text-xs mt-0.5'}
+            className={compact ? 'text-xs sm:text-sm mt-0.5 line-clamp-2' : 'text-sm mt-0.5'}
             style={{ color: 'var(--muted)' }}
           >
             {sub}

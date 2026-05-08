@@ -148,7 +148,7 @@ export function HighlightsGrid({ weather, dust, pollen, loading, compact }: Prop
   return (
     <div>
       <h2
-        className={compact ? 'text-xs font-semibold mb-1.5' : 'text-sm font-semibold mb-3'}
+        className={compact ? 'text-sm font-semibold mb-1.5' : 'text-base font-semibold mb-3'}
         style={{ color: 'var(--muted)' }}
       >
         대기정보
@@ -181,7 +181,7 @@ export function HighlightsGrid({ weather, dust, pollen, loading, compact }: Prop
       {/* 꽃가루 위험지수 (종별 3카드) */}
       <div className={compact ? 'mt-1.5' : 'mt-3'}>
         <p
-          className={compact ? 'text-xs font-semibold mb-1.5' : 'text-sm font-semibold mb-3'}
+          className={compact ? 'text-sm font-semibold mb-1.5' : 'text-base font-semibold mb-3'}
           style={{ color: 'var(--muted)' }}
         >
           꽃가루농도지수

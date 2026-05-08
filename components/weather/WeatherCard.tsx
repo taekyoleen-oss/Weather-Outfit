@@ -297,12 +297,12 @@ export function WeatherCard({
       {/* Header */}
       <div className="flex items-start justify-between gap-2 mb-1">
         <div className="min-w-0 flex-1 pr-1">
-          <p className="text-sm font-semibold leading-tight tracking-wide" style={{ color: textColor }}>
+          <p className="text-base font-semibold leading-tight tracking-wide" style={{ color: textColor }}>
             {locationTitle}
           </p>
           {showAddress && (
             <p
-              className="text-[11px] sm:text-xs mt-1 leading-snug line-clamp-2"
+              className="text-xs sm:text-sm mt-1 leading-snug line-clamp-2"
               style={{ color: mutedColor }}
             >
               {addressLine}
@@ -342,12 +342,12 @@ export function WeatherCard({
             </div>
           )}
         </div>
-        <p className="text-sm mt-0.5 leading-snug" style={{ color: textColor }}>
+        <p className="text-base mt-0.5 leading-snug" style={{ color: textColor }}>
           <span className="font-medium">{weatherLabel(weather.skyCode, weather.ptyCode)}</span>
           {compareLine ? (
             <>
               {' '}
-              <span className="font-normal text-xs sm:text-sm" style={{ color: mutedColor }}>
+              <span className="font-normal text-sm sm:text-base" style={{ color: mutedColor }}>
                 {compareLine}
               </span>
             </>
@@ -383,10 +383,10 @@ export function WeatherCard({
       )}
 
       {/* Stats grid: row1 = 체감/습도/바람, row2 = 가시거리/일출/일몰 */}
-      <div className="mt-2 grid grid-cols-3 gap-x-2 gap-y-2 text-xs sm:text-sm">
+      <div className="mt-2 grid grid-cols-3 gap-x-2 gap-y-2 text-sm sm:text-base">
         {/* 체감온도 with ℹ — 폭염/한파 기준 안내 */}
         <div className="text-center min-w-0 relative">
-          <p className="text-xs" style={{ color: mutedColor }}>체감</p>
+          <p className="text-xs sm:text-sm" style={{ color: mutedColor }}>체감</p>
           <p className="font-semibold mt-0.5 tabular-nums" style={{ color: textColor }}>{formatTemp1(feels)}°</p>
           <button
             onClick={() => setModal('heat')}
@@ -606,10 +606,10 @@ function Stat({
 }) {
   return (
     <div className="text-center min-w-0">
-      <p className="text-xs" style={{ color: muted }}>{label}</p>
+      <p className="text-xs sm:text-sm" style={{ color: muted }}>{label}</p>
       <p className="font-semibold mt-0.5 tabular-nums break-words" style={{ color }}>{value}</p>
       {sub && (
-        <p className="text-[10px] mt-0.5 leading-tight line-clamp-2" style={{ color: muted }}>
+        <p className="text-xs mt-0.5 leading-tight line-clamp-2" style={{ color: muted }}>
           {sub}
         </p>
       )}

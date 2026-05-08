@@ -139,7 +139,7 @@ export function HourlyWeatherStrip({
           : undefined
       }
     >
-      <h3 className="text-sm font-semibold mb-2.5" style={{ color: 'var(--muted)' }}>
+      <h3 className="text-base font-semibold mb-2.5" style={{ color: 'var(--muted)' }}>
         시간별 예보
       </h3>
       <div className="flex gap-0.5 sm:gap-1 pb-1">
