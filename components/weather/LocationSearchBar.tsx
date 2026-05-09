@@ -172,7 +172,7 @@ export function LocationSearchBar({ onSelect }: Props) {
 
   const placeholder =
     mode === 'place'
-      ? '장소명 검색 (예: 한강공원, 남산, 스카이72)'
+      ? '장소명 검색 (예: 한강공원, 북한산, 스카이72)'
       : '주소 검색 (예: 강남구, 분당구 정자동)'
 
   const terrainIcon = (loc: LocationInfo) =>

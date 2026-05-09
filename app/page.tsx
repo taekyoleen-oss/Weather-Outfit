@@ -18,7 +18,6 @@ const WeeklyForecastInline = dynamic(
 import { HighlightsGrid } from '@/components/weather/HighlightsGrid'
 import { TimePeriodPicker } from '@/components/weather/TimePeriodPicker'
 import { OutfitPanel } from '@/components/outfit/OutfitPanel'
-import { NearbyWeatherChips } from '@/components/weather/NearbyWeatherChips'
 import { SpotPanel } from '@/components/spot/SpotPanel'
 import { useAutoLocation } from '@/lib/hooks/useAutoLocation'
 import { useWeather } from '@/lib/hooks/useWeather'
@@ -40,7 +39,6 @@ import {
 } from '@/lib/utils/timePeriods'
 import { buildHourlySlotYmds, resolveHourlyForYmdBand } from '@/lib/utils/resolveHourlyForPeriod'
 import { mergeWeeklyDailyStartingTomorrow } from '@/lib/weather/weeklyFromTomorrow'
-import { latLonToGrid } from '@/lib/location/geoConvert'
 import type {
   DustData,
   PollenData,
@@ -74,15 +72,6 @@ interface WeatherData {
   hourly: HourlyForecast[]
   fetchedAt: number
 }
-
-// ── Mountain quick-select for Tab 1 header ────────────────────────────────────
-const MOUNTAIN_CHIPS: LocationInfo[] = [
-  { name: '북한산', address: '서울 강북구/도봉구', lat: 37.6587, lon: 126.9786, ...latLonToGrid({ lat: 37.6587, lon: 126.9786 }), terrain: 'mountain' },
-  { name: '관악산', address: '서울 관악구/과천시', lat: 37.4450, lon: 126.9648, ...latLonToGrid({ lat: 37.4450, lon: 126.9648 }), terrain: 'mountain' },
-  { name: '한라산', address: '제주 제주시/서귀포시', lat: 33.3617, lon: 126.5292, ...latLonToGrid({ lat: 33.3617, lon: 126.5292 }), terrain: 'mountain' },
-  { name: '설악산', address: '강원 속초시/인제군', lat: 38.1195, lon: 128.4657, ...latLonToGrid({ lat: 38.1195, lon: 128.4657 }), terrain: 'mountain' },
-  { name: '지리산', address: '전남 구례군/경남 하동군', lat: 35.3378, lon: 127.7302, ...latLonToGrid({ lat: 35.3378, lon: 127.7302 }), terrain: 'mountain' },
-]
 
 // ── Pure helper: period-adjusted display weather ──────────────────────────────
 function computeDisplayWeather(
@@ -559,14 +548,6 @@ export default function HomePage() {
   // ── Shared UI nodes ───────────────────────────────────────────────────────
   const locationSearch = <LocationSearchBar onSelect={handleSelectLocation} />
   const recentChips = <RecentChips onSelect={handleSelectLocation} currentName={location.name} />
-  const nearbyChips = (
-    <NearbyWeatherChips
-      currentLat={location.lat}
-      currentLon={location.lon}
-      currentName={location.name}
-      onSelect={handleSelectLocation}
-    />
-  )
 
   const highlightsGrid = (
     <HighlightsGrid weather={displayWeather} dust={dust} pollen={pollen} loading={weatherLoading} compact />
@@ -664,21 +645,7 @@ export default function HomePage() {
         </button>
       </div>
       {gpsError && <p className="text-xs mt-1 px-1" style={{ color: 'var(--danger)' }}>{gpsError}</p>}
-      <div className="mt-2">{recentChips}{nearbyChips}</div>
-      {/* Mountain quick chips */}
-      <div className="flex flex-wrap gap-1.5 mt-1.5">
-        {MOUNTAIN_CHIPS.map((m) => (
-          <button
-            key={m.name}
-            type="button"
-            onClick={() => { setManualLocation(m); saveRecentLocation(m) }}
-            className="text-xs px-2.5 py-1 rounded-full transition-all active:opacity-70"
-            style={{ background: 'var(--primary-tint-10)', color: 'var(--humidity)', border: '1px solid var(--border)' }}
-          >
-            ⛰ {m.name}
-          </button>
-        ))}
-      </div>
+      <div className="mt-2">{recentChips}</div>
     </div>
   )
 
@@ -860,7 +827,6 @@ export default function HomePage() {
       {gpsError && <p className="text-xs px-0.5" style={{ color: 'var(--danger)' }}>{gpsError}</p>}
       <div className="space-y-2 min-w-0">
         {recentChips}
-        {nearbyChips}
       </div>
 
       <div
