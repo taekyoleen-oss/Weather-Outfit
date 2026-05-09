@@ -834,7 +834,7 @@ export function OutfitPanel({
                     )}
                   </div>
                   <span className="text-[11px] leading-none" aria-hidden>{wxEmoji}</span>
-                  <span className="text-[7px] font-semibold leading-tight tabular-nums"
+                  <span className="text-[5px] font-semibold leading-tight tabular-nums"
                     style={{ color: isSelected ? 'var(--primary)' : 'var(--text)' }}>
                     {p.label}
                   </span>

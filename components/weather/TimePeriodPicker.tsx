@@ -363,7 +363,7 @@ export function TimePeriodPicker({
               </div>
 
               <span
-                className="text-[9px] font-semibold mt-0.5 leading-tight"
+                className="text-[7px] font-semibold mt-0.5 leading-tight"
                 style={{ color: isSelected ? 'var(--accent)' : 'var(--text)' }}
               >
                 {period.label}
