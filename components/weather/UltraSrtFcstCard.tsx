@@ -3,20 +3,9 @@
 import type { SkyCode, PtyCode } from '@/types/weather'
 import { weatherLabel, formatTemp1 } from '@/lib/utils/formatWeather'
 
-export interface UltraSrtObserved {
-  temperature: number
-  skyCode: string
-  ptyCode: string
-  precipitation: number
-  windSpeed: number
-  humidity: number
-  lgt: number
-}
-
-export interface UltraSrtFcstSlot {
-  fcstYmd: string
-  fcstHour: number
-  fcstMinute: number
+export interface Strip10mSlot {
+  minuteOffset: number
+  timeKst: string
   temperature: number
   skyCode: string
   ptyCode: string
@@ -32,8 +21,7 @@ export interface LightningStatus {
 }
 
 interface Props {
-  observed: UltraSrtObserved | null
-  slots: UltraSrtFcstSlot[]
+  strip10m: Strip10mSlot[]
   lightningNow: LightningStatus
 }
 
@@ -61,10 +49,6 @@ function ltStyle(level: LightningStatus['level']) {
   if (level === 'watch')
     return { color: '#b45309', icon: '⚡', label: '낙뢰 주의' }
   return { color: '#15803d', icon: '✓', label: '낙뢰 없음' }
-}
-
-function slotTimeLabel(fcstHour: number, fcstMinute: number): string {
-  return `${String(fcstHour).padStart(2, '0')}:${String(fcstMinute).padStart(2, '0')}`
 }
 
 interface SlotColProps {
@@ -175,11 +159,9 @@ function SlotCol({
   )
 }
 
-export function UltraSrtFcstCard({ observed, slots, lightningNow }: Props) {
+export function UltraSrtFcstCard({ strip10m, lightningNow }: Props) {
   const lt = ltStyle(lightningNow.level)
-  const hasData = observed !== null || slots.length > 0
-
-  if (!hasData) return null
+  if (strip10m.length === 0) return null
 
   return (
     <div className="glass-card wf-hourly-strip p-3 sm:p-4">
@@ -225,26 +207,11 @@ export function UltraSrtFcstCard({ observed, slots, lightningNow }: Props) {
 
         {/* 스크롤 슬롯 영역 */}
         <div className="scroll-strip flex gap-1.5 sm:gap-2.5">
-          {/* 현재 관측값 */}
-          {observed && (
+          {strip10m.map((s, i) => (
             <SlotCol
-              timeLabel="지금"
-              isCurrent
-              temperature={observed.temperature}
-              skyCode={observed.skyCode}
-              ptyCode={observed.ptyCode}
-              precipitation={observed.precipitation}
-              windSpeed={observed.windSpeed}
-              humidity={observed.humidity}
-              lgt={observed.lgt}
-            />
-          )}
-
-          {/* 예보 슬롯 */}
-          {slots.map((s, i) => (
-            <SlotCol
-              key={`${s.fcstYmd}-${s.fcstHour}-${s.fcstMinute}-${i}`}
-              timeLabel={slotTimeLabel(s.fcstHour, s.fcstMinute)}
+              key={`${s.timeKst}-${i}`}
+              timeLabel={i === 0 ? '지금' : s.timeKst}
+              isCurrent={i === 0}
               temperature={s.temperature}
               skyCode={s.skyCode}
               ptyCode={s.ptyCode}

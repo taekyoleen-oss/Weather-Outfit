@@ -59,6 +59,11 @@ import type { OpenMeteoDailyCompare } from '@/lib/weather/openMeteoCompare'
 
 // ── Spot data shape (subset used by page) ────────────────────────────────────
 interface SpotData {
+  strip10m: Array<{
+    minuteOffset: number; timeKst: string; temperature: number
+    skyCode: string; ptyCode: string; precipitation: number
+    windSpeed: number; humidity: number; lgt: number
+  }>
   observed: {
     temperature: number; humidity: number; windSpeed: number
     skyCode: string; ptyCode: string; precipitation: number; lgt: number
@@ -726,8 +731,7 @@ export default function HomePage() {
       />
       {spotData && (
         <UltraSrtFcstCard
-          observed={spotData.observed}
-          slots={spotData.hourly}
+          strip10m={spotData.strip10m}
           lightningNow={spotData.lightningNow}
         />
       )}

@@ -56,6 +56,18 @@ interface TenMinutePrecipSlot {
   precipMm: number
 }
 
+export interface TenMinuteFullSlot {
+  minuteOffset: number
+  timeKst: string
+  temperature: number
+  skyCode: string
+  ptyCode: string
+  precipitation: number
+  windSpeed: number
+  humidity: number
+  lgt: number
+}
+
 interface LightningNow {
   level: 'none' | 'watch' | 'warning'
   message: string
@@ -96,6 +108,7 @@ interface OutfitSummaryOut {
 
 interface SpotResponse {
   spot: { name: string; address?: string; lat: number; lon: number; nx: number; ny: number }
+  strip10m: TenMinuteFullSlot[]
   observed: {
     baseDate: string
     baseTime: string
@@ -208,6 +221,96 @@ function makePrecip10m(
       precipMm: Math.round(mm * 10) / 10,
     })
   }
+  return out
+}
+
+function buildTenMinuteStrip(
+  kstHour: number,
+  kstMinute: number,
+  todayYmd: string,
+  observed: SpotResponse['observed'],
+  hourly: SpotHourlySlot[],
+): TenMinuteFullSlot[] {
+  interface Anchor {
+    minOffset: number
+    temperature: number
+    skyCode: string
+    ptyCode: string
+    precipitation: number
+    windSpeed: number
+    humidity: number
+    lgt: number
+  }
+
+  const anchors: Anchor[] = []
+  const nowAbsMin = kstHour * 60 + kstMinute
+
+  if (observed) {
+    anchors.push({
+      minOffset: 0,
+      temperature: observed.temperature,
+      skyCode: observed.skyCode,
+      ptyCode: observed.ptyCode,
+      precipitation: observed.precipitation,
+      windSpeed: observed.windSpeed,
+      humidity: observed.humidity,
+      lgt: observed.lgt,
+    })
+  }
+
+  for (const slot of hourly) {
+    const slotDayDelta = slot.fcstYmd > todayYmd ? 1 : 0
+    const slotAbsMin = slotDayDelta * 1440 + slot.fcstHour * 60 + slot.fcstMinute
+    const offset = slotAbsMin - nowAbsMin
+    if (offset <= 0) continue
+    anchors.push({
+      minOffset: offset,
+      temperature: slot.temperature,
+      skyCode: slot.skyCode,
+      ptyCode: slot.ptyCode,
+      precipitation: slot.precipitation,
+      windSpeed: slot.windSpeed,
+      humidity: slot.humidity,
+      lgt: slot.lgt,
+    })
+  }
+
+  if (anchors.length === 0) return []
+  anchors.sort((a, b) => a.minOffset - b.minOffset)
+
+  const lastOffset = anchors[anchors.length - 1]!.minOffset
+  const maxOffset = Math.min(lastOffset, 360)
+
+  const out: TenMinuteFullSlot[] = []
+  for (let tick = 0; tick <= maxOffset; tick += 10) {
+    let prevIdx = 0
+    for (let i = 0; i < anchors.length; i++) {
+      if (anchors[i]!.minOffset <= tick) prevIdx = i
+      else break
+    }
+    const nextIdx = Math.min(prevIdx + 1, anchors.length - 1)
+    const prev = anchors[prevIdx]!
+    const next = anchors[nextIdx]!
+
+    let ratio = 0
+    const span = next.minOffset - prev.minOffset
+    if (span > 0 && nextIdx !== prevIdx) ratio = (tick - prev.minOffset) / span
+
+    const lerp = (a: number, b: number) => a + ratio * (b - a)
+    const t = addMinutesKst(kstHour, kstMinute, tick)
+    out.push({
+      minuteOffset: tick,
+      timeKst: `${two(t.hh)}:${two(t.mm)}`,
+      temperature: Math.round(lerp(prev.temperature, next.temperature) * 10) / 10,
+      skyCode: prev.skyCode,
+      ptyCode: prev.ptyCode,
+      precipitation: Math.max(0, Math.round(lerp(prev.precipitation, next.precipitation) * 10) / 10),
+      windSpeed: Math.round(lerp(prev.windSpeed, next.windSpeed) * 10) / 10,
+      humidity: Math.round(lerp(prev.humidity, next.humidity)),
+      lgt: prev.lgt,
+    })
+  }
+
   return out
 }
 
@@ -410,6 +513,8 @@ export async function GET(req: NextRequest) {
             source: 'alert-derived',
           }
 
+      const strip10m = buildTenMinuteStrip(kstHour, kstMinute, todayYmd, observed, hourly)
+
       const nextHour = hourly[0]
       const precip10m = makePrecip10m(
         kstHour,
@@ -498,6 +603,7 @@ export async function GET(req: NextRequest) {
           nx,
           ny,
         },
+        strip10m,
         observed,
         tmnToday,
         tmxToday,
