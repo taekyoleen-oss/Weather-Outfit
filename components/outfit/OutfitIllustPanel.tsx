@@ -24,7 +24,7 @@ const ILLUST_ACC_VARIANT_ROW_CLASS = 'h-[30px] w-[30px] shrink-0 object-contain 
 const ACC_VARIANT_IMG_PX = 30
 
 const ITEM_CHIP_CLASS =
-  'inline-flex max-w-full min-w-0 items-center gap-0.5 text-[9px] px-1 py-0.5 rounded-full sm:text-[10px]'
+  'inline-flex max-w-full min-w-0 items-start gap-0.5 text-[8px] px-0.5 py-0.5 rounded-full sm:text-[9px]'
 
 function itemChipShellStyle(required: boolean): CSSProperties {
   return {
@@ -72,7 +72,7 @@ function itemChip(item: OutfitItem, idx: number, iconOnly?: boolean) {
         title={tooltip}
         aria-label={tooltip}
       >
-        <span className="flex-shrink-0 text-[17px] sm:text-lg leading-none" aria-hidden>
+        <span className="flex-shrink-0 text-[15px] sm:text-base leading-none" aria-hidden>
           {item.icon}
         </span>
       </span>
@@ -88,9 +88,9 @@ function itemChip(item: OutfitItem, idx: number, iconOnly?: boolean) {
       }}
     >
       <span className="flex-shrink-0">{item.icon}</span>
-      <span className="font-medium truncate">{item.name}</span>
+      <span className="font-medium break-words whitespace-normal line-clamp-2">{item.name}</span>
       {timeLabel && (
-        <span className="shrink-0 text-[8px] sm:text-[8px] leading-none opacity-60">{timeLabel}</span>
+        <span className="shrink-0 text-[6px] sm:text-[6px] leading-none opacity-60">{timeLabel}</span>
       )}
     </span>
   )
@@ -129,7 +129,7 @@ function itemChipsOrAccessoryImages(items: OutfitItem[], gender: GenderType, acc
             />
           </span>
           {!accVariantRow ? (
-            <span className="font-medium truncate min-w-0">{item.name}</span>
+            <span className="font-medium break-words whitespace-normal line-clamp-2 min-w-0">{item.name}</span>
           ) : null}
         </span>
       )
@@ -254,7 +254,7 @@ function CategoryBlock({
                 />
               </span>
               {!isVariantAccRow ? (
-                <span className="font-medium truncate min-w-0">{ACCESSORY_ALT[key]}</span>
+                <span className="font-medium break-words whitespace-normal line-clamp-2 min-w-0">{ACCESSORY_ALT[key]}</span>
               ) : null}
             </span>
           )
@@ -295,7 +295,7 @@ export function OutfitIllustPanel({ result, gender, calendarMonth, showSunshine,
     <div className="w-full min-w-0">
       <div className="mx-auto flex max-w-full flex-row flex-nowrap items-stretch justify-center gap-1 overflow-x-auto pb-0.5 sm:gap-2 lg:gap-3 lg:max-w-full">
         {/* 좌측 6단 */}
-        <div className="order-1 z-auto flex min-h-0 w-[min(124px,40vw)] min-w-0 max-w-[180px] flex-none flex-col max-lg:z-10 max-lg:-mr-[84px] sm:w-[min(124px,25vw)] lg:mr-0 lg:w-[min(220px,24vw)]">
+        <div className="order-1 z-auto flex min-h-0 w-[min(108px,33vw)] min-w-0 flex-none flex-col max-lg:z-10 max-lg:-mr-[84px] sm:w-[min(124px,25vw)] lg:mr-0 lg:w-[min(220px,24vw)]">
           {PC_BAND_LEFT.map((cat, i) => (
             <CategoryBlock
               key={`L-${i}-${cat ?? 'x'}`}
@@ -325,7 +325,7 @@ export function OutfitIllustPanel({ result, gender, calendarMonth, showSunshine,
         </div>
 
         {/* 우측 6단 */}
-        <div className="order-3 z-auto flex min-h-0 w-[min(124px,40vw)] min-w-0 max-w-[180px] flex-none flex-col max-lg:z-10 max-lg:-ml-[84px] sm:w-[min(124px,25vw)] lg:ml-0 lg:w-[min(220px,24vw)]">
+        <div className="order-3 z-auto flex min-h-0 w-[min(108px,33vw)] min-w-0 flex-none flex-col max-lg:z-10 max-lg:-ml-[84px] sm:w-[min(124px,25vw)] lg:ml-0 lg:w-[min(220px,24vw)]">
           {PC_BAND_RIGHT.map((cat, i) => (
             <CategoryBlock
               key={`R-${i}-${cat ?? 'x'}`}
