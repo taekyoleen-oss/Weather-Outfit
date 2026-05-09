@@ -51,8 +51,15 @@ const WEATHER_ACCESSORY_TOOLTIP: Partial<Record<OutfitAccessoryKey, string>> = {
   trekkingPole: '등산·트레킹 시 무릎 보호용 스틱',
 }
 
+/** 조건에서 시간대 레이블 추출 — "19~21시 기준 추가" → "19~21시", 일반 조건은 null */
+function coldPeriodTimeLabel(condition?: string): string | null {
+  if (!condition?.includes('기준 추가')) return null
+  return condition.split(' 기준')[0] ?? null
+}
+
 function itemChip(item: OutfitItem, idx: number, iconOnly?: boolean) {
   const tooltip = itemIllustTooltip(item)
+  const timeLabel = coldPeriodTimeLabel(item.condition)
   if (iconOnly) {
     return (
       <span
@@ -82,6 +89,9 @@ function itemChip(item: OutfitItem, idx: number, iconOnly?: boolean) {
     >
       <span className="flex-shrink-0">{item.icon}</span>
       <span className="font-medium truncate">{item.name}</span>
+      {timeLabel && (
+        <span className="shrink-0 text-[9px] leading-none opacity-70">{timeLabel}</span>
+      )}
     </span>
   )
 }

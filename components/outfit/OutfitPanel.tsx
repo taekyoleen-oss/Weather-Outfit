@@ -603,7 +603,7 @@ export function OutfitPanel({
       terrain,
     }
 
-    // 다중 시간대: 따뜻한 구간 기준 추천과 비교해 추운 구간에만 필요한 아이템을 선택으로 강등
+    // 다중 시간대: 따뜻한(긴) 구간을 필수 기준으로, 추운 구간에만 필요한 아이템을 선택으로 추가
     if (
       selectedOutfitPeriodIndices.length > 1 &&
       periodWeather?.source === 'period_hourly' &&
@@ -614,17 +614,32 @@ export function OutfitPanel({
       if (tempDiff >= 3) {
         const flWarm =
           feelsLike(periodMaxT, effectiveWeatherForOutfit.windSpeed, effectiveWeatherForOutfit.humidity) + sensitivity
-        const coldResult = recommendOutfit({ temperature: tempForOutfit, feelsLike: adjustedFeelsLike, ...sharedArgs })
+        // 따뜻한 구간 기준 = 필수 베이스 (가장 오래 입는 복장)
         const warmResult = recommendOutfit({ temperature: periodMaxT, feelsLike: flWarm, ...sharedArgs })
+        // 추운 구간 기준 = 추가로 필요한 아이템 파악
+        const coldResult = recommendOutfit({ temperature: tempForOutfit, feelsLike: adjustedFeelsLike, ...sharedArgs })
         const warmIds = new Set(warmResult.items.map((i) => i.id))
         const coldLabel = periodWeather.coldPeriodLabel
+        // 추운 구간에만 등장하는 아이템 = 선택 아이템으로 추가
+        const coldOnlyItems = coldResult.items
+          .filter((i) => !warmIds.has(i.id))
+          .map((i) => ({ ...i, required: false, condition: `${coldLabel} 기준 추가` }))
+        // 위험 등급은 두 결과 중 더 높은 값 적용
+        const dangerRank = { none: 0, caution: 1, warning: 2, cancel: 3 } as const
+        const coldWins =
+          dangerRank[coldResult.dangerLevel] > dangerRank[warmResult.dangerLevel]
         return {
-          ...coldResult,
-          items: coldResult.items.map((item) =>
-            !warmIds.has(item.id)
-              ? { ...item, required: false, condition: `${coldLabel} 기준 추가` }
-              : item
-          ),
+          ...warmResult,
+          items: [...warmResult.items, ...coldOnlyItems],
+          dangerLevel: coldWins ? coldResult.dangerLevel : warmResult.dangerLevel,
+          dangerReasons: coldWins
+            ? [...new Set([...warmResult.dangerReasons, ...coldResult.dangerReasons])]
+            : warmResult.dangerReasons,
+          cancelActivity: warmResult.cancelActivity || coldResult.cancelActivity,
+          uvAlert: warmResult.uvAlert || coldResult.uvAlert,
+          dustAlert: warmResult.dustAlert || coldResult.dustAlert,
+          rainAlert: warmResult.rainAlert || coldResult.rainAlert,
+          windAlert: warmResult.windAlert || coldResult.windAlert,
         }
       }
     }
