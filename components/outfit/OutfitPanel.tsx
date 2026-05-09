@@ -194,6 +194,38 @@ function buildOutfitPeriodChipPreviews(
   })
 }
 
+function dominantLabel(slots: HourlyForecast[]): string {
+  if (!slots.length) return ''
+  const counts = new Map<string, number>()
+  for (const h of slots) {
+    const lab = weatherLabel(h.skyCode, h.ptyCode)
+    counts.set(lab, (counts.get(lab) ?? 0) + 1)
+  }
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? ''
+}
+
+const WEATHER_TRANSITION_FORM: Record<string, string> = {
+  '맑음': '맑다가',
+  '구름 많음': '흐리다가',
+  '흐림': '흐리다가',
+  '비': '비오다가',
+  '비/눈': '비·눈오다가',
+  '눈': '눈오다가',
+  '소나기': '소나기오다가',
+}
+
+function buildRangeConditionLabel(labels: string[]): string {
+  if (!labels.length) return ''
+  const deduped = labels.filter((l, i) => i === 0 || l !== labels[i - 1])
+  if (deduped.length === 1) return deduped[0]!
+  const parts: string[] = []
+  for (let i = 0; i < deduped.length - 1; i++) {
+    parts.push(WEATHER_TRANSITION_FORM[deduped[i]!] ?? deduped[i]!)
+  }
+  parts.push(deduped[deduped.length - 1]!)
+  return parts.join(' ')
+}
+
 function ymdToDateInput(ymd: string): string {
   if (ymd.length !== 8) return ''
   return `${ymd.slice(0, 4)}-${ymd.slice(4, 6)}-${ymd.slice(6, 8)}`
@@ -438,50 +470,97 @@ export function OutfitPanel({
     let pStart: number
     let pEnd: number
     let periodName: string
+    let sortedIndices: number[]
+
+    const isMultiSel = selectedOutfitPeriodIndices.length > 1
 
     if (isMobileSheet && selectedOutfitPeriodIndices.length > 0) {
-      const sorted = [...selectedOutfitPeriodIndices].sort((a, b) => a - b)
-      const fp = OUTFIT_PERIODS[sorted[0]!]!
-      const lp = OUTFIT_PERIODS[sorted[sorted.length - 1]!]!
+      sortedIndices = [...selectedOutfitPeriodIndices].sort((a, b) => a - b)
+      const fp = OUTFIT_PERIODS[sortedIndices[0]!]!
+      const lp = OUTFIT_PERIODS[sortedIndices[sortedIndices.length - 1]!]!
       pStart = fp.start
       pEnd = lp.end
-      periodName = sorted.length === 1 ? fp.label : `${fp.label}~${lp.label}`
+      if (sortedIndices.length === 1) {
+        periodName = fp.label
+      } else {
+        periodName = fp.start === 0 ? `새벽~${lp.end}시` : `${fp.start}~${lp.end}시`
+      }
+    } else if (!isMobileSheet && isMultiSel) {
+      sortedIndices = [...selectedOutfitPeriodIndices].sort((a, b) => a - b)
+      const fp = OUTFIT_PERIODS[sortedIndices[0]!]!
+      const lp = OUTFIT_PERIODS[sortedIndices[sortedIndices.length - 1]!]!
+      pStart = fp.start
+      pEnd = lp.end
+      periodName = fp.start === 0 ? `새벽~${lp.end}시` : `${fp.start}~${lp.end}시`
     } else {
+      sortedIndices = selectedOutfitPeriodIndices.length > 0
+        ? [...selectedOutfitPeriodIndices].sort((a, b) => a - b)
+        : [getOutfitPeriodIndex(startHour)]
       const chipPeriod = TIME_PERIODS[getPeriodIndex(startHour)]!
       pStart = chipPeriod.start
       pEnd = chipPeriod.end
       periodName = periodChipNameFromHours(pStart, pEnd)
     }
 
+    const isMultiPeriod = sortedIndices.length > 1
+
     const todayYmd = kstTodayYmd()
     const slotYmds = buildHourlySlotYmds(hourly, todayYmd)
     const nextYmd = addCalendarDaysFromKstYmd(effectiveOutfitYmd, 1)
-    const inRange = hourly.filter((h, i) => {
-      const slotYmd = slotYmds[i]
-      if (!slotYmd) return false
-      const hourNum = parseInt(h.time.slice(0, 2), 10)
-      if (Number.isNaN(hourNum)) return false
-      if (pStart <= pEnd) {
-        return slotYmd === effectiveOutfitYmd && hourNum >= pStart && hourNum <= pEnd
-      }
-      return (
-        (slotYmd === effectiveOutfitYmd && hourNum >= pStart) ||
-        (slotYmd === nextYmd && hourNum <= pEnd)
-      )
-    })
+
+    function slotsForPeriod(ps: number, pe: number): HourlyForecast[] {
+      return hourly.filter((h, i) => {
+        const slotYmd = slotYmds[i]
+        if (!slotYmd) return false
+        const hNum = parseInt(h.time.slice(0, 2), 10)
+        if (Number.isNaN(hNum)) return false
+        if (ps <= pe) return slotYmd === effectiveOutfitYmd && hNum >= ps && hNum <= pe
+        return (
+          (slotYmd === effectiveOutfitYmd && hNum >= ps) ||
+          (slotYmd === nextYmd && hNum <= pe)
+        )
+      })
+    }
+
+    const inRange = slotsForPeriod(pStart, pEnd)
 
     if (inRange.length > 0) {
       const minTemp = Math.min(...inRange.map((h) => h.temperature))
       const maxTemp = Math.max(...inRange.map((h) => h.temperature))
-      const labelCounts = new Map<string, number>()
-      for (const h of inRange) {
-        const label = weatherLabel(h.skyCode, h.ptyCode)
-        labelCounts.set(label, (labelCounts.get(label) ?? 0) + 1)
+
+      let conditionLabel: string
+      let coldPeriodLabel: string | undefined
+
+      if (isMultiPeriod) {
+        const perPeriodLabels: string[] = []
+        let coldAvg = Infinity
+
+        for (const idx of sortedIndices) {
+          const p = OUTFIT_PERIODS[idx]!
+          const slots = slotsForPeriod(p.start, p.end)
+          const lab = dominantLabel(slots) || weatherLabel(inRange[0]!.skyCode, inRange[0]!.ptyCode)
+          perPeriodLabels.push(lab)
+          if (slots.length > 0) {
+            const avg = slots.reduce((s, h) => s + h.temperature, 0) / slots.length
+            if (avg < coldAvg) {
+              coldAvg = avg
+              coldPeriodLabel = p.label
+            }
+          }
+        }
+        conditionLabel = buildRangeConditionLabel(perPeriodLabels)
+      } else {
+        const labelCounts = new Map<string, number>()
+        for (const h of inRange) {
+          const label = weatherLabel(h.skyCode, h.ptyCode)
+          labelCounts.set(label, (labelCounts.get(label) ?? 0) + 1)
+        }
+        conditionLabel =
+          [...labelCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ??
+          weatherLabel(inRange[0]!.skyCode, inRange[0]!.ptyCode)
       }
-      const conditionLabel =
-        [...labelCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ??
-        weatherLabel(inRange[0]!.skyCode, inRange[0]!.ptyCode)
-      return { source: 'period_hourly' as const, conditionLabel, minTemp, maxTemp, periodName }
+
+      return { source: 'period_hourly' as const, conditionLabel, minTemp, maxTemp, periodName, coldPeriodLabel }
     }
 
     const dayRow = daily.find((d) => d.date === effectiveOutfitYmd)
@@ -498,7 +577,6 @@ export function OutfitPanel({
 
   const result = useMemo(() => {
     if (!effectiveWeatherForOutfit) return null
-    // 구간 최저기온을 감안: 대표 시각 기온보다 구간 내 최저가 낮으면 그 기온 기준으로 복장 결정
     const periodMinT = periodWeather?.minTemp
     const tempForOutfit =
       periodMinT !== undefined
@@ -509,9 +587,8 @@ export function OutfitPanel({
         ? feelsLike(tempForOutfit, effectiveWeatherForOutfit.windSpeed, effectiveWeatherForOutfit.humidity)
         : effectiveWeatherForOutfit.feelsLike
     const adjustedFeelsLike = flBase + sensitivity
-    return recommendOutfit({
-      temperature: tempForOutfit,
-      feelsLike: adjustedFeelsLike,
+
+    const sharedArgs = {
       humidity: effectiveWeatherForOutfit.humidity,
       windSpeed: effectiveWeatherForOutfit.windSpeed,
       uvIndex: effectiveWeatherForOutfit.uvIndex,
@@ -524,8 +601,36 @@ export function OutfitPanel({
       hour: startHour,
       duration: selectedDuration,
       terrain,
-    })
-  }, [effectiveWeatherForOutfit, periodWeather, dust, activity, gender, terrain, sensitivity, startHour, selectedDuration])
+    }
+
+    // 다중 시간대: 따뜻한 구간 기준 추천과 비교해 추운 구간에만 필요한 아이템을 선택으로 강등
+    if (
+      selectedOutfitPeriodIndices.length > 1 &&
+      periodWeather?.source === 'period_hourly' &&
+      periodWeather.coldPeriodLabel
+    ) {
+      const periodMaxT = periodWeather.maxTemp
+      const tempDiff = periodMaxT - tempForOutfit
+      if (tempDiff >= 3) {
+        const flWarm =
+          feelsLike(periodMaxT, effectiveWeatherForOutfit.windSpeed, effectiveWeatherForOutfit.humidity) + sensitivity
+        const coldResult = recommendOutfit({ temperature: tempForOutfit, feelsLike: adjustedFeelsLike, ...sharedArgs })
+        const warmResult = recommendOutfit({ temperature: periodMaxT, feelsLike: flWarm, ...sharedArgs })
+        const warmIds = new Set(warmResult.items.map((i) => i.id))
+        const coldLabel = periodWeather.coldPeriodLabel
+        return {
+          ...coldResult,
+          items: coldResult.items.map((item) =>
+            !warmIds.has(item.id)
+              ? { ...item, required: false, condition: `${coldLabel} 기준 추가` }
+              : item
+          ),
+        }
+      }
+    }
+
+    return recommendOutfit({ temperature: tempForOutfit, feelsLike: adjustedFeelsLike, ...sharedArgs })
+  }, [effectiveWeatherForOutfit, periodWeather, dust, activity, gender, terrain, sensitivity, startHour, selectedDuration, selectedOutfitPeriodIndices])
 
   /** 모바일 관심 일정 날짜는 입력값과 즉시 맞춤(페이지 scheduleYmd보다 앞설 수 있음) */
   const periodChipPreviewYmd =

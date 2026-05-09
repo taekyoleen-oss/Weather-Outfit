@@ -18,6 +18,8 @@ export type OutfitPeriodWeather =
       minTemp: number
       maxTemp: number
       periodName: string
+      /** 다중 시간대 선택 시 가장 추운 시간대 레이블 (조건부 아이템 표시용) */
+      coldPeriodLabel?: string
     }
   | {
       source: 'day_daily'
