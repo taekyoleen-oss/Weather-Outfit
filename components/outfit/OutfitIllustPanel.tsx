@@ -24,7 +24,7 @@ const ILLUST_ACC_VARIANT_ROW_CLASS = 'h-[30px] w-[30px] shrink-0 object-contain 
 const ACC_VARIANT_IMG_PX = 30
 
 const ITEM_CHIP_CLASS =
-  'inline-flex max-w-full min-w-0 items-center gap-0.5 text-[8px] px-1 py-0.5 rounded-full sm:text-[10px]'
+  'inline-flex max-w-full min-w-0 items-center gap-0.5 text-[9px] px-1 py-0.5 rounded-full sm:text-[10px]'
 
 function itemChipShellStyle(required: boolean): CSSProperties {
   return {
@@ -295,7 +295,7 @@ export function OutfitIllustPanel({ result, gender, calendarMonth, showSunshine,
     <div className="w-full min-w-0">
       <div className="mx-auto flex max-w-full flex-row flex-nowrap items-stretch justify-center gap-1 overflow-x-auto pb-0.5 sm:gap-2 lg:gap-3 lg:max-w-full">
         {/* 좌측 6단 */}
-        <div className="order-1 z-auto flex min-h-0 w-[min(108px,27vw)] min-w-0 max-w-[180px] flex-none flex-col max-lg:z-10 max-lg:-mr-[84px] sm:w-[min(124px,25vw)] lg:mr-0 lg:w-[min(220px,24vw)]">
+        <div className="order-1 z-auto flex min-h-0 w-[min(124px,31vw)] min-w-0 max-w-[180px] flex-none flex-col max-lg:z-10 max-lg:-mr-[84px] sm:w-[min(124px,25vw)] lg:mr-0 lg:w-[min(220px,24vw)]">
           {PC_BAND_LEFT.map((cat, i) => (
             <CategoryBlock
               key={`L-${i}-${cat ?? 'x'}`}
@@ -325,7 +325,7 @@ export function OutfitIllustPanel({ result, gender, calendarMonth, showSunshine,
         </div>
 
         {/* 우측 6단 */}
-        <div className="order-3 z-auto flex min-h-0 w-[min(108px,27vw)] min-w-0 max-w-[180px] flex-none flex-col max-lg:z-10 max-lg:-ml-[84px] sm:w-[min(124px,25vw)] lg:ml-0 lg:w-[min(220px,24vw)]">
+        <div className="order-3 z-auto flex min-h-0 w-[min(124px,31vw)] min-w-0 max-w-[180px] flex-none flex-col max-lg:z-10 max-lg:-ml-[84px] sm:w-[min(124px,25vw)] lg:ml-0 lg:w-[min(220px,24vw)]">
           {PC_BAND_RIGHT.map((cat, i) => (
             <CategoryBlock
               key={`R-${i}-${cat ?? 'x'}`}
