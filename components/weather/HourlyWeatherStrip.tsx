@@ -17,6 +17,8 @@ interface Props {
   /** true면 `highlightTargetYmd`가 아닌 날의 슬롯을 흐리게 */
   fadeNonMatchingTargetYmd?: boolean
   sunsetTime?: string
+  /** 시간별 적합도 색상 바 — 키: "${yyyymmdd}-${hour}" */
+  suitabilityByHour?: Record<string, { score: number; grade: string }>
 }
 
 function ymdToUtcMidnight(ymd: string): number {
@@ -77,6 +79,12 @@ function sunsetHmFromText(sunsetTime?: string): number | null {
   return Number.isFinite(hm) ? hm : null
 }
 
+function suitabilityColor(score: number): string {
+  if (score >= 80) return '#22c55e'
+  if (score >= 50) return '#eab308'
+  return '#ef4444'
+}
+
 export function HourlyWeatherStrip({
   hourly,
   currentHour,
@@ -86,6 +94,7 @@ export function HourlyWeatherStrip({
   highlightTargetYmd,
   fadeNonMatchingTargetYmd = false,
   sunsetTime,
+  suitabilityByHour,
 }: Props) {
   if (!hourly.length) {
     return (
@@ -216,8 +225,12 @@ export function HourlyWeatherStrip({
                   aria-hidden
                 />
               )}
+            {(() => {
+              const suKey = `${slotYmd}-${hourNum}`
+              const suit = suitabilityByHour?.[suKey]
+              return (
             <div
-              className="grid grid-rows-[14px_14px_20px_14px_14px_14px_14px_14px] items-center min-w-[52px] sm:min-w-[58px] py-1.5 px-1 rounded-xl transition-colors text-center"
+              className="grid grid-rows-[14px_14px_20px_14px_14px_14px_14px_14px] items-center min-w-[52px] sm:min-w-[58px] py-1.5 px-1 rounded-xl transition-colors text-center relative overflow-hidden"
               style={{
                 opacity: fadeThisSlot ? 0.4 : 1,
                 background: isCurrent
@@ -232,6 +245,13 @@ export function HourlyWeatherStrip({
                   : '1px solid transparent',
               }}
             >
+              {suit && (
+                <div
+                  className="absolute top-0 left-0 right-0"
+                  style={{ height: 3, background: suitabilityColor(suit.score) }}
+                  aria-hidden
+                />
+              )}
               <div className="h-[14px] w-full flex items-center justify-center">
                 {dayBanner ? (
                   <span
@@ -282,6 +302,8 @@ export function HourlyWeatherStrip({
               <span className="h-[14px] flex items-center justify-center" style={{ fontSize: 11, color: 'var(--muted)' }}>{Math.round(h.humidity)}</span>
               <span className="h-[14px] flex items-center justify-center" style={{ fontSize: 11, color: 'var(--muted)' }}>{h.windSpeed.toFixed(1)}</span>
             </div>
+              )
+            })()}
             </div>
             )
           })}
