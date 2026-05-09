@@ -9,6 +9,7 @@ import {
   outfitItemToAccessoryKey,
 } from '@/lib/outfit/outfitWeatherAccessories'
 import { OutfitHeroIllustration } from './OutfitHeroIllustration'
+import { AutoShrinkText } from './AutoShrinkText'
 
 /** PC·모바일 공통 6단(머리→발): 좌 카테고리 배치 (null = 빈 칸) */
 const PC_BAND_LEFT: (OutfitCategoryKey | null)[] = ['acc', 'top', 'mid', 'outer', 'foot', null]
@@ -88,7 +89,7 @@ function itemChip(item: OutfitItem, idx: number, iconOnly?: boolean) {
       }}
     >
       <span className="flex-shrink-0">{item.icon}</span>
-      <span className="font-medium break-words whitespace-normal line-clamp-2">{item.name}</span>
+      <AutoShrinkText text={item.name} className="font-medium" />
       {timeLabel && (
         <span className="shrink-0 text-[6px] sm:text-[6px] leading-none text-gray-800">{timeLabel}</span>
       )}
@@ -129,7 +130,7 @@ function itemChipsOrAccessoryImages(items: OutfitItem[], gender: GenderType, acc
             />
           </span>
           {!accVariantRow ? (
-            <span className="font-medium break-words whitespace-normal line-clamp-2 min-w-0">{item.name}</span>
+            <AutoShrinkText text={item.name} className="font-medium min-w-0" />
           ) : null}
         </span>
       )
@@ -254,7 +255,7 @@ function CategoryBlock({
                 />
               </span>
               {!isVariantAccRow ? (
-                <span className="font-medium break-words whitespace-normal line-clamp-2 min-w-0">{ACCESSORY_ALT[key]}</span>
+                <AutoShrinkText text={ACCESSORY_ALT[key]} className="font-medium min-w-0" />
               ) : null}
             </span>
           )
