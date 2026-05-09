@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import type { HourlyForecast } from '@/types/weather'
 import { weatherLabel, formatTemp1 } from '@/lib/utils/formatWeather'
 import { addCalendarDaysFromKstYmd, kstTodayYmd } from '@/lib/utils/timeOfDay'
@@ -41,14 +40,6 @@ function dayBannerLabel(todayYmd: string, slotYmd: string): string | null {
   return `${d}일 뒤`
 }
 
-function dayNavLabel(todayYmd: string, slotYmd: string): string {
-  const d = Math.round((ymdToUtcMidnight(slotYmd) - ymdToUtcMidnight(todayYmd)) / 86400000)
-  if (d === 0) return '현재'
-  if (d === 1) return '내일'
-  if (d === 2) return '모레'
-  if (d === 3) return '글피'
-  return `${d}일 뒤`
-}
 
 function resolveSlotYmd(
   h: HourlyForecast,
@@ -106,8 +97,6 @@ export function HourlyWeatherStrip({
   sunsetTime,
   suitabilityByHour,
 }: Props) {
-  const [activeDayOffset, setActiveDayOffset] = useState(0)
-
   if (!hourly.length) {
     return (
       <div className="glass-card p-4">
@@ -135,20 +124,9 @@ export function HourlyWeatherStrip({
     prevHour = parseInt(hourly[i].time.split(':')[0], 10)
   }
 
-  // 고유 날짜 목록 (데이터 순서대로)
-  const uniqueDayYmds: string[] = []
-  for (const ymd of slotYmds) {
-    if (!uniqueDayYmds.includes(ymd)) uniqueDayYmds.push(ymd)
-  }
-
-  // 선택된 날짜 — activeDayOffset 범위 초과 시 마지막 날짜로 보정
-  const clampedOffset = Math.min(activeDayOffset, uniqueDayYmds.length - 1)
-  const activeDayYmd = uniqueDayYmds[clampedOffset] ?? todayYmd
-
-  // 활성 날짜 항목만 필터링
+  // 모든 날짜 항목을 연속으로 표시 (날짜별 필터링 없음)
   const activeEntries: { h: HourlyForecast; ymd: string }[] = hourly
     .map((h, i) => ({ h, ymd: slotYmds[i] ?? todayYmd }))
-    .filter(e => e.ymd === activeDayYmd)
 
   const selectedTargetYmd =
     highlightTargetYmd ??
@@ -175,29 +153,10 @@ export function HourlyWeatherStrip({
           : undefined
       }
     >
-      <div className="flex items-center justify-between mb-2.5">
+      <div className="flex items-center mb-2.5">
         <h3 className="text-base font-semibold" style={{ color: 'var(--muted)' }}>
           시간별 예보
         </h3>
-        {uniqueDayYmds.length > 1 && (
-          <div className="flex gap-1">
-            {uniqueDayYmds.map((ymd, i) => (
-              <button
-                key={ymd}
-                type="button"
-                onClick={() => setActiveDayOffset(i)}
-                className="text-xs px-2 py-0.5 rounded-full font-semibold transition-colors"
-                style={{
-                  background: clampedOffset === i ? 'var(--primary)' : 'var(--surface)',
-                  color: clampedOffset === i ? 'white' : 'var(--muted)',
-                  border: `1px solid ${clampedOffset === i ? 'var(--primary)' : 'var(--border)'}`,
-                }}
-              >
-                {dayNavLabel(todayYmd, ymd)}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
       <div className="flex gap-0.5 sm:gap-1 pb-1">
         {/* 좌측 고정 라벨 열 */}
@@ -227,7 +186,7 @@ export function HourlyWeatherStrip({
           </div>
         </div>
 
-        <div key={activeDayOffset} className="scroll-strip flex gap-1.5 sm:gap-2.5">
+        <div className="scroll-strip flex gap-1.5 sm:gap-2.5">
           {activeEntries.map(({ h, ymd: slotYmd }, idx) => {
             const hourNum = parseInt(h.time.split(':')[0], 10)
             const isCurrent = hourNum === currentHour && slotYmd === todayYmd
