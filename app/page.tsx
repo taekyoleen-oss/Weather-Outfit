@@ -36,7 +36,9 @@ import { useNowMinute } from '@/lib/hooks/useNowMinute'
 import { feelsLike, weatherLabel, weatherEmojiFromLabel, pickIllustKey, illustFile } from '@/lib/utils/formatWeather'
 import {
   TIME_PERIODS,
+  OUTFIT_PERIODS,
   getPeriodIndex,
+  getOutfitPeriodIndex,
   samePeriodHourlySliceFloor,
   orderHourlyStripBeforeNoon,
   type TimePeriod,
@@ -290,12 +292,12 @@ export default function HomePage() {
 
   const todayYmdKst = kstTodayYmd()
   const presetChipPeriod = useMemo(
-    () => TIME_PERIODS[getPeriodIndex(periodPreset.repHour)],
+    () => OUTFIT_PERIODS[getOutfitPeriodIndex(periodPreset.repHour)]!,
     [periodPreset.repHour],
   )
   const outfitIsNowPeriod =
     periodPreset.dayOffset === 0 &&
-    getPeriodIndex(periodPreset.repHour) === getPeriodIndex(hour) &&
+    getOutfitPeriodIndex(periodPreset.repHour) === getOutfitPeriodIndex(hour) &&
     scheduleYmd === todayYmdKst
 
   const fallbackActivityStart = activityStartFloor(presetChipPeriod.start, outfitIsNowPeriod, hour)

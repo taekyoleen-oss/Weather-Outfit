@@ -1,7 +1,7 @@
 'use client'
 
 import type { HourlyForecast, SkyCode, PtyCode } from '@/types/weather'
-import { TIME_PERIODS, getPeriodIndex } from '@/lib/utils/timePeriods'
+import { OUTFIT_PERIODS, getOutfitPeriodIndex } from '@/lib/utils/timePeriods'
 import { weatherLabel, formatTemp1 } from '@/lib/utils/formatWeather'
 import { addCalendarDaysFromKstYmd, kstTodayYmd } from '@/lib/utils/timeOfDay'
 
@@ -115,8 +115,8 @@ export function TimePeriodPicker({
     prevHour = parseInt(hourly[i].time.split(':')[0], 10)
   }
 
-  const periodCount = TIME_PERIODS.length
-  const currentIdx = getPeriodIndex(currentHour)
+  const periodCount = OUTFIT_PERIODS.length
+  const currentIdx = getOutfitPeriodIndex(currentHour)
   const curHourStr = String(currentHour).padStart(2, '0') + ':00'
   const sunsetHm = sunsetHmFromText(sunsetTime)
 
@@ -141,7 +141,7 @@ export function TimePeriodPicker({
   const chips = Array.from({ length: periodCount }, (_, i) => {
     const rawIdx = currentIdx + i
     const idx = rawIdx % periodCount
-    const period = TIME_PERIODS[idx]
+    const period = OUTFIT_PERIODS[idx]
     const dayOffset = Math.floor(rawIdx / periodCount)
     const isTomorrow = dayOffset >= 1
     const targetYmd = addDaysYmd(todayYmd, dayOffset)
@@ -168,7 +168,7 @@ export function TimePeriodPicker({
     }
 
     const isSelected =
-      getPeriodIndex(selectedRepHour) === getPeriodIndex(period.repHour) &&
+      getOutfitPeriodIndex(selectedRepHour) === getOutfitPeriodIndex(period.repHour) &&
       targetYmd === selectedScheduleYmd
 
     return {
@@ -191,7 +191,7 @@ export function TimePeriodPicker({
       >
         🕐 시간대 선택
       </h3>
-      <div className="grid grid-cols-4 gap-1">
+      <div className="grid grid-cols-7 gap-1">
         {chips.map(({ period, isTomorrow, dayOffset, isCurrent, temperature, weatherEmoji, isNight, isSelected }) => (
           <button
             key={period.id + (isTomorrow ? '-t' : '')}
