@@ -61,19 +61,22 @@ export function RecentChips({ onSelect, currentName }: Props) {
   if (!recents.length) return null
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex gap-1.5 overflow-x-auto scroll-strip">
       {recents
         .filter((r) => r.name !== currentName)
-        .slice(0, 4)
+        .slice(0, 3)
         .map((r) => (
           <button
             key={r.name}
             onClick={() => onSelect(r)}
-            className="text-xs px-3 py-1.5 rounded-full border transition-colors hover:bg-white/80"
+            className="flex-shrink-0 rounded-full border transition-colors hover:bg-white/80"
             style={{
+              fontSize: 11,
+              padding: '3px 10px',
               background: 'var(--surface)',
               border: '1px solid var(--border)',
               color: 'var(--muted)',
+              whiteSpace: 'nowrap',
             }}
           >
             🕐 {r.name}
