@@ -90,7 +90,7 @@ function itemChip(item: OutfitItem, idx: number, iconOnly?: boolean) {
       <span className="flex-shrink-0">{item.icon}</span>
       <span className="font-medium break-words whitespace-normal line-clamp-2">{item.name}</span>
       {timeLabel && (
-        <span className="shrink-0 text-[6px] sm:text-[6px] leading-none opacity-60">{timeLabel}</span>
+        <span className="shrink-0 text-[6px] sm:text-[6px] leading-none text-gray-800">{timeLabel}</span>
       )}
     </span>
   )
