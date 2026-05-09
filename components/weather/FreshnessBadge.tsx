@@ -17,7 +17,7 @@ export function FreshnessBadge({ fetchedAt }: Props) {
       const diffMin = Math.floor((Date.now() - fetchedAt) / 60000)
       const d = new Date(fetchedAt)
       const hhmm = d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
-      setLabel(`마지막 갱신 ${hhmm}`)
+      setLabel(`갱신 ${hhmm}`)
       setStale(diffMin > 35)
     }
 

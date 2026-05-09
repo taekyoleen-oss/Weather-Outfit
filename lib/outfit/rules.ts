@@ -256,9 +256,9 @@ export function getBaseItems(
     }
   } else if (zone === 'cool') {
     if (gender === 'male') {
-      items.push({ id: 'mid-cardigan', name: '가디건 / 맨투맨', icon: '🧥', category: 'mid', required: true })
+      items.push({ id: 'mid-cardigan', name: '가디건 / 맨투맨', icon: '🧥', category: 'mid', required: true, condition: '점퍼 안에 레이어드 — 함께 착용' })
     } else {
-      items.push({ id: 'mid-cardigan-f', name: '롱 가디건 / 니트 조끼', icon: '🧥', category: 'mid', required: true })
+      items.push({ id: 'mid-cardigan-f', name: '롱 가디건 / 니트 조끼', icon: '🧥', category: 'mid', required: true, condition: '점퍼 안에 레이어드 — 함께 착용' })
     }
   } else if (zone === 'cold' || zone === 'freezing') {
     if (gender === 'male') {
@@ -271,9 +271,9 @@ export function getBaseItems(
   // OUTER layer
   if (zone === 'cool') {
     if (gender === 'male') {
-      items.push({ id: 'outer-jacket', name: '가벼운 점퍼 / 바람막이', icon: '🧥', category: 'outer', required: true })
+      items.push({ id: 'outer-jacket', name: '가벼운 점퍼 / 바람막이', icon: '🧥', category: 'outer', required: true, condition: '가디건 위에 겹쳐 착용' })
     } else {
-      items.push({ id: 'outer-jacket-f', name: '트렌치코트 / 가벼운 점퍼', icon: '🧥', category: 'outer', required: true })
+      items.push({ id: 'outer-jacket-f', name: '트렌치코트 / 가벼운 점퍼', icon: '🧥', category: 'outer', required: true, condition: '가디건 위에 겹쳐 착용' })
     }
   } else if (zone === 'cold') {
     if (gender === 'male') {

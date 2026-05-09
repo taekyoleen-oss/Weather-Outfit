@@ -95,11 +95,11 @@ export function OutfitResult({
             ))}
           </div>
         )}
-        <div className="flex items-center justify-between gap-2 mt-1">
-          <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-start justify-between gap-2 mt-1">
+          <div className="flex flex-col gap-0.5">
             <span
-              className="text-sm font-medium px-3 py-1 rounded-full"
-              style={{ background: 'rgba(255,181,71,0.15)', color: 'var(--accent)' }}
+              className="text-[11px] font-medium leading-tight"
+              style={{ color: 'var(--accent)' }}
             >
               {result.layerLabel}
             </span>
@@ -108,7 +108,7 @@ export function OutfitResult({
               {[1, 2, 3].map((l) => (
                 <div
                   key={l}
-                  className="w-3 h-3 rounded-full"
+                  className="w-2.5 h-2.5 rounded-full"
                   style={{
                     background: l <= result.layerLevel ? LAYER_BAR_COLORS[result.layerLevel - 1] : 'var(--border)',
                   }}

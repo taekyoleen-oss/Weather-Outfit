@@ -191,23 +191,23 @@ export function TimePeriodPicker({
       >
         🕐 시간대 선택
       </h3>
-      <div className="grid grid-cols-4 max-lg:grid-cols-2 gap-1.5">
+      <div className="grid grid-cols-4 gap-1">
         {chips.map(({ period, isTomorrow, dayOffset, isCurrent, temperature, weatherEmoji, isNight, isSelected }) => (
           <button
             key={period.id + (isTomorrow ? '-t' : '')}
             type="button"
             onClick={() => onSelectPreset(period.repHour, dayOffset)}
-            className="flex flex-col items-center gap-0.5 max-lg:gap-1 py-2 px-1 rounded-lg transition-all"
+            className="flex flex-col items-center gap-0.5 py-2 px-0.5 rounded-lg transition-all"
             style={{
               background: isSelected ? 'var(--colors-canvas-light)' : 'var(--colors-surface-filter)',
               border: `1.5px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}`,
             }}
             aria-pressed={isSelected}
           >
-            <div className="h-[16px] flex items-center justify-center">
+            <div className="h-[14px] flex items-center justify-center">
               {isCurrent && (
                 <span
-                  className="text-[9px] max-lg:text-[10px] px-1.5 max-lg:px-2 py-0.5 rounded-full font-semibold leading-none max-lg:tracking-wide"
+                  className="text-[8px] px-1 py-0.5 rounded-full font-semibold leading-none"
                   style={{ background: 'rgba(34,197,94,0.12)', color: '#16a34a' }}
                 >
                   지금
@@ -215,7 +215,7 @@ export function TimePeriodPicker({
               )}
               {isTomorrow && (
                 <span
-                  className="text-[9px] max-lg:text-[10px] px-1.5 max-lg:px-2 py-0.5 rounded-full font-semibold leading-none max-lg:tracking-wide"
+                  className="text-[8px] px-1 py-0.5 rounded-full font-semibold leading-none"
                   style={{ background: 'var(--primary-tint-10)', color: 'var(--humidity)' }}
                 >
                   내일
@@ -223,10 +223,10 @@ export function TimePeriodPicker({
               )}
             </div>
 
-            <div className="h-[20px] w-full flex items-center justify-center">
+            <div className="h-[18px] w-full flex items-center justify-center">
               {weatherEmoji === '🌙☁️' ? (
                 <span
-                  className="relative inline-block w-[24px] h-[20px]"
+                  className="relative inline-block w-[22px] h-[18px]"
                   style={{
                     color: 'initial',
                     filter: isNight ? 'grayscale(1) saturate(0)' : 'none',
@@ -234,12 +234,12 @@ export function TimePeriodPicker({
                     transform: 'translateY(1px)',
                   }}
                 >
-                  <span className="absolute left-0 top-[1px] text-lg max-lg:text-xl leading-none">🌙</span>
-                  <span className="absolute left-[10px] top-[3px] text-base max-lg:text-lg leading-none">☁️</span>
+                  <span className="absolute left-0 top-[1px] text-base leading-none">🌙</span>
+                  <span className="absolute left-[9px] top-[2px] text-sm leading-none">☁️</span>
                 </span>
               ) : (
                 <span
-                  className="text-lg max-lg:text-xl leading-none inline-block whitespace-nowrap"
+                  className="text-base leading-none inline-block whitespace-nowrap"
                   style={{
                     color: 'initial',
                     filter: isNight ? 'grayscale(1) saturate(0)' : 'none',
@@ -253,7 +253,7 @@ export function TimePeriodPicker({
             </div>
 
             <span
-              className="text-[11px] max-lg:text-[13px] font-semibold mt-0.5 max-lg:mt-0 leading-tight max-lg:tracking-wide"
+              className="text-[11px] font-semibold mt-0.5 leading-tight"
               style={{ color: isSelected ? 'var(--accent)' : 'var(--text)' }}
             >
               {period.label}
@@ -261,13 +261,13 @@ export function TimePeriodPicker({
 
             {temperature !== undefined ? (
               <span
-                className="text-xs max-lg:text-[13px] font-bold tabular-nums leading-none max-lg:mt-0.5"
+                className="text-[10px] font-bold tabular-nums leading-none"
                 style={{ color: isSelected ? 'var(--accent)' : 'var(--muted)' }}
               >
                 {formatTemp1(temperature)}°
               </span>
             ) : (
-              <span className="max-lg:text-[13px] max-lg:leading-none text-xs" style={{ color: 'var(--muted)' }}>
+              <span className="text-[10px] leading-none" style={{ color: 'var(--muted)' }}>
                 --
               </span>
             )}

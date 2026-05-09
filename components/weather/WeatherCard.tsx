@@ -300,14 +300,6 @@ export function WeatherCard({
           <p className="text-base font-semibold leading-tight tracking-wide" style={{ color: textColor }}>
             {locationTitle}
           </p>
-          {showAddress && (
-            <p
-              className="text-xs sm:text-sm mt-1 leading-snug line-clamp-2"
-              style={{ color: mutedColor }}
-            >
-              {addressLine}
-            </p>
-          )}
           <div className="mt-1">
             <FreshnessBadge fetchedAt={weather.fetchedAt} />
           </div>
@@ -387,7 +379,7 @@ export function WeatherCard({
         {/* 체감온도 with ℹ — 폭염/한파 기준 안내 */}
         <div className="text-center min-w-0 relative">
           <p className="text-xs sm:text-sm" style={{ color: mutedColor }}>체감</p>
-          <p className="font-semibold mt-0.5 tabular-nums" style={{ color: textColor }}>{formatTemp1(feels)}°</p>
+          <p className="text-[10px] font-semibold mt-0.5 tabular-nums" style={{ color: textColor }}>{formatTemp1(feels)}°</p>
           <button
             onClick={() => setModal('heat')}
             className="absolute -top-4 -right-4 flex items-center justify-center"
@@ -473,7 +465,7 @@ export function WeatherCard({
           <span className="text-base">☀️</span>
           <div className="min-w-0">
             <p className="text-[10px] leading-none mb-0.5" style={{ color: mutedColor }}>자외선</p>
-            <p className="text-sm font-bold leading-none" style={{ color: uvColor(uv) }}>UV {uv}</p>
+            <p className="text-[10px] font-bold leading-none" style={{ color: uvColor(uv) }}>UV {uv}</p>
             <p className="text-[10px] mt-0.5" style={{ color: uvColor(uv) }}>{uvLabel(uv)}</p>
           </div>
         </div>
@@ -483,7 +475,7 @@ export function WeatherCard({
           <span className="text-base">⚗️</span>
           <div className="min-w-0">
             <p className="text-[10px] leading-none mb-0.5" style={{ color: mutedColor }}>오존</p>
-            <p className="text-sm font-bold leading-none" style={{ color: o3Color }}>
+            <p className="text-[10px] font-bold leading-none" style={{ color: o3Color }}>
               {o3Label}
             </p>
             {o3Value && (
@@ -607,7 +599,7 @@ function Stat({
   return (
     <div className="text-center min-w-0">
       <p className="text-xs sm:text-sm" style={{ color: muted }}>{label}</p>
-      <p className="font-semibold mt-0.5 tabular-nums break-words" style={{ color }}>{value}</p>
+      <p className="text-[10px] font-semibold mt-0.5 tabular-nums break-words" style={{ color }}>{value}</p>
       {sub && (
         <p className="text-xs mt-0.5 leading-tight line-clamp-2" style={{ color: muted }}>
           {sub}

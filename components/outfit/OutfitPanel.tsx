@@ -412,28 +412,10 @@ export function OutfitPanel({
     }
   }, [weather, effectiveOutfitYmd, scheduleYmd, hourly, startHour])
 
-  const result = useMemo(() => {
-    if (!effectiveWeatherForOutfit) return null
-    const adjustedFeelsLike = effectiveWeatherForOutfit.feelsLike + sensitivity
-    return recommendOutfit({
-      temperature: effectiveWeatherForOutfit.temperature,
-      feelsLike: adjustedFeelsLike,
-      humidity: effectiveWeatherForOutfit.humidity,
-      windSpeed: effectiveWeatherForOutfit.windSpeed,
-      uvIndex: effectiveWeatherForOutfit.uvIndex,
-      ptyCode: effectiveWeatherForOutfit.ptyCode,
-      precipitation: effectiveWeatherForOutfit.precipitation,
-      dustGrade: dust?.pm10Grade ?? '2',
-      o3Grade: dust?.o3Grade,
-      activity,
-      gender,
-      hour: startHour,
-      duration: selectedDuration,
-      terrain,
-    })
-  }, [effectiveWeatherForOutfit, dust, activity, gender, terrain, sensitivity, startHour, selectedDuration])
-
   const periodWeather = useMemo(() => {
+    const chipPeriod = TIME_PERIODS[getPeriodIndex(startHour)]
+    const pStart = chipPeriod.start
+    const pEnd = chipPeriod.end
     const todayYmd = kstTodayYmd()
     const slotYmds = buildHourlySlotYmds(hourly, todayYmd)
     const nextYmd = addCalendarDaysFromKstYmd(effectiveOutfitYmd, 1)
@@ -442,12 +424,12 @@ export function OutfitPanel({
       if (!slotYmd) return false
       const hourNum = parseInt(h.time.slice(0, 2), 10)
       if (Number.isNaN(hourNum)) return false
-      if (startHour <= endHour) {
-        return slotYmd === effectiveOutfitYmd && hourNum >= startHour && hourNum <= endHour
+      if (pStart <= pEnd) {
+        return slotYmd === effectiveOutfitYmd && hourNum >= pStart && hourNum <= pEnd
       }
       return (
-        (slotYmd === effectiveOutfitYmd && hourNum >= startHour) ||
-        (slotYmd === nextYmd && hourNum <= endHour)
+        (slotYmd === effectiveOutfitYmd && hourNum >= pStart) ||
+        (slotYmd === nextYmd && hourNum <= pEnd)
       )
     })
 
@@ -467,7 +449,7 @@ export function OutfitPanel({
         conditionLabel,
         minTemp,
         maxTemp,
-        periodName: periodChipNameFromHours(startHour, endHour),
+        periodName: periodChipNameFromHours(pStart, pEnd),
       }
     }
 
@@ -481,7 +463,38 @@ export function OutfitPanel({
       }
     }
     return null
-  }, [hourly, daily, effectiveOutfitYmd, startHour, endHour])
+  }, [hourly, daily, effectiveOutfitYmd, startHour])
+
+  const result = useMemo(() => {
+    if (!effectiveWeatherForOutfit) return null
+    // 구간 최저기온을 감안: 대표 시각 기온보다 구간 내 최저가 낮으면 그 기온 기준으로 복장 결정
+    const periodMinT = periodWeather?.minTemp
+    const tempForOutfit =
+      periodMinT !== undefined
+        ? Math.min(effectiveWeatherForOutfit.temperature, periodMinT)
+        : effectiveWeatherForOutfit.temperature
+    const flBase =
+      tempForOutfit !== effectiveWeatherForOutfit.temperature
+        ? feelsLike(tempForOutfit, effectiveWeatherForOutfit.windSpeed, effectiveWeatherForOutfit.humidity)
+        : effectiveWeatherForOutfit.feelsLike
+    const adjustedFeelsLike = flBase + sensitivity
+    return recommendOutfit({
+      temperature: tempForOutfit,
+      feelsLike: adjustedFeelsLike,
+      humidity: effectiveWeatherForOutfit.humidity,
+      windSpeed: effectiveWeatherForOutfit.windSpeed,
+      uvIndex: effectiveWeatherForOutfit.uvIndex,
+      ptyCode: effectiveWeatherForOutfit.ptyCode,
+      precipitation: effectiveWeatherForOutfit.precipitation,
+      dustGrade: dust?.pm10Grade ?? '2',
+      o3Grade: dust?.o3Grade,
+      activity,
+      gender,
+      hour: startHour,
+      duration: selectedDuration,
+      terrain,
+    })
+  }, [effectiveWeatherForOutfit, periodWeather, dust, activity, gender, terrain, sensitivity, startHour, selectedDuration])
 
   /** 모바일 관심 일정 날짜는 입력값과 즉시 맞춤(페이지 scheduleYmd보다 앞설 수 있음) */
   const periodChipPreviewYmd =
@@ -760,19 +773,14 @@ export function OutfitPanel({
                 <button
                   type="button"
                   onClick={() => setSheetSettings(true)}
-                  className="max-w-[55vw] sm:max-w-[55%] text-right text-[10px] font-semibold py-1.5 px-2 rounded-lg transition-colors active:scale-[0.99]"
+                  className="text-[10px] font-semibold py-1 px-2 rounded-lg transition-colors active:scale-[0.99] flex-shrink-0 whitespace-nowrap"
                   style={{
                     background: 'var(--surface)',
                     border: '1px solid var(--border)',
-                    color: 'var(--text)',
+                    color: 'var(--muted)',
                   }}
                 >
-                  <span className="block mb-0.5" style={{ color: 'var(--muted)' }}>
-                    세부 옵션
-                  </span>
-                  <span className="block truncate leading-snug">
-                    성별 · 체감 ({SENSITIVITY_LABEL_MAP[sensitivity]})
-                  </span>
+                  {gender === 'male' ? '남성' : '여성'} · {sensitivity === 0 ? '보통' : sensitivity < 0 ? '더위에 강함' : '추위에 강함'}
                 </button>
               ) : undefined
             }

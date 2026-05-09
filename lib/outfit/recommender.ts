@@ -176,7 +176,7 @@ export function recommendOutfit(input: OutfitInput): OutfitResult {
   const skipFiveMWindOuter =
     (input.activity === 'river' && ['hot', 'warm', 'mild'].includes(baseZone)) ||
     (input.activity === 'hiking' && ['hot', 'warm', 'mild'].includes(baseZone))
-  if (input.windSpeed >= 5 && !skipFiveMWindOuter && ['warm', 'mild', 'cool', 'cold'].includes(zone)) {
+  if (input.windSpeed >= 5 && !skipFiveMWindOuter && ['warm', 'mild'].includes(zone)) {
     pushCorr({
       id: 'corr-wind-fives',
       name: '얇은 바람막이',

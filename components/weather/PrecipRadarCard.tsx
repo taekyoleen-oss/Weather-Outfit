@@ -31,26 +31,13 @@ export function PrecipRadarCard({ lightningNow, precip10m }: Props) {
 
   return (
     <div className="glass-card p-3 sm:p-4">
-      <h3 className="text-base font-semibold mb-2.5" style={{ color: 'var(--muted)' }}>
-        초단기 강수 / 낙뢰
-      </h3>
-
-      {/* Lightning status */}
-      <div
-        className="flex items-center gap-2.5 px-3 py-2 rounded-xl mb-3"
-        style={{ background: lt.bg, border: `1px solid ${lt.border}` }}
-      >
-        <span className="text-xl leading-none">{lt.icon}</span>
-        <div className="flex-1 min-w-0">
-          <span className="text-sm font-semibold" style={{ color: lt.color }}>
-            {lt.label}
-          </span>
-          {lightningNow.message && (
-            <p className="text-xs mt-0.5 leading-snug" style={{ color: 'var(--muted)' }}>
-              {lightningNow.message}
-            </p>
-          )}
-        </div>
+      <div className="flex items-center justify-between mb-2.5">
+        <h3 className="text-base font-semibold" style={{ color: 'var(--muted)' }}>
+          초단기 강수 / 낙뢰
+        </h3>
+        <span className="text-xs font-semibold" style={{ color: lt.color }}>
+          {lt.icon} {lt.label}
+        </span>
       </div>
 
       {/* 10-min precip tiles */}
