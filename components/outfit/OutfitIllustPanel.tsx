@@ -90,7 +90,7 @@ function itemChip(item: OutfitItem, idx: number, iconOnly?: boolean) {
       <span className="flex-shrink-0">{item.icon}</span>
       <span className="font-medium truncate">{item.name}</span>
       {timeLabel && (
-        <span className="shrink-0 text-[6px] sm:text-[8px] leading-none opacity-60">{timeLabel}</span>
+        <span className="shrink-0 text-[8px] sm:text-[8px] leading-none opacity-60">{timeLabel}</span>
       )}
     </span>
   )
@@ -295,7 +295,7 @@ export function OutfitIllustPanel({ result, gender, calendarMonth, showSunshine,
     <div className="w-full min-w-0">
       <div className="mx-auto flex max-w-full flex-row flex-nowrap items-stretch justify-center gap-1 overflow-x-auto pb-0.5 sm:gap-2 lg:gap-3 lg:max-w-full">
         {/* 좌측 6단 */}
-        <div className="order-1 z-auto flex min-h-0 w-[min(124px,31vw)] min-w-0 max-w-[180px] flex-none flex-col max-lg:z-10 max-lg:-mr-[84px] sm:w-[min(124px,25vw)] lg:mr-0 lg:w-[min(220px,24vw)]">
+        <div className="order-1 z-auto flex min-h-0 w-[min(124px,40vw)] min-w-0 max-w-[180px] flex-none flex-col max-lg:z-10 max-lg:-mr-[84px] sm:w-[min(124px,25vw)] lg:mr-0 lg:w-[min(220px,24vw)]">
           {PC_BAND_LEFT.map((cat, i) => (
             <CategoryBlock
               key={`L-${i}-${cat ?? 'x'}`}
@@ -325,7 +325,7 @@ export function OutfitIllustPanel({ result, gender, calendarMonth, showSunshine,
         </div>
 
         {/* 우측 6단 */}
-        <div className="order-3 z-auto flex min-h-0 w-[min(124px,31vw)] min-w-0 max-w-[180px] flex-none flex-col max-lg:z-10 max-lg:-ml-[84px] sm:w-[min(124px,25vw)] lg:ml-0 lg:w-[min(220px,24vw)]">
+        <div className="order-3 z-auto flex min-h-0 w-[min(124px,40vw)] min-w-0 max-w-[180px] flex-none flex-col max-lg:z-10 max-lg:-ml-[84px] sm:w-[min(124px,25vw)] lg:ml-0 lg:w-[min(220px,24vw)]">
           {PC_BAND_RIGHT.map((cat, i) => (
             <CategoryBlock
               key={`R-${i}-${cat ?? 'x'}`}
