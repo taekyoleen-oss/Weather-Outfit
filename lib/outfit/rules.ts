@@ -228,7 +228,7 @@ export function getBaseItems(
     }
   } else if (zone === 'mild') {
     if (gender === 'male') {
-      items.push({ id: 'top-longsleeve', name: '긴팔 티셔츠', icon: '👕', category: 'top', required: true })
+      items.push({ id: 'top-longsleeve', name: '긴팔 셔츠', icon: '👕', category: 'top', required: true })
     } else {
       items.push({ id: 'top-longsleeve-f', name: '긴팔 티 / 얇은 니트', icon: '👚', category: 'top', required: true })
     }
@@ -250,7 +250,7 @@ export function getBaseItems(
   // MID layer
   if (zone === 'mild') {
     if (gender === 'male') {
-      items.push({ id: 'mid-hoodie', name: '후드 / 맨투맨', icon: '🧥', category: 'mid', required: false, condition: '아침저녁 쌀쌀할 때' })
+      items.push({ id: 'mid-hoodie', name: '맨투맨', icon: '🧥', category: 'mid', required: false, condition: '아침저녁 쌀쌀할 때' })
     } else {
       items.push({ id: 'mid-cardigan-light', name: '얇은 가디건', icon: '🧥', category: 'mid', required: false, condition: '아침저녁 쌀쌀할 때' })
     }
@@ -303,24 +303,24 @@ export function getBaseItems(
     }
   } else if (zone === 'warm') {
     if (gender === 'female') {
-      items.push({ id: 'bottom-linen-pants-f', name: '통기성 긴바지 / 반바지', icon: '👖', category: 'bottom', required: true })
+      items.push({ id: 'bottom-linen-pants-f', name: '긴바지 / 반바지', icon: '👖', category: 'bottom', required: true })
       items.push({ id: 'bottom-midi-skirt', name: '미디스커트 (선택)', icon: '👗', category: 'bottom', required: false, condition: '스커트로 대체 가능' })
     } else {
-      items.push({ id: 'bottom-shorts-m', name: '통기성 긴바지 또는 반바지', icon: '🩳', category: 'bottom', required: true })
+      items.push({ id: 'bottom-shorts-m', name: '긴바지 / 반바지', icon: '🩳', category: 'bottom', required: true })
     }
   } else if (zone === 'mild') {
     if (gender === 'female') {
-      items.push({ id: 'bottom-wide-pants', name: '긴바지 / 청바지', icon: '👖', category: 'bottom', required: true })
+      items.push({ id: 'bottom-wide-pants', name: '면바지', icon: '👖', category: 'bottom', required: true })
       items.push({ id: 'bottom-midi-skirt-mild', name: '미디스커트 + 스타킹 (선택)', icon: '👗', category: 'bottom', required: false, condition: '스커트 착용 시 스타킹 필수' })
     } else {
-      items.push({ id: 'bottom-pants', name: '면바지 / 청바지', icon: '👖', category: 'bottom', required: true })
+      items.push({ id: 'bottom-pants', name: '면바지', icon: '👖', category: 'bottom', required: true })
     }
   } else if (zone === 'cool') {
     if (gender === 'female') {
-      items.push({ id: 'bottom-slacks-f', name: '면바지 / 두꺼운 청바지', icon: '👖', category: 'bottom', required: true })
+      items.push({ id: 'bottom-slacks-f', name: '면바지', icon: '👖', category: 'bottom', required: true })
       items.push({ id: 'bottom-long-skirt', name: '롱스커트 + 두꺼운 타이츠 (선택)', icon: '👗', category: 'bottom', required: false, condition: '스커트 착용 시 타이츠 필수' })
     } else {
-      items.push({ id: 'bottom-slacks-m', name: '청바지 / 면바지', icon: '👖', category: 'bottom', required: true })
+      items.push({ id: 'bottom-slacks-m', name: '면바지', icon: '👖', category: 'bottom', required: true })
     }
   } else {
     // cold / freezing
