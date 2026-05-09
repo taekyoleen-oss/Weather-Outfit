@@ -16,7 +16,7 @@ const STORAGE_KEY = 'weatherfit:lastLocation'
 const AUTO_REFRESH_MIN_MOVE_KM = 2
 const AUTO_REFRESH_MAX_AGE_MS = 60 * 60 * 1000
 
-type StoredLocation = LocationInfo & { savedAt?: number }
+type StoredLocation = LocationInfo & { savedAt?: number; isManual?: boolean }
 
 function isValidStored(data: unknown): data is StoredLocation {
   if (!data || typeof data !== 'object') return false
@@ -57,14 +57,14 @@ function loadStoredLocationRaw(): StoredLocation | null {
 function loadStoredLocation(): LocationInfo | null {
   const s = loadStoredLocationRaw()
   if (!s) return null
-  const { savedAt: _savedAt, ...loc } = s
+  const { savedAt: _savedAt, isManual: _isManual, ...loc } = s
   return loc
 }
 
-function storeLocation(loc: LocationInfo) {
+function storeLocation(loc: LocationInfo, isManual = false) {
   if (typeof window === 'undefined') return
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...loc, savedAt: Date.now() }))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...loc, savedAt: Date.now(), isManual }))
   } catch {
     /* quota / private mode */
   }
@@ -163,6 +163,11 @@ export function useAutoLocation() {
           if (reason === 'auto') {
             const stored = loadStoredLocationRaw()
             if (stored) {
+              // 수동으로 선택한 위치는 자동 GPS로 덮어쓰지 않음
+              if (stored.isManual) {
+                setGpsLoading(false)
+                return
+              }
               const movedKm = haversineKm(stored.lat, stored.lon, lat, lon)
               const ageMs = Date.now() - (stored.savedAt ?? 0)
               const isStale = !stored.savedAt || ageMs >= AUTO_REFRESH_MAX_AGE_MS
@@ -195,7 +200,7 @@ export function useAutoLocation() {
 
   const setManualLocation = useCallback((loc: LocationInfo) => {
     setLocation(loc)
-    storeLocation(loc)
+    storeLocation(loc, true)
     setGpsError(null)
   }, [])
 

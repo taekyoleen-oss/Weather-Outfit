@@ -49,12 +49,16 @@ export function MobileLayout({ tabs, defaultTab, selectedTab, onTabChange }: Pro
         {current.header}
       </div>
 
-      {/* 스크롤 가능한 콘텐츠 */}
-      <main
-        className="flex-1 overflow-y-auto px-3 pt-4 pb-6 space-y-6 max-w-[1280px] mx-auto w-full"
-      >
-        {current.content}
-      </main>
+      {/* 스크롤 가능한 콘텐츠 — 모든 탭을 마운트 유지, 비활성 탭만 숨김 */}
+      {tabs.map(tab => (
+        <main
+          key={tab.key}
+          className="flex-1 overflow-y-auto px-3 pt-4 pb-6 space-y-6 max-w-[1280px] mx-auto w-full"
+          style={{ display: tab.key === activeTab ? undefined : 'none' }}
+        >
+          {tab.content}
+        </main>
+      ))}
 
       {/* 하단 탭 — 항상 최하단에 고정 */}
       <nav
