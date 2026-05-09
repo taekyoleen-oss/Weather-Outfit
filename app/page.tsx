@@ -22,6 +22,10 @@ import { SpotPanel } from '@/components/spot/SpotPanel'
 import { useAutoLocation } from '@/lib/hooks/useAutoLocation'
 import { useWeather } from '@/lib/hooks/useWeather'
 import { useWeeklyForecast } from '@/lib/hooks/useWeeklyForecast'
+import { useFavoriteLocations } from '@/lib/hooks/useFavoriteLocations'
+import { useCompanionProfile, COMPANION_PROFILES } from '@/lib/hooks/useCompanionProfile'
+import { FavoriteChips } from '@/components/weather/FavoriteChips'
+import { OutfitChecklist } from '@/components/outfit/OutfitChecklist'
 import {
   getTimeOfDay,
   kstTodayYmd,
@@ -257,6 +261,8 @@ export default function HomePage() {
   const { location, gpsLoading, gpsError, requestGps, setManualLocation } = useAutoLocation()
   const { data: weatherData, loading: weatherLoading } = useWeather(location)
   const { data: weekly, loading: weeklyLoading } = useWeeklyForecast(location)
+  const { favorites, addFavorite, removeFavorite } = useFavoriteLocations()
+  const { profile: companionProfile, setProfile: setCompanionProfile } = useCompanionProfile()
   const hour = useNowMinute()
   const hourRef = useRef(hour)
   hourRef.current = hour
@@ -646,15 +652,44 @@ export default function HomePage() {
       </div>
       {gpsError && <p className="text-xs mt-1 px-1" style={{ color: 'var(--danger)' }}>{gpsError}</p>}
       <div className="mt-2">{recentChips}</div>
+      <div className="mt-1.5">
+        <FavoriteChips
+          favorites={favorites}
+          currentLocation={location}
+          onSelect={handleSelectLocation}
+          onAdd={addFavorite}
+          onRemove={removeFavorite}
+        />
+      </div>
     </div>
   )
 
   // ── Mobile Tab 2 header (외출옷) ──────────────────────────────────────────
   const tab2Header = (
-    <div className="px-3 pt-2 pb-1">
+    <div className="px-3 pt-2 pb-1 space-y-2">
       <p className="text-xs" style={{ color: 'var(--muted)' }}>
         📍 {location.name} 날씨 기준
       </p>
+      <div className="flex gap-1.5 overflow-x-auto scroll-strip">
+        {COMPANION_PROFILES.map(p => (
+          <button
+            key={p.key}
+            onClick={() => setCompanionProfile(p.key)}
+            className="flex-shrink-0 rounded-full transition-all active:opacity-70"
+            style={{
+              fontSize: 12,
+              padding: '4px 12px',
+              background: companionProfile === p.key ? 'var(--primary-tint-12)' : 'var(--surface)',
+              border: `1px solid ${companionProfile === p.key ? 'var(--colors-primary)' : 'var(--border)'}`,
+              color: companionProfile === p.key ? 'var(--primary)' : 'var(--muted)',
+              fontWeight: companionProfile === p.key ? 600 : 400,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {p.emoji} {p.label}
+          </button>
+        ))}
+      </div>
     </div>
   )
 
@@ -693,6 +728,12 @@ export default function HomePage() {
       {weatherLoading && !weatherData && (
         <div className="h-8 animate-pulse rounded-lg" style={{ background: 'var(--colors-surface-soft)' }} />
       )}
+      <OutfitChecklist
+        weather={weatherData?.current ?? null}
+        dust={dust}
+        hourly={weatherData?.hourly ?? []}
+        profile={companionProfile}
+      />
       {outfitPanelMobile}
     </>
   )
