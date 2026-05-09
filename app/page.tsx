@@ -670,6 +670,7 @@ export default function HomePage() {
       <p className="text-xs" style={{ color: 'var(--muted)' }}>
         📍 {location.name} 날씨 기준
       </p>
+      {timePeriodPicker}
       <div className="flex gap-1.5 overflow-x-auto scroll-strip">
         {COMPANION_PROFILES.map(p => (
           <button
@@ -729,7 +730,7 @@ export default function HomePage() {
         <div className="h-8 animate-pulse rounded-lg" style={{ background: 'var(--colors-surface-soft)' }} />
       )}
       <OutfitChecklist
-        weather={weatherData?.current ?? null}
+        weather={displayWeather}
         dust={dust}
         hourly={weatherData?.hourly ?? []}
         profile={companionProfile}
