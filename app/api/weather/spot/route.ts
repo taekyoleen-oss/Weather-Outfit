@@ -35,11 +35,14 @@ const QuerySchema = z.object({
 interface SpotHourlySlot {
   fcstYmd: string
   fcstHour: number
+  fcstMinute: number
   temperature: number
   skyCode: SkyCode
   ptyCode: PtyCode
   precipitation: number
   windSpeed: number
+  humidity: number
+  lgt: number
   pop: number
   vecDeg: number
   feelsLikeC: number
@@ -100,8 +103,10 @@ interface SpotResponse {
     humidity: number
     windSpeed: number
     windDirection: number
+    skyCode: SkyCode
     ptyCode: PtyCode
-    rn1: number
+    precipitation: number
+    lgt: number
   } | null
   /** 단기예보 기준 오늘 일 최저·최고 */
   tmnToday: number | null
@@ -301,8 +306,10 @@ export async function GET(req: NextRequest) {
               humidity: s.humidity,
               windSpeed: s.windSpeed,
               windDirection: vec,
+              skyCode: toSkyCode(vilage?.current.skyCode),
               ptyCode: toPtyCode(s.ptyCode),
-              rn1: s.rn1,
+              precipitation: s.rn1,
+              lgt: s.lgt,
             }
           })()
         : null
@@ -331,7 +338,7 @@ export async function GET(req: NextRequest) {
         feelsLikeC: feelsNow,
         windSpeedMs: observed?.windSpeed ?? 0,
         pop: popNow,
-        rn1mm: observed?.rn1 ?? 0,
+        rn1mm: observed?.precipitation ?? 0,
         ptyCode: observed?.ptyCode ?? '0',
         uvIndex: uvVal,
         visibilityKm: visKm,
@@ -340,6 +347,7 @@ export async function GET(req: NextRequest) {
 
       const hourly: SpotHourlySlot[] = (fcstBundle?.slots ?? []).map((slot) => {
         const fcstHour = parseInt(slot.fcstTime.slice(0, 2), 10)
+        const fcstMinute = parseInt(slot.fcstTime.slice(2, 4), 10) || 0
         const vrow = vilageSlotAtHour(map, slot.fcstDate, fcstHour)
         const pop = parseFloat(vrow?.POP ?? '0')
         const vecDeg = parseFloat(vrow?.VEC ?? String(vilage?.current.windDirection ?? 0))
@@ -349,6 +357,7 @@ export async function GET(req: NextRequest) {
         const temp = Number.isFinite(t1h) ? t1h : parseFloat(vrow?.TMP ?? '0')
         const fl = feelsLike(temp, wsd, reh)
         const pty = toPtyCode(slot.PTY)
+        const lgt = parseFloat(slot.LGT ?? '0') || 0
         const rn1 = (() => {
           const rawR = slot.RN1 ?? '0'
           const n = parseFloat(rawR)
@@ -368,11 +377,14 @@ export async function GET(req: NextRequest) {
         return {
           fcstYmd: slot.fcstDate,
           fcstHour,
+          fcstMinute,
           temperature: temp,
           skyCode: toSkyCode(slot.SKY),
           ptyCode: pty,
           precipitation: rn1,
           windSpeed: wsd,
+          humidity: reh,
+          lgt,
           pop,
           vecDeg,
           feelsLikeC: fl,
@@ -403,9 +415,9 @@ export async function GET(req: NextRequest) {
         kstHour,
         kstMinute,
         popNow,
-        observed?.rn1 ?? 0,
+        observed?.precipitation ?? 0,
         nextHour?.pop ?? popNow,
-        nextHour?.precipitation ?? observed?.rn1 ?? 0,
+        nextHour?.precipitation ?? observed?.precipitation ?? 0,
       )
 
       const mountainHourly: MountainHourlyInfo[] = hourly.slice(0, 6).map((h) => {
@@ -455,7 +467,7 @@ export async function GET(req: NextRequest) {
           windSpeed: observed.windSpeed,
           uvIndex: uvVal,
           ptyCode: observed.ptyCode,
-          precipitation: observed.rn1,
+          precipitation: observed.precipitation,
           dustGrade: '2',
           activity: 'golf',
           gender: 'male',

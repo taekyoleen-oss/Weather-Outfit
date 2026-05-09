@@ -8,7 +8,7 @@ import { GpsButton } from '@/components/weather/GpsButton'
 import { RecentChips, saveRecentLocation } from '@/components/weather/RecentChips'
 import { WeatherCard } from '@/components/weather/WeatherCard'
 import { HourlyWeatherStrip } from '@/components/weather/HourlyWeatherStrip'
-import { PrecipRadarCard } from '@/components/weather/PrecipRadarCard'
+import { UltraSrtFcstCard } from '@/components/weather/UltraSrtFcstCard'
 import { TempGraph48h } from '@/components/weather/TempGraph48h'
 import dynamic from 'next/dynamic'
 const WeeklyForecastInline = dynamic(
@@ -59,7 +59,16 @@ import type { OpenMeteoDailyCompare } from '@/lib/weather/openMeteoCompare'
 
 // ── Spot data shape (subset used by page) ────────────────────────────────────
 interface SpotData {
-  hourly: Array<{ fcstYmd: string; fcstHour: number; score: { score: number; grade: string } }>
+  observed: {
+    temperature: number; humidity: number; windSpeed: number
+    skyCode: string; ptyCode: string; precipitation: number; lgt: number
+  } | null
+  hourly: Array<{
+    fcstYmd: string; fcstHour: number; fcstMinute: number
+    temperature: number; skyCode: string; ptyCode: string
+    precipitation: number; windSpeed: number; humidity: number; lgt: number
+    score: { score: number; grade: string }
+  }>
   precip10m: Array<{ minuteOffset: number; timeKst: string; precipProb: number; precipMm: number }>
   lightningNow: { level: 'none' | 'watch' | 'warning'; message: string; source: string }
   mountainHourly: Array<{
@@ -716,9 +725,10 @@ export default function HomePage() {
         suitabilityByHour={suitabilityByHour}
       />
       {spotData && (
-        <PrecipRadarCard
+        <UltraSrtFcstCard
+          observed={spotData.observed}
+          slots={spotData.hourly}
           lightningNow={spotData.lightningNow}
-          precip10m={spotData.precip10m}
         />
       )}
       <TempGraph48h hourly={weatherData?.hourly ?? []} loading={weatherLoading && !weatherData} />

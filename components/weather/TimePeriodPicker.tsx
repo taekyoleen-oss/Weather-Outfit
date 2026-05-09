@@ -253,7 +253,7 @@ export function TimePeriodPicker({
             </div>
 
             <span
-              className="text-[11px] font-semibold mt-0.5 leading-tight"
+              className="text-[9px] font-semibold mt-0.5 leading-tight"
               style={{ color: isSelected ? 'var(--accent)' : 'var(--text)' }}
             >
               {period.label}
@@ -261,7 +261,7 @@ export function TimePeriodPicker({
 
             {temperature !== undefined ? (
               <span
-                className="text-[10px] font-bold tabular-nums leading-none"
+                className="text-[8px] font-bold tabular-nums leading-none"
                 style={{ color: isSelected ? 'var(--accent)' : 'var(--muted)' }}
               >
                 {formatTemp1(temperature)}°

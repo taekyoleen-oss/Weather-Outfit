@@ -183,13 +183,15 @@ export function parseNcstSurface(row: Record<string, string>): {
   windSpeed: number
   ptyCode: string
   rn1: number
+  lgt: number
 } {
   const temperature = parseFloat(row.T1H ?? 'NaN')
   const humidity = parseFloat(row.REH ?? '50')
   const windSpeed = parseFloat(row.WSD ?? '0')
   const ptyCode = row.PTY ?? '0'
   const rn1 = parseFloat(row.RN1 ?? '0') || 0
-  return { temperature, humidity, windSpeed, ptyCode, rn1 }
+  const lgt = parseFloat(row.LGT ?? '0') || 0
+  return { temperature, humidity, windSpeed, ptyCode, rn1, lgt }
 }
 
 /** 초단기예보 1회 호출로 향후 N시간(0~6h) 슬롯의 멀티 카테고리(T1H·SKY·PTY·RN1·WSD) 묶음 반환 */
@@ -202,12 +204,13 @@ export interface UltraSrtFcstSlot {
   RN1?: string
   WSD?: string
   REH?: string
+  LGT?: string
 }
 
 export async function fetchUltraSrtFcstSlots(
   nx: number,
   ny: number,
-  hours = 6
+  hours = 12
 ): Promise<{ slots: UltraSrtFcstSlot[]; baseDate: string; baseTime: string } | null> {
   /* 최근 발표분부터 역추적: 10분 단위 base_time, 발표 시점이 너무 최근이면 빈 응답이 와서 폴백 */
   const candidates: { baseDate: string; baseTime: string }[] = []
