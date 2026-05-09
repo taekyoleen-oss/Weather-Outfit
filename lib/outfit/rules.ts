@@ -340,7 +340,7 @@ export function getBaseItems(
 
 function getShoes(activity: ActivityType, zone: TempZone, gender: GenderType = 'male'): OutfitItem {
   if (activity === 'hiking') return { id: 'foot-hiking', name: '등산화', icon: '🥾', category: 'foot', required: true }
-  if (activity === 'running' || activity === 'cycling') return { id: 'foot-sneaker', name: '러닝화 / 운동화', icon: '👟', category: 'foot', required: true }
+  if (activity === 'running' || activity === 'cycling') return { id: 'foot-sneaker', name: '운동화', icon: '👟', category: 'foot', required: true }
   if (activity === 'golf') return { id: 'foot-golf', name: '골프화', icon: '👞', category: 'foot', required: true }
   if (activity === 'beach') return { id: 'foot-sandal', name: '샌들', icon: '🩴', category: 'foot', required: true }
   if (activity === 'ski') return { id: 'foot-boots', name: '방한 부츠', icon: '🥾', category: 'foot', required: true }
