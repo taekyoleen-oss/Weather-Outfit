@@ -117,8 +117,8 @@ export function OutfitResult({
             </div>
           </div>
           {periodWeather && (
-            <p className="text-[11px] sm:text-xs font-semibold tabular-nums text-right leading-snug" style={{ color: 'var(--muted)' }}>
-              {periodWeather.source === 'period_hourly'
+            <p className="text-[9px] font-semibold tabular-nums text-right leading-snug" style={{ color: 'var(--muted)' }}>
+              {periodWeather.source === 'period_hourly' && periodWeather.periodName
                 ? `${periodWeather.periodName} · `
                 : '해당일 · '}
               {periodWeather.conditionLabel} · 최고 {formatTemp1(periodWeather.maxTemp)}° / 최저 {formatTemp1(periodWeather.minTemp)}°

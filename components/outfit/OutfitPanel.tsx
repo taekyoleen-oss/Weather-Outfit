@@ -20,7 +20,7 @@ import { OutfitDayChecklist } from './OutfitDayChecklist'
 import { feelsLike, weatherEmojiFromLabel, weatherLabel } from '@/lib/utils/formatWeather'
 import { buildHourlySlotYmds } from '@/lib/utils/resolveHourlyForPeriod'
 import type { VisitSchedule } from '@/lib/utils/visitSchedule'
-import { getPeriodIndex, PERIOD_CHIP_LABELS_KO, TIME_PERIODS } from '@/lib/utils/timePeriods'
+import { getPeriodIndex, PERIOD_CHIP_LABELS_KO, TIME_PERIODS, OUTFIT_PERIODS, getOutfitPeriodIndex } from '@/lib/utils/timePeriods'
 
 function calendarMonthKstFromWeather(w: CurrentWeather | null): number | undefined {
   if (!w) return undefined
@@ -64,15 +64,15 @@ interface Props {
 type SensitivityLevel = -2 | 0 | 2
 
 const SENSITIVITY_OPTIONS: { value: SensitivityLevel; label: string; emoji: string; desc: string }[] = [
-  { value: -2, label: '더위에 강함', emoji: '🥶', desc: '더위를 덜 타는 편이에요' },
-  { value: 0,  label: '보통',       emoji: '😊', desc: '평균 체감' },
-  { value: 2,  label: '추위에 강함', emoji: '🥵', desc: '추위를 덜 타는 편이에요' },
+  { value: -2, label: '더위 강함', emoji: '🥶', desc: '더위를 덜 타는 편이에요' },
+  { value: 0,  label: '체감 보통', emoji: '😊', desc: '평균 체감' },
+  { value: 2,  label: '추위 강함', emoji: '🥵', desc: '추위를 덜 타는 편이에요' },
 ]
 
 const SENSITIVITY_LABEL_MAP: Record<SensitivityLevel, string> = {
-  [-2]: '🥶 더위에 강함',
-  [0]: '😊 보통',
-  [2]: '🥵 추위에 강함',
+  [-2]: '🥶 더위 강함',
+  [0]: '😊 체감 보통',
+  [2]: '🥵 추위 강함',
 }
 
 const ACTIVITY_DEFAULT_DURATION_HOURS: Record<ActivityType, number> = {
@@ -114,20 +114,20 @@ function mobileChipPeriodLineLabel(
   currentPeriodIdx: number,
 ): string {
   const todayYmd = kstTodayYmd()
-  const base = PERIOD_CHIP_LABELS_KO[periodIdx]
+  const base = OUTFIT_PERIODS[periodIdx]?.label ?? PERIOD_CHIP_LABELS_KO[periodIdx] ?? ''
   const diff = diffCalendarDaysYmd(todayYmd, visitYmd)
   if (diff < 0) return base
   if (diff === 0) {
-    if (periodIdx < currentPeriodIdx) return `내일 ${base}`
+    if (periodIdx < currentPeriodIdx) return `내일`
     return base
   }
-  if (diff === 1) return `내일 ${base}`
-  if (diff === 2) return `모레 ${base}`
-  return `${visitYmd.slice(4, 6)}/${visitYmd.slice(6, 8)} ${base}`
+  if (diff === 1) return `내일`
+  if (diff === 2) return `모레`
+  return `${visitYmd.slice(4, 6)}/${visitYmd.slice(6, 8)}`
 }
 
-/** 일별 최저~최고만 있을 때 시간대별 대표 기온 비중(새벽·아침·점심·저녁) */
-const DAILY_EST_TEMP_WEIGHTS = [0.12, 0.38, 0.88, 0.45] as const
+/** 일별 최저~최고만 있을 때 시간대별 대표 기온 비중(OUTFIT_PERIODS 순서) */
+const DAILY_EST_TEMP_WEIGHTS = [0.08, 0.25, 0.55, 0.88, 0.72, 0.45, 0.20] as const
 
 function buildOutfitPeriodChipPreviews(
   scheduleYmd: string,
@@ -138,8 +138,7 @@ function buildOutfitPeriodChipPreviews(
   const todayYmd = kstTodayYmd()
   const slotYmds = buildHourlySlotYmds(hourly, todayYmd)
 
-  return TIME_PERIODS.map((p, idx) => {
-    /** 오늘 조회일에서 구간 순서가 자정을 넘기면 해당 칸은 다음날 달력 기준 예보 */
+  return OUTFIT_PERIODS.map((p, idx) => {
     const periodDayYmd =
       scheduleYmd === todayYmd && idx < currentPeriodIdx
         ? addCalendarDaysFromKstYmd(scheduleYmd, 1)
@@ -304,6 +303,10 @@ export function OutfitPanel({
   const [sensitivity, setSensitivity] = useState<SensitivityLevel>(0)
   /** 모바일 외출옷 칩으로 선택된 실질 날짜 — visitDateYmd 변경 없이 내일 구간 추천 가능 */
   const [outfitEffectiveYmd, setOutfitEffectiveYmd] = useState<string | null>(null)
+  /** 모바일 칩 다중 선택 — OUTFIT_PERIODS 인덱스 배열(정렬됨, 연속 구간만 허용) */
+  const [selectedOutfitPeriodIndices, setSelectedOutfitPeriodIndices] = useState<number[]>(() => [
+    getOutfitPeriodIndex(activityStartFloor(outfitPeriodStartHour, outfitIsNowPeriod, outfitCurrentKstHour))
+  ])
 
   useEffect(() => {
     const g = loadPref<GenderType>('wf:gender', 'male')
@@ -351,6 +354,7 @@ export function OutfitPanel({
     const f = activityStartFloor(outfitPeriodStartHour, outfitIsNowPeriod, outfitCurrentKstHour)
     setStartHour(f)
     setEndHour(addHoursWrap24(f, ACTIVITY_DEFAULT_DURATION_HOURS[activityRef.current]))
+    setSelectedOutfitPeriodIndices([getOutfitPeriodIndex(f)])
     // outfitCurrentKstHour, activityRef: intentionally excluded — kst hour has its own effect; activity change is handled by handleActivity
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [outfitScheduleSyncKey, outfitPeriodStartHour, outfitIsNowPeriod])
@@ -365,6 +369,7 @@ export function OutfitPanel({
     if (!isMobileSheet || !mobileInterestSchedule) return
     setStartHour(mobileInterestSchedule.startHour)
     setEndHour(mobileInterestSchedule.endHour)
+    setSelectedOutfitPeriodIndices([getOutfitPeriodIndex(mobileInterestSchedule.startHour)])
   }, [
     isMobileSheet,
     mobileInterestSchedule?.startHour,
@@ -413,9 +418,24 @@ export function OutfitPanel({
   }, [weather, effectiveOutfitYmd, scheduleYmd, hourly, startHour])
 
   const periodWeather = useMemo(() => {
-    const chipPeriod = TIME_PERIODS[getPeriodIndex(startHour)]
-    const pStart = chipPeriod.start
-    const pEnd = chipPeriod.end
+    let pStart: number
+    let pEnd: number
+    let periodName: string
+
+    if (isMobileSheet && selectedOutfitPeriodIndices.length > 0) {
+      const sorted = [...selectedOutfitPeriodIndices].sort((a, b) => a - b)
+      const fp = OUTFIT_PERIODS[sorted[0]!]!
+      const lp = OUTFIT_PERIODS[sorted[sorted.length - 1]!]!
+      pStart = fp.start
+      pEnd = lp.end
+      periodName = sorted.length === 1 ? fp.label : `${fp.label}~${lp.label}`
+    } else {
+      const chipPeriod = TIME_PERIODS[getPeriodIndex(startHour)]!
+      pStart = chipPeriod.start
+      pEnd = chipPeriod.end
+      periodName = periodChipNameFromHours(pStart, pEnd)
+    }
+
     const todayYmd = kstTodayYmd()
     const slotYmds = buildHourlySlotYmds(hourly, todayYmd)
     const nextYmd = addCalendarDaysFromKstYmd(effectiveOutfitYmd, 1)
@@ -444,13 +464,7 @@ export function OutfitPanel({
       const conditionLabel =
         [...labelCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ??
         weatherLabel(inRange[0]!.skyCode, inRange[0]!.ptyCode)
-      return {
-        source: 'period_hourly' as const,
-        conditionLabel,
-        minTemp,
-        maxTemp,
-        periodName: periodChipNameFromHours(pStart, pEnd),
-      }
+      return { source: 'period_hourly' as const, conditionLabel, minTemp, maxTemp, periodName }
     }
 
     const dayRow = daily.find((d) => d.date === effectiveOutfitYmd)
@@ -463,7 +477,7 @@ export function OutfitPanel({
       }
     }
     return null
-  }, [hourly, daily, effectiveOutfitYmd, startHour])
+  }, [hourly, daily, effectiveOutfitYmd, startHour, isMobileSheet, selectedOutfitPeriodIndices])
 
   const result = useMemo(() => {
     if (!effectiveWeatherForOutfit) return null
@@ -500,7 +514,7 @@ export function OutfitPanel({
   const periodChipPreviewYmd =
     isMobileSheet && mobileInterestSchedule ? mobileInterestSchedule.visitDateYmd : scheduleYmd
 
-  const currentPeriodIdxForChips = getPeriodIndex(outfitCurrentKstHour)
+  const currentPeriodIdxForChips = getOutfitPeriodIndex(outfitCurrentKstHour)
 
   const periodChipPreviews = useMemo(
     () =>
@@ -513,15 +527,10 @@ export function OutfitPanel({
     [periodChipPreviewYmd, hourly, daily, currentPeriodIdxForChips],
   )
 
-  /** 오늘: 현재 시간대 → 오른쪽으로 새벽·아침·점심·저녁 순(순환). 그 외 날짜: 새벽부터 */
+  /** 외출옷 칩: OUTFIT_PERIODS 7개 전부 표시 */
   const mobilePeriodChipIndices = useMemo(() => {
-    if (!isMobileSheet || !mobileInterestSchedule) return [0, 1, 2, 3] as number[]
-    const todayYmd = kstTodayYmd()
-    const visitYmd = mobileInterestSchedule.visitDateYmd
-    if (visitYmd !== todayYmd) return [0, 1, 2, 3]
-    const cur = getPeriodIndex(outfitCurrentKstHour)
-    return [0, 1, 2, 3].map((k) => (cur + k) % 4)
-  }, [isMobileSheet, mobileInterestSchedule?.visitDateYmd, outfitCurrentKstHour])
+    return [0, 1, 2, 3, 4, 5, 6] as number[]
+  }, [])
 
   const genderSensitivityBlock = (
     <>
@@ -610,21 +619,18 @@ export function OutfitPanel({
               내일
             </p>
           ) : null}
-          <div className="grid grid-cols-4 gap-1">
+          <div className="grid grid-cols-7 gap-0.5">
             {mobilePeriodChipIndices.map((periodIdx) => {
-              const p = TIME_PERIODS[periodIdx]!
+              const p = OUTFIT_PERIODS[periodIdx]!
               const todayYmd = kstTodayYmd()
               const visitYmd = mobileInterestSchedule.visitDateYmd
-              /** 오늘 조회일에서 칩 순서가 자정 넘김이면 이 칸은 다음날 달력(내일 …) */
               const chipTargetYmd =
                 visitYmd === todayYmd && periodIdx < currentPeriodIdxForChips
                   ? addCalendarDaysFromKstYmd(todayYmd, 1)
                   : visitYmd
-              // 로컬 startHour/endHour 및 effectiveOutfitYmd 기준으로 선택 여부 판단
-              const selected =
-                startHour === p.start &&
-                endHour === p.end &&
-                effectiveOutfitYmd === chipTargetYmd
+              const isSelected = selectedOutfitPeriodIndices.includes(periodIdx) && effectiveOutfitYmd === chipTargetYmd
+              const isCurrent = periodIdx === currentPeriodIdxForChips && chipTargetYmd === todayYmd
+              const isTomorrow = chipTargetYmd !== visitYmd
               const preview = periodChipPreviews[periodIdx]!
               const wxEmoji =
                 preview.conditionLabel !== '—'
@@ -634,54 +640,66 @@ export function OutfitPanel({
                 <button
                   key={p.id}
                   type="button"
-                  title={`${preview.conditionLabel} · ${preview.tempLine}`}
-                  className="flex flex-col items-center justify-center gap-0.5 py-1 px-0.5 rounded-lg text-center transition-all active:scale-95 min-w-0 min-h-[76px]"
+                  className="flex flex-col items-center justify-center gap-0.5 py-1 px-0 rounded-lg text-center transition-all active:scale-95 min-w-0 min-h-[58px]"
                   style={{
-                    background: selected ? 'var(--primary-tint-12)' : 'var(--surface)',
-                    border: `2px solid ${selected ? 'var(--primary)' : 'var(--border)'}`,
+                    background: isSelected ? 'var(--primary-tint-12)' : 'var(--surface)',
+                    border: `2px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}`,
                   }}
                   onClick={() => {
-                    // visitDateYmd를 변경하지 않고 로컬에서만 시간대·날짜 갱신
-                    setStartHour(p.start)
-                    setEndHour(p.end)
-                    setOutfitEffectiveYmd(chipTargetYmd)
+                    const current = selectedOutfitPeriodIndices
+                    let newSel: number[]
+
+                    if (chipTargetYmd !== effectiveOutfitYmd) {
+                      newSel = [periodIdx]
+                      setOutfitEffectiveYmd(chipTargetYmd)
+                    } else if (current.includes(periodIdx)) {
+                      if (current.length === 1) return
+                      const without = current.filter(i => i !== periodIdx).sort((a, b) => a - b)
+                      const contiguous = without.every((v, i) => i === 0 || v === without[i - 1]! + 1)
+                      newSel = contiguous ? without : without.slice(0, without.indexOf(Math.min(...without.filter(i => i > periodIdx))) || 1)
+                      if (newSel.length === 0) newSel = [without[0]!]
+                    } else {
+                      const sorted = [...current].sort((a, b) => a - b)
+                      const min = sorted[0]!
+                      const max = sorted[sorted.length - 1]!
+                      if (periodIdx === min - 1 || periodIdx === max + 1) {
+                        newSel = [...current, periodIdx].sort((a, b) => a - b)
+                      } else {
+                        newSel = [periodIdx]
+                      }
+                    }
+
+                    setSelectedOutfitPeriodIndices(newSel)
+                    const fp = OUTFIT_PERIODS[newSel[0]!]!
+                    const lp = OUTFIT_PERIODS[newSel[newSel.length - 1]!]!
+                    setStartHour(fp.start)
+                    setEndHour(lp.end)
                   }}
                 >
-                  <span
-                    className="font-semibold leading-tight text-[9px] sm:text-[10px] break-keep line-clamp-2 w-full px-0.5"
-                    style={{ color: selected ? 'var(--primary)' : 'var(--text)' }}
-                  >
-                    {mobileChipPeriodLineLabel(
-                      mobileInterestSchedule.visitDateYmd,
-                      periodIdx,
-                      currentPeriodIdxForChips,
+                  <div className="h-[10px] flex items-center justify-center">
+                    {isCurrent && (
+                      <span className="text-[7px] px-0.5 py-0 rounded-full font-semibold leading-none"
+                        style={{ background: 'rgba(34,197,94,0.12)', color: '#16a34a' }}>지금</span>
                     )}
+                    {isTomorrow && !isCurrent && (
+                      <span className="text-[7px] px-0.5 py-0 rounded-full font-semibold leading-none"
+                        style={{ background: 'var(--primary-tint-10)', color: 'var(--humidity)' }}>내일</span>
+                    )}
+                  </div>
+                  <span className="text-[11px] leading-none" aria-hidden>{wxEmoji}</span>
+                  <span className="text-[7px] font-semibold leading-tight tabular-nums"
+                    style={{ color: isSelected ? 'var(--primary)' : 'var(--text)' }}>
+                    {p.label}
                   </span>
-                  <span className="text-[15px] sm:text-base leading-none" aria-hidden>
-                    {wxEmoji}
+                  <span className="text-[8px] font-bold tabular-nums leading-none"
+                    style={{ color: isSelected ? 'var(--primary)' : 'var(--muted)' }}>
+                    {preview.tempLine !== '—' ? preview.tempLine : '--'}
                   </span>
-                  <span
-                    className="font-medium leading-tight text-[8px] sm:text-[9px] break-keep line-clamp-1 w-full px-0.5"
-                    style={{ color: selected ? 'var(--primary)' : 'var(--muted)' }}
-                  >
-                    {preview.conditionLabel !== '—' ? preview.conditionLabel : '—'}
-                  </span>
-                  <span
-                    className="text-[10px] sm:text-[11px] font-bold tabular-nums leading-none"
-                    style={{ color: selected ? 'var(--primary)' : 'var(--text)' }}
-                  >
-                    {preview.tempLine}
-                  </span>
-                  {preview.source === 'daily_est' && preview.conditionLabel !== '—' && (
-                    <span className="text-[7px] leading-none" style={{ color: 'var(--muted)' }}>
-                      일별추정
-                    </span>
-                  )}
                 </button>
               )
             })}
           </div>
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {effectiveOutfitYmd !== mobileInterestSchedule.visitDateYmd && (
               <div className="flex justify-center">
                 <span
@@ -692,23 +710,18 @@ export function OutfitPanel({
                 </span>
               </div>
             )}
-            <p className="text-[10px] text-center leading-snug" style={{ color: 'var(--muted)' }}>
-              기준 {effectiveOutfitYmd.slice(0, 4)}.{effectiveOutfitYmd.slice(4, 6)}.{effectiveOutfitYmd.slice(6, 8)} ·{' '}
-              {periodChipNameFromHours(startHour, endHour)}
+            <p className="text-[9px] text-center leading-snug" style={{ color: 'var(--muted)' }}>
+              {effectiveOutfitYmd.slice(0, 4)}.{effectiveOutfitYmd.slice(4, 6)}.{effectiveOutfitYmd.slice(6, 8)}{periodWeather?.periodName ? ` · ${periodWeather.periodName}` : ''}
             </p>
             {periodWeather ? (
               <p
-                className="text-[10px] text-center leading-snug font-semibold"
+                className="text-[9px] text-center leading-snug font-semibold"
                 style={{ color: 'var(--text)' }}
               >
-                {periodWeather.source === 'period_hourly'
-                  ? `${periodWeather.periodName} 구간 · `
-                  : '해당일 · '}
-                {periodWeather.conditionLabel} · 최고 {Math.round(periodWeather.maxTemp)}° / 최저{' '}
-                {Math.round(periodWeather.minTemp)}°
+                {periodWeather.conditionLabel} · 최고 {Math.round(periodWeather.maxTemp)}° / 최저 {Math.round(periodWeather.minTemp)}°
               </p>
             ) : hourly.length > 0 || daily.length > 0 ? (
-              <p className="text-[10px] text-center" style={{ color: 'var(--muted)' }}>
+              <p className="text-[9px] text-center" style={{ color: 'var(--muted)' }}>
                 선택 날짜·구간의 예보를 불러오지 못했습니다.
               </p>
             ) : null}

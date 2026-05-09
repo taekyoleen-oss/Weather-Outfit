@@ -26,6 +26,27 @@ export function getPeriodIndex(hour: number): number {
   return 3
 }
 
+/** 외출옷 추천 전용 세분화 시간대 (7개) */
+export const OUTFIT_PERIODS: TimePeriod[] = [
+  { id: 'dawn',    label: '새벽',    emoji: '🌙', repHour: 3,  start: 0,  end: 6  },
+  { id: 'h07_09', label: '7~9시',   emoji: '🌅', repHour: 8,  start: 7,  end: 9  },
+  { id: 'h10_12', label: '10~12시', emoji: '☀️', repHour: 11, start: 10, end: 12 },
+  { id: 'h13_15', label: '13~15시', emoji: '🌤', repHour: 14, start: 13, end: 15 },
+  { id: 'h16_18', label: '16~18시', emoji: '🌇', repHour: 17, start: 16, end: 18 },
+  { id: 'h19_21', label: '19~21시', emoji: '🌆', repHour: 20, start: 19, end: 21 },
+  { id: 'h21_23', label: '21~23시', emoji: '🌙', repHour: 22, start: 21, end: 23 },
+]
+
+export function getOutfitPeriodIndex(hour: number): number {
+  if (hour < 7) return 0
+  if (hour < 10) return 1
+  if (hour < 13) return 2
+  if (hour < 16) return 3
+  if (hour < 19) return 4
+  if (hour < 22) return 5
+  return 6
+}
+
 /**
  * 오전(7~11시)일 때는 오전 전체가 보이도록 7시부터 시작.
  * 오후/저녁은 현재 시각부터 시작.
