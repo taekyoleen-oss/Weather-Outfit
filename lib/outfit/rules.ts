@@ -589,3 +589,74 @@ export function generateTips(
 
   return tips.slice(0, 6) // 최대 6개
 }
+
+// ─── Multi-period gap bridging ────────────────────────────────────────────────
+// 가이드 라.2: 기온차 대응 레이어 — 최대 2개, 외투 우선
+// 근거: weather-outdoor-clothing-guide.md 나. 권장 데이터 항목 「일교차·아침저녁 보온 판단」
+
+const ZONE_ORDER: Record<TempZone, number> = {
+  hot: 5, warm: 4, mild: 3, cool: 2, cold: 1, freezing: 0,
+}
+
+/** 두 구간 사이의 존 거리 (0=동일 구간) */
+export function getZoneGap(z1: TempZone, z2: TempZone): number {
+  return Math.abs(ZONE_ORDER[z1] - ZONE_ORDER[z2])
+}
+
+/**
+ * 다중 시간대 기온차(planZone vs coldZone) 대응 선택 아이템 — 최대 2개.
+ * planZone: 계획 온도(최저+범위×0.3) 기반 구간 → 기본 복장 구간
+ * coldZone: 최저 온도 구간 → 가장 추울 때 필요한 외투 식별
+ *
+ * 가이드 원칙:
+ *  - cold/freezing 구간 외투는 이미 planZone에서 필수로 생성되므로
+ *    planZone이 이미 cool↓이면 coldZone 외투 중복 추가 방지
+ *  - 선택 아이템은 「벗고 입기 쉬운 겉옷」 위주 (가이드 라.2 아침저녁 일교차 문구와 동일)
+ */
+export function getGapBridgingItems(
+  planZone: TempZone,
+  coldZone: TempZone,
+  gender: GenderType,
+  coldPeriodLabel?: string,
+): OutfitItem[] {
+  const planOrder = ZONE_ORDER[planZone]
+  const coldOrder = ZONE_ORDER[coldZone]
+  // planZone이 coldZone과 같거나 더 추우면 기본 복장에 이미 포함 → 추가 불필요
+  if (planOrder <= coldOrder) return []
+
+  const gap = planOrder - coldOrder
+  const cond = coldPeriodLabel ? `기온차 대비 겉옷 (${coldPeriodLabel})` : '기온차 대비 겉옷'
+  const items: OutfitItem[] = []
+
+  // coldZone에 맞는 외투 한 벌 (planZone 기본 복장에 없는 것만)
+  switch (coldZone) {
+    case 'mild':
+      // mild → planZone은 warm·hot: 아침저녁 바람막이
+      items.push({ id: 'gap-outer-wb', name: '바람막이', icon: '💨', category: 'outer', required: false, condition: cond })
+      break
+    case 'cool':
+      // cool → planZone은 mild·warm·hot: 얇은 점퍼
+      // planZone=cool 이면 이미 outer-jacket 필수 → skip (planOrder<=coldOrder 분기에서 처리)
+      items.push({ id: 'gap-outer-jacket', name: '얇은 점퍼', icon: '🧥', category: 'outer', required: false, condition: cond })
+      break
+    case 'cold':
+      // cold → planZone은 mild·cool·warm·hot
+      // planZone=cool이면 얇은점퍼 필수, coldZone=cold이므로 경량패딩 upgrade 선택으로 추가
+      items.push({ id: 'gap-outer-padding-l', name: '경량 패딩', icon: '🧥', category: 'outer', required: false, condition: cond })
+      break
+    case 'freezing':
+      items.push({ id: 'gap-outer-padding-h', name: '두꺼운 패딩', icon: '🥶', category: 'outer', required: false, condition: cond })
+      break
+    // hot·warm coldZone → planOrder<=coldOrder이므로 여기 도달 안 함
+  }
+
+  // gap 2존 이상 + cold/freezing 으로 급락: 머플러/목도리 추가
+  if (gap >= 2 && (coldZone === 'cold' || coldZone === 'freezing')) {
+    const scarf: OutfitItem = gender === 'female'
+      ? { id: 'gap-acc-muffler', name: '머플러', icon: '🧣', category: 'acc', required: false, condition: coldPeriodLabel ? `추운 시간대 보온 (${coldPeriodLabel})` : '추운 시간대 보온' }
+      : { id: 'gap-acc-scarf',   name: '목도리',  icon: '🧣', category: 'acc', required: false, condition: coldPeriodLabel ? `추운 시간대 보온 (${coldPeriodLabel})` : '추운 시간대 보온' }
+    items.push(scarf)
+  }
+
+  return items.slice(0, 2)
+}

@@ -6,6 +6,7 @@ import { GenderToggle } from './GenderToggle'
 import { OutfitResult } from './OutfitResult'
 import { OutfitLlmSuggest } from './OutfitLlmSuggest'
 import { recommendOutfit } from '@/lib/outfit/recommender'
+import { getTempZone, getGapBridgingItems } from '@/lib/outfit/rules'
 import type { ActivityType, GenderType } from '@/types/outfit'
 import type {
   CurrentWeather,
@@ -603,43 +604,52 @@ export function OutfitPanel({
       terrain,
     }
 
-    // 다중 시간대: 따뜻한(긴) 구간을 필수 기준으로, 추운 구간에만 필요한 아이템을 선택으로 추가
+    // 다중 시간대: 계획 온도(최저+범위×0.3) 단일 추천 + 기온차 레이어 최대 2개
+    // 근거: weather-outdoor-clothing-guide.md 나. 「일교차·아침저녁 보온 판단」
     if (
       selectedOutfitPeriodIndices.length > 1 &&
-      periodWeather?.source === 'period_hourly' &&
-      periodWeather.coldPeriodLabel
+      periodWeather?.source === 'period_hourly'
     ) {
+      const periodMinT = periodWeather.minTemp
       const periodMaxT = periodWeather.maxTemp
-      const tempDiff = periodMaxT - tempForOutfit
-      if (tempDiff >= 3) {
-        const flWarm =
-          feelsLike(periodMaxT, effectiveWeatherForOutfit.windSpeed, effectiveWeatherForOutfit.humidity) + sensitivity
-        // 따뜻한 구간 기준 = 필수 베이스 (가장 오래 입는 복장)
-        const warmResult = recommendOutfit({ temperature: periodMaxT, feelsLike: flWarm, ...sharedArgs })
-        // 추운 구간 기준 = 추가로 필요한 아이템 파악
-        const coldResult = recommendOutfit({ temperature: tempForOutfit, feelsLike: adjustedFeelsLike, ...sharedArgs })
-        const warmIds = new Set(warmResult.items.map((i) => i.id))
-        const coldLabel = periodWeather.coldPeriodLabel
-        // 추운 구간에만 등장하는 아이템 = 선택 아이템으로 추가
-        const coldOnlyItems = coldResult.items
-          .filter((i) => !warmIds.has(i.id))
-          .map((i) => ({ ...i, required: false, condition: `${coldLabel} 기준 추가` }))
-        // 위험 등급은 두 결과 중 더 높은 값 적용
+      const tempRange = periodMaxT - periodMinT
+
+      if (tempRange >= 3) {
+        // 계획 온도: 최저 기준, 기온차의 30% 가산 (추운 쪽 가중 — 종일 입을 복장 기준)
+        const planningTemp = periodMinT + tempRange * 0.3
+        const flPlanning =
+          feelsLike(planningTemp, effectiveWeatherForOutfit.windSpeed, effectiveWeatherForOutfit.humidity) + sensitivity
+        const flCold =
+          feelsLike(periodMinT, effectiveWeatherForOutfit.windSpeed, effectiveWeatherForOutfit.humidity) + sensitivity
+
+        const planZone = getTempZone(flPlanning)
+        const coldZone = getTempZone(flCold)
+
+        // 계획 온도 기반 단일 추천 (필수 복장)
+        const mainResult = recommendOutfit({ temperature: planningTemp, feelsLike: flPlanning, ...sharedArgs })
+
+        // 기온차 대응 선택 아이템 — 최대 2개 (기본 복장에 없는 것만)
+        const mainIds = new Set(mainResult.items.map((i) => i.id))
+        const gapItems = getGapBridgingItems(planZone, coldZone, gender, periodWeather.coldPeriodLabel)
+          .filter((i) => !mainIds.has(i.id))
+
+        // 위험 등급은 최저 온도 기준으로도 평가 (안전 최우선)
+        const coldResult = recommendOutfit({ temperature: periodMinT, feelsLike: flCold, ...sharedArgs })
         const dangerRank = { none: 0, caution: 1, warning: 2, cancel: 3 } as const
-        const coldWins =
-          dangerRank[coldResult.dangerLevel] > dangerRank[warmResult.dangerLevel]
+        const coldWins = dangerRank[coldResult.dangerLevel] > dangerRank[mainResult.dangerLevel]
+
         return {
-          ...warmResult,
-          items: [...warmResult.items, ...coldOnlyItems],
-          dangerLevel: coldWins ? coldResult.dangerLevel : warmResult.dangerLevel,
+          ...mainResult,
+          items: [...mainResult.items, ...gapItems],
+          dangerLevel: coldWins ? coldResult.dangerLevel : mainResult.dangerLevel,
           dangerReasons: coldWins
-            ? [...new Set([...warmResult.dangerReasons, ...coldResult.dangerReasons])]
-            : warmResult.dangerReasons,
-          cancelActivity: warmResult.cancelActivity || coldResult.cancelActivity,
-          uvAlert: warmResult.uvAlert || coldResult.uvAlert,
-          dustAlert: warmResult.dustAlert || coldResult.dustAlert,
-          rainAlert: warmResult.rainAlert || coldResult.rainAlert,
-          windAlert: warmResult.windAlert || coldResult.windAlert,
+            ? [...new Set([...mainResult.dangerReasons, ...coldResult.dangerReasons])]
+            : mainResult.dangerReasons,
+          cancelActivity: mainResult.cancelActivity || coldResult.cancelActivity,
+          uvAlert: mainResult.uvAlert || coldResult.uvAlert,
+          dustAlert: mainResult.dustAlert || coldResult.dustAlert,
+          rainAlert: mainResult.rainAlert || coldResult.rainAlert,
+          windAlert: mainResult.windAlert || coldResult.windAlert,
         }
       }
     }
