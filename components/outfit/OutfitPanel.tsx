@@ -40,6 +40,8 @@ interface Props {
   terrain: TerrainType
   /** 선택한 시간대의 시작 시각(새벽 0, 오전 6, …) */
   outfitPeriodStartHour: number
+  /** 연속 범위 선택 시 끝 시간대의 end 시각. 단일 선택이면 undefined */
+  outfitPeriodEndHour?: number
   /** 오늘·현재 구간(지금)이면 시작 시각 하한을 현재 시+1(KST)로 둠 */
   outfitIsNowPeriod: boolean
   /** KST 현재 시(0–23) */
@@ -279,6 +281,7 @@ export function OutfitPanel({
   alerts = [],
   terrain,
   outfitPeriodStartHour,
+  outfitPeriodEndHour,
   outfitIsNowPeriod,
   outfitCurrentKstHour,
   outfitScheduleSyncKey,
@@ -353,11 +356,25 @@ export function OutfitPanel({
   useEffect(() => {
     const f = activityStartFloor(outfitPeriodStartHour, outfitIsNowPeriod, outfitCurrentKstHour)
     setStartHour(f)
-    setEndHour(addHoursWrap24(f, ACTIVITY_DEFAULT_DURATION_HOURS[activityRef.current]))
-    setSelectedOutfitPeriodIndices([getOutfitPeriodIndex(f)])
+    if (outfitPeriodEndHour !== undefined) {
+      setEndHour(outfitPeriodEndHour)
+      // 범위 선택: selectedOutfitPeriodIndices를 시작~끝 구간으로 확장
+      const startPeriodIdx = getOutfitPeriodIndex(f)
+      const endPeriodIdx = OUTFIT_PERIODS.findIndex((p) => p.end === outfitPeriodEndHour)
+      if (endPeriodIdx >= startPeriodIdx) {
+        setSelectedOutfitPeriodIndices(
+          Array.from({ length: endPeriodIdx - startPeriodIdx + 1 }, (_, k) => startPeriodIdx + k),
+        )
+      } else {
+        setSelectedOutfitPeriodIndices([startPeriodIdx])
+      }
+    } else {
+      setEndHour(addHoursWrap24(f, ACTIVITY_DEFAULT_DURATION_HOURS[activityRef.current]))
+      setSelectedOutfitPeriodIndices([getOutfitPeriodIndex(f)])
+    }
     // outfitCurrentKstHour, activityRef: intentionally excluded — kst hour has its own effect; activity change is handled by handleActivity
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [outfitScheduleSyncKey, outfitPeriodStartHour, outfitIsNowPeriod])
+  }, [outfitScheduleSyncKey, outfitPeriodStartHour, outfitIsNowPeriod, outfitPeriodEndHour])
 
   useEffect(() => {
     if (!outfitIsNowPeriod) return
@@ -650,21 +667,31 @@ export function OutfitPanel({
                     let newSel: number[]
 
                     if (chipTargetYmd !== effectiveOutfitYmd) {
+                      // 다른 날짜 칩: 단일 선택으로 초기화
                       newSel = [periodIdx]
                       setOutfitEffectiveYmd(chipTargetYmd)
                     } else if (current.includes(periodIdx)) {
-                      if (current.length === 1) return
-                      const without = current.filter(i => i !== periodIdx).sort((a, b) => a - b)
-                      const contiguous = without.every((v, i) => i === 0 || v === without[i - 1]! + 1)
-                      newSel = contiguous ? without : without.slice(0, without.indexOf(Math.min(...without.filter(i => i > periodIdx))) || 1)
-                      if (newSel.length === 0) newSel = [without[0]!]
+                      // 이미 선택된 칩: 범위 축소
+                      if (current.length === 1) return // 마지막 칩은 해제 불가
+                      const sorted = [...current].sort((a, b) => a - b)
+                      const minIdx = sorted[0]!
+                      const maxIdx = sorted[sorted.length - 1]!
+                      if (periodIdx === minIdx) {
+                        newSel = sorted.slice(1)       // 첫 칩 제거
+                      } else if (periodIdx === maxIdx) {
+                        newSel = sorted.slice(0, -1)   // 마지막 칩 제거
+                      } else {
+                        newSel = [periodIdx]            // 중간 칩: 해당 칩만 남김
+                      }
                     } else {
                       const sorted = [...current].sort((a, b) => a - b)
                       const min = sorted[0]!
                       const max = sorted[sorted.length - 1]!
                       if (periodIdx === min - 1 || periodIdx === max + 1) {
+                        // 인접 칩: 범위 확장
                         newSel = [...current, periodIdx].sort((a, b) => a - b)
                       } else {
+                        // 비연속 칩: 새로 단일 선택
                         newSel = [periodIdx]
                       }
                     }

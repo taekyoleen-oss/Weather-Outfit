@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect, useRef } from 'react'
 import type { HourlyForecast, SkyCode, PtyCode } from '@/types/weather'
 import { OUTFIT_PERIODS, getOutfitPeriodIndex } from '@/lib/utils/timePeriods'
 import { weatherLabel, formatTemp1 } from '@/lib/utils/formatWeather'
@@ -44,17 +45,6 @@ function sunsetHmFromText(sunsetTime?: string): number | null {
   return Number.isFinite(hm) ? hm : null
 }
 
-interface Props {
-  currentHour: number
-  currentConditions?: { temperature: number; skyCode: SkyCode; ptyCode: PtyCode } | null
-  hourly: HourlyForecast[]
-  selectedRepHour: number
-  /** 복장·날씨 기준일(KST yyyymmdd). 칩 선택 표시는 달력 일자와 대표 시각으로 맞춘다 */
-  selectedScheduleYmd: string
-  sunsetTime?: string
-  onSelectPreset: (repHour: number, dayOffset: number) => void
-}
-
 function ymdToUtcMidnight(ymd: string): number {
   return Date.UTC(
     parseInt(ymd.slice(0, 4), 10),
@@ -69,6 +59,10 @@ function addDaysYmd(ymd: string, days: number): string {
   const m = String(d.getUTCMonth() + 1).padStart(2, '0')
   const dd = String(d.getUTCDate()).padStart(2, '0')
   return `${y}${m}${dd}`
+}
+
+function diffDaysYmd(fromYmd: string, toYmd: string): number {
+  return Math.round((ymdToUtcMidnight(toYmd) - ymdToUtcMidnight(fromYmd)) / 86400000)
 }
 
 function resolveSlotYmd(
@@ -95,6 +89,27 @@ function findHourlyAtHour(
   return idx >= 0 ? hourly[idx] : undefined
 }
 
+interface Props {
+  currentHour: number
+  currentConditions?: { temperature: number; skyCode: SkyCode; ptyCode: PtyCode } | null
+  hourly: HourlyForecast[]
+  selectedRepHour: number
+  /** 복장·날씨 기준일(KST yyyymmdd). 칩 선택 표시는 달력 일자와 대표 시각으로 맞춘다 */
+  selectedScheduleYmd: string
+  sunsetTime?: string
+  onSelectPreset: (repHour: number, dayOffset: number) => void
+  /** 연속 시간대 범위 선택 시 끝 칩 정보 (단일 선택이면 start === end) */
+  onRangeSelect?: (
+    startRepHour: number,
+    startDayOffset: number,
+    endRepHour: number,
+    endDayOffset: number,
+  ) => void
+}
+
+/** 선택된 칩을 (OUTFIT_PERIODS 인덱스, 일자 오프셋) 쌍으로 표현 */
+type SelectedChip = { periodIdx: number; dayOffset: number }
+
 export function TimePeriodPicker({
   currentHour,
   currentConditions,
@@ -103,6 +118,7 @@ export function TimePeriodPicker({
   selectedScheduleYmd,
   sunsetTime,
   onSelectPreset,
+  onRangeSelect,
 }: Props) {
   const todayYmd = kstTodayYmd()
   const slotYmds: string[] = []
@@ -119,6 +135,79 @@ export function TimePeriodPicker({
   const currentIdx = getOutfitPeriodIndex(currentHour)
   const curHourStr = String(currentHour).padStart(2, '0') + ':00'
   const sunsetHm = sunsetHmFromText(sunsetTime)
+
+  // ── 선택 상태: (periodIdx, dayOffset) 쌍 배열로 관리 ─────────────────────
+  // currentIdx 변화에 독립적이므로 시간이 지나도 올바른 칩이 유지됨
+  const [selectedChips, setSelectedChips] = useState<SelectedChip[]>(() => {
+    const selPeriodIdx = getOutfitPeriodIndex(selectedRepHour)
+    const selDayOffset = Math.max(0, diffDaysYmd(kstTodayYmd(), selectedScheduleYmd))
+    return [{ periodIdx: selPeriodIdx, dayOffset: selDayOffset }]
+  })
+
+  // 내부 클릭으로 유발된 props 변경은 상태를 리셋하지 않도록 플래그 사용
+  const internalUpdateRef = useRef(false)
+
+  useEffect(() => {
+    if (internalUpdateRef.current) {
+      internalUpdateRef.current = false
+      return
+    }
+    // 외부(위치 변경 등) 변화 → 단일 칩으로 리셋
+    const selPeriodIdx = getOutfitPeriodIndex(selectedRepHour)
+    const selDayOffset = Math.max(0, diffDaysYmd(todayYmd, selectedScheduleYmd))
+    setSelectedChips([{ periodIdx: selPeriodIdx, dayOffset: selDayOffset }])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRepHour, selectedScheduleYmd])
+
+  function chipOrder(c: SelectedChip) {
+    return c.dayOffset * periodCount + c.periodIdx
+  }
+
+  function sameChip(a: SelectedChip, b: SelectedChip) {
+    return a.periodIdx === b.periodIdx && a.dayOffset === b.dayOffset
+  }
+
+  function isChipSelected(periodIdx: number, dayOffset: number) {
+    return selectedChips.some((c) => c.periodIdx === periodIdx && c.dayOffset === dayOffset)
+  }
+
+  function handleChipClick(periodIdx: number, dayOffset: number) {
+    const clickedChip: SelectedChip = { periodIdx, dayOffset }
+    const clickedOrder = chipOrder(clickedChip)
+    const sorted = [...selectedChips].sort((a, b) => chipOrder(a) - chipOrder(b))
+    const minOrder = chipOrder(sorted[0]!)
+    const maxOrder = chipOrder(sorted[sorted.length - 1]!)
+
+    let newSel: SelectedChip[]
+    if (sorted.some((c) => sameChip(c, clickedChip))) {
+      // 이미 선택된 칩 클릭: 범위 축소
+      if (sorted.length === 1) return // 마지막 칩은 해제 불가
+      if (clickedOrder === minOrder) {
+        newSel = sorted.slice(1)          // 첫 칩 제거
+      } else if (clickedOrder === maxOrder) {
+        newSel = sorted.slice(0, -1)      // 마지막 칩 제거
+      } else {
+        newSel = [clickedChip]            // 중간 칩: 해당 칩만 남김
+      }
+    } else if (clickedOrder === minOrder - 1 || clickedOrder === maxOrder + 1) {
+      // 인접한 칩: 범위 확장
+      newSel = [...sorted, clickedChip].sort((a, b) => chipOrder(a) - chipOrder(b))
+    } else {
+      // 비연속 칩: 새로 단일 선택
+      newSel = [clickedChip]
+    }
+
+    setSelectedChips(newSel)
+
+    const firstChip = newSel[0]!
+    const lastChip = newSel[newSel.length - 1]!
+    const firstPeriod = OUTFIT_PERIODS[firstChip.periodIdx]!
+    const lastPeriod = OUTFIT_PERIODS[lastChip.periodIdx]!
+
+    internalUpdateRef.current = true
+    onSelectPreset(firstPeriod.repHour, firstChip.dayOffset)
+    onRangeSelect?.(firstPeriod.repHour, firstChip.dayOffset, lastPeriod.repHour, lastChip.dayOffset)
+  }
 
   function fallbackTempForNow(): number | undefined {
     const idx = hourly.findIndex((h, i) => h.time === curHourStr && slotYmds[i] === todayYmd)
@@ -141,7 +230,7 @@ export function TimePeriodPicker({
   const chips = Array.from({ length: periodCount }, (_, i) => {
     const rawIdx = currentIdx + i
     const idx = rawIdx % periodCount
-    const period = OUTFIT_PERIODS[idx]
+    const period = OUTFIT_PERIODS[idx]!
     const dayOffset = Math.floor(rawIdx / periodCount)
     const isTomorrow = dayOffset >= 1
     const targetYmd = addDaysYmd(todayYmd, dayOffset)
@@ -167,12 +256,11 @@ export function TimePeriodPicker({
       temperature = atStart?.temperature
     }
 
-    const isSelected =
-      getOutfitPeriodIndex(selectedRepHour) === getOutfitPeriodIndex(period.repHour) &&
-      targetYmd === selectedScheduleYmd
+    const isSelected = isChipSelected(idx, dayOffset)
 
     return {
       period,
+      idx,
       isTomorrow,
       dayOffset,
       isCurrent,
@@ -183,6 +271,13 @@ export function TimePeriodPicker({
     }
   })
 
+  // 선택된 칩 중 첫/마지막 시각적 위치 (연결 표시용)
+  const selectedVisualPositions = chips
+    .map((c, i) => (c.isSelected ? i : -1))
+    .filter((i) => i >= 0)
+  const selMin = selectedVisualPositions[0] ?? -1
+  const selMax = selectedVisualPositions[selectedVisualPositions.length - 1] ?? -1
+
   return (
     <div className="glass-card p-3 sm:p-4 max-lg:px-3.5 max-lg:pt-3.5 max-lg:pb-3.5">
       <h3
@@ -192,87 +287,103 @@ export function TimePeriodPicker({
         🕐 시간대 선택
       </h3>
       <div className="grid grid-cols-7 gap-1">
-        {chips.map(({ period, isTomorrow, dayOffset, isCurrent, temperature, weatherEmoji, isNight, isSelected }) => (
-          <button
-            key={period.id + (isTomorrow ? '-t' : '')}
-            type="button"
-            onClick={() => onSelectPreset(period.repHour, dayOffset)}
-            className="flex flex-col items-center gap-0.5 py-2 px-0.5 rounded-lg transition-all"
-            style={{
-              background: isSelected ? 'var(--colors-canvas-light)' : 'var(--colors-surface-filter)',
-              border: `1.5px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}`,
-            }}
-            aria-pressed={isSelected}
-          >
-            <div className="h-[14px] flex items-center justify-center">
-              {isCurrent && (
-                <span
-                  className="text-[8px] px-1 py-0.5 rounded-full font-semibold leading-none"
-                  style={{ background: 'rgba(34,197,94,0.12)', color: '#16a34a' }}
-                >
-                  지금
-                </span>
-              )}
-              {isTomorrow && (
-                <span
-                  className="text-[8px] px-1 py-0.5 rounded-full font-semibold leading-none"
-                  style={{ background: 'var(--primary-tint-10)', color: 'var(--humidity)' }}
-                >
-                  내일
-                </span>
-              )}
-            </div>
+        {chips.map(({ period, idx, isTomorrow, dayOffset, isCurrent, temperature, weatherEmoji, isNight, isSelected }, visualPos) => {
+          const isRangeStart = isSelected && visualPos === selMin
+          const isRangeEnd = isSelected && visualPos === selMax
+          const isRangeMiddle = isSelected && !isRangeStart && !isRangeEnd
 
-            <div className="h-[18px] w-full flex items-center justify-center">
-              {weatherEmoji === '🌙☁️' ? (
+          return (
+            <button
+              key={period.id + (isTomorrow ? '-t' : '')}
+              type="button"
+              onClick={() => handleChipClick(idx, dayOffset)}
+              className="flex flex-col items-center gap-0.5 py-2 px-0.5 rounded-lg transition-all"
+              style={{
+                background: isSelected ? 'var(--colors-canvas-light)' : 'var(--colors-surface-filter)',
+                border: `1.5px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}`,
+                // 연속 선택 범위: 중간 칩은 좌우 경계선을 흐리게 해 연결감 표현
+                ...(isRangeMiddle
+                  ? { borderLeftColor: 'rgba(91,141,238,0.35)', borderRightColor: 'rgba(91,141,238,0.35)' }
+                  : {}),
+                ...(isRangeStart && selMax > selMin
+                  ? { borderRightColor: 'rgba(91,141,238,0.35)' }
+                  : {}),
+                ...(isRangeEnd && selMax > selMin
+                  ? { borderLeftColor: 'rgba(91,141,238,0.35)' }
+                  : {}),
+              }}
+              aria-pressed={isSelected}
+            >
+              <div className="h-[14px] flex items-center justify-center">
+                {isCurrent && (
+                  <span
+                    className="text-[8px] px-1 py-0.5 rounded-full font-semibold leading-none"
+                    style={{ background: 'rgba(34,197,94,0.12)', color: '#16a34a' }}
+                  >
+                    지금
+                  </span>
+                )}
+                {isTomorrow && (
+                  <span
+                    className="text-[8px] px-1 py-0.5 rounded-full font-semibold leading-none"
+                    style={{ background: 'var(--primary-tint-10)', color: 'var(--humidity)' }}
+                  >
+                    내일
+                  </span>
+                )}
+              </div>
+
+              <div className="h-[18px] w-full flex items-center justify-center">
+                {weatherEmoji === '🌙☁️' ? (
+                  <span
+                    className="relative inline-block w-[22px] h-[18px]"
+                    style={{
+                      color: 'initial',
+                      filter: isNight ? 'grayscale(1) saturate(0)' : 'none',
+                      fontFamily: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif',
+                      transform: 'translateY(1px)',
+                    }}
+                  >
+                    <span className="absolute left-0 top-[1px] text-base leading-none">🌙</span>
+                    <span className="absolute left-[9px] top-[2px] text-sm leading-none">☁️</span>
+                  </span>
+                ) : (
+                  <span
+                    className="text-base leading-none inline-block whitespace-nowrap"
+                    style={{
+                      color: 'initial',
+                      filter: isNight ? 'grayscale(1) saturate(0)' : 'none',
+                      fontFamily: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif',
+                      transform: 'translateY(1px)',
+                    }}
+                  >
+                    {weatherEmoji}
+                  </span>
+                )}
+              </div>
+
+              <span
+                className="text-[9px] font-semibold mt-0.5 leading-tight"
+                style={{ color: isSelected ? 'var(--accent)' : 'var(--text)' }}
+              >
+                {period.label}
+              </span>
+
+              {temperature !== undefined ? (
                 <span
-                  className="relative inline-block w-[22px] h-[18px]"
-                  style={{
-                    color: 'initial',
-                    filter: isNight ? 'grayscale(1) saturate(0)' : 'none',
-                    fontFamily: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif',
-                    transform: 'translateY(1px)',
-                  }}
+                  className="text-[8px] font-bold tabular-nums leading-none"
+                  style={{ color: isSelected ? 'var(--accent)' : 'var(--muted)' }}
                 >
-                  <span className="absolute left-0 top-[1px] text-base leading-none">🌙</span>
-                  <span className="absolute left-[9px] top-[2px] text-sm leading-none">☁️</span>
+                  {formatTemp1(temperature)}°
                 </span>
               ) : (
-                <span
-                  className="text-base leading-none inline-block whitespace-nowrap"
-                  style={{
-                    color: 'initial',
-                    filter: isNight ? 'grayscale(1) saturate(0)' : 'none',
-                    fontFamily: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif',
-                    transform: 'translateY(1px)',
-                  }}
-                >
-                  {weatherEmoji}
+                <span className="text-[10px] leading-none" style={{ color: 'var(--muted)' }}>
+                  --
                 </span>
               )}
-            </div>
-
-            <span
-              className="text-[9px] font-semibold mt-0.5 leading-tight"
-              style={{ color: isSelected ? 'var(--accent)' : 'var(--text)' }}
-            >
-              {period.label}
-            </span>
-
-            {temperature !== undefined ? (
-              <span
-                className="text-[8px] font-bold tabular-nums leading-none"
-                style={{ color: isSelected ? 'var(--accent)' : 'var(--muted)' }}
-              >
-                {formatTemp1(temperature)}°
-              </span>
-            ) : (
-              <span className="text-[10px] leading-none" style={{ color: 'var(--muted)' }}>
-                --
-              </span>
-            )}
-          </button>
-        ))}
+            </button>
+          )
+        })}
       </div>
     </div>
   )

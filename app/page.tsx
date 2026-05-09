@@ -301,6 +301,8 @@ export default function HomePage() {
     repHour: TIME_PERIODS[getPeriodIndex(hour)].repHour,
     dayOffset: 0,
   }))
+  /** 연속 시간대 범위 선택 시 끝 칩 정보. 단일 선택이면 null */
+  const [periodPresetEnd, setPeriodPresetEnd] = useState<{ repHour: number; dayOffset: number } | null>(null)
   const [scheduleYmd, setScheduleYmd] = useState(() => kstTodayYmd())
   const [wxActivityHours, setWxActivityHours] = useState<{ start: number; end: number } | null>(null)
 
@@ -484,6 +486,16 @@ export default function HomePage() {
     setWxActivityHours(null)
   }
 
+  function handleRangeSelect(
+    _sRepHour: number,
+    _sDayOffset: number,
+    eRepHour: number,
+    eDayOffset: number,
+  ) {
+    const isSingle = _sRepHour === eRepHour && _sDayOffset === eDayOffset
+    setPeriodPresetEnd(isSingle ? null : { repHour: eRepHour, dayOffset: eDayOffset })
+  }
+
   const handleScheduleYmdChange = useCallback((ymd: string) => {
     setScheduleYmd(ymd)
     const off = Math.max(0, diffCalendarDaysYmd(kstTodayYmd(), ymd))
@@ -549,7 +561,10 @@ export default function HomePage() {
   const heroIconHour = tab1HourlyDisplay[0] ? parseInt(tab1HourlyDisplay[0].time.split(':')[0], 10) : hour
   const heroSunsetHm = sunsetHmNumber(sunriseSunset?.sunset)
 
-  const outfitScheduleSyncKey = `${periodPreset.repHour}|${periodPreset.dayOffset}`
+  const outfitScheduleSyncKey = `${periodPreset.repHour}|${periodPreset.dayOffset}|${periodPresetEnd?.repHour ?? ''}|${periodPresetEnd?.dayOffset ?? ''}`
+  const outfitPeriodEndHour = periodPresetEnd
+    ? OUTFIT_PERIODS[getOutfitPeriodIndex(periodPresetEnd.repHour)]?.end
+    : undefined
 
   const currentDongName = extractDongName(location.name, location.address)
   const normalizedLocationName = location.name?.trim()
@@ -610,6 +625,7 @@ export default function HomePage() {
       selectedScheduleYmd={scheduleYmd}
       sunsetTime={sunriseSunset?.sunset}
       onSelectPreset={handleSelectPreset}
+      onRangeSelect={handleRangeSelect}
     />
   )
 
@@ -621,6 +637,7 @@ export default function HomePage() {
     alerts,
     terrain: location.terrain ?? 'urban',
     outfitPeriodStartHour: presetChipPeriod.start,
+    outfitPeriodEndHour,
     outfitIsNowPeriod,
     outfitCurrentKstHour: hour,
     outfitScheduleSyncKey,
