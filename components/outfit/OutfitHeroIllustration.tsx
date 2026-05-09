@@ -1,8 +1,7 @@
 import Image from 'next/image'
 import type { HeroIllustKey, GenderType, OutfitWeatherSnapshot, TempZone } from '@/types/outfit'
 import type { OutfitItem } from '@/types/outfit'
-import { DynamicOutfitIllustration } from './illustration/DynamicOutfitIllustration'
-import { illustDisplayHeightOverWidth } from './illustration/illustViewBox'
+import { outfitCharacterImageSrc } from '@/lib/outfit/characterIllust'
 
 interface Props {
   illustKey: HeroIllustKey
@@ -42,6 +41,10 @@ function heroLabel(illustKey: HeroIllustKey, calendarMonth?: number): string {
   return ILLUST_LABELS['fall-layered']
 }
 
+/** 캐릭터 이미지 표준 크기 (모든 이미지 686×1024로 크롭 통일) */
+const CHAR_IMG_W = 686
+const CHAR_IMG_H = 1024
+
 export function OutfitHeroIllustration({
   illustKey,
   size = 180,
@@ -50,16 +53,10 @@ export function OutfitHeroIllustration({
   gender = 'male',
   tempZone = 'mild',
   large,
-  showSunshine,
-  weatherSky,
 }: Props) {
   const label = heroLabel(illustKey, calendarMonth)
   const displaySize = large ? 320 : Math.round(size * 1.12)
-  const pad = large ? 8 : 16
-  const innerW = displaySize - 2 * pad
-  const innerH = Math.round(innerW * illustDisplayHeightOverWidth())
   const frameClass = 'rounded-3xl flex items-center justify-center overflow-hidden'
-  /** 모바일: 좌우 패딩 축소로 SVG 가로 여백 최소화, sm+ 에서 기존 16px 느낌 복원 */
   const framePadClass = large ? 'p-2' : 'px-0.5 py-1 sm:px-1.5 sm:py-2'
   const frameBaseStyle = {
     background: 'rgba(255,255,255,0.6)',
@@ -67,64 +64,34 @@ export function OutfitHeroIllustration({
     width: displaySize,
   } as const
 
+  const charSrc = items != null ? outfitCharacterImageSrc(gender, tempZone) : null
+  const altText = gender === 'female' ? `여성 복장 일러스트 — ${label}` : `남성 복장 일러스트 — ${label}`
+
+  const characterImage = charSrc ? (
+    <Image
+      src={charSrc}
+      alt={altText}
+      width={CHAR_IMG_W}
+      height={CHAR_IMG_H}
+      className="h-auto w-full max-w-full"
+      priority
+    />
+  ) : (
+    <Image
+      src={`/illust/outfit/${illustKey}.svg`}
+      alt={label}
+      width={200}
+      height={296}
+      className="h-auto w-full max-w-full"
+      priority
+    />
+  )
+
   return (
     <div className="flex flex-col items-center gap-2">
-      {large ? (
-        <div
-          className={`${frameClass} ${framePadClass}`}
-          style={{
-            ...frameBaseStyle,
-            height: innerH + 2 * pad,
-          }}
-        >
-          {items != null ? (
-            <DynamicOutfitIllustration
-              items={items}
-              illustKey={illustKey}
-              gender={gender}
-              tempZone={tempZone}
-              size={innerW}
-              calendarMonth={calendarMonth}
-              showSunshine={showSunshine}
-              weatherSky={weatherSky}
-            />
-          ) : (
-            <Image
-              src={`/illust/outfit/${illustKey}.svg`}
-              alt={label}
-              width={innerW}
-              height={innerH}
-              className="h-auto w-full max-w-full"
-              priority
-            />
-          )}
-        </div>
-      ) : (
-        <div className={`${frameClass} ${framePadClass}`} style={{ ...frameBaseStyle }}>
-          {items != null ? (
-            <DynamicOutfitIllustration
-              items={items}
-              illustKey={illustKey}
-              gender={gender}
-              tempZone={tempZone}
-              layout="fluid"
-              size={displaySize}
-              calendarMonth={calendarMonth}
-              showSunshine={showSunshine}
-              weatherSky={weatherSky}
-            />
-          ) : (
-            <Image
-              src={`/illust/outfit/${illustKey}.svg`}
-              alt={label}
-              width={200}
-              height={296}
-              className="h-auto w-full max-w-full"
-              priority
-            />
-          )}
-        </div>
-      )}
+      <div className={`${frameClass} ${framePadClass}`} style={{ ...frameBaseStyle }}>
+        {characterImage}
+      </div>
       <span className="text-xs font-medium" style={{ color: 'var(--muted)' }}>
         {label}
       </span>
