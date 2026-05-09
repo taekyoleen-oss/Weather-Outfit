@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import type { HourlyForecast } from '@/types/weather'
 import { weatherLabel, formatTemp1 } from '@/lib/utils/formatWeather'
 import { addCalendarDaysFromKstYmd, kstTodayYmd } from '@/lib/utils/timeOfDay'
@@ -29,11 +30,20 @@ function ymdToUtcMidnight(ymd: string): number {
   )
 }
 
-/** 오늘(KST) 대비 슬롯 일자 — 오늘/내일/모레/글피/… */
+/** 오늘(KST) 대비 슬롯 일자 — 현재/내일/모레/글피/… */
 function dayBannerLabel(todayYmd: string, slotYmd: string): string | null {
   const d = Math.round((ymdToUtcMidnight(slotYmd) - ymdToUtcMidnight(todayYmd)) / 86400000)
-  if (d === 0) return '오늘'
+  if (d === 0) return '현재'
   if (d < 0) return null
+  if (d === 1) return '내일'
+  if (d === 2) return '모레'
+  if (d === 3) return '글피'
+  return `${d}일 뒤`
+}
+
+function dayNavLabel(todayYmd: string, slotYmd: string): string {
+  const d = Math.round((ymdToUtcMidnight(slotYmd) - ymdToUtcMidnight(todayYmd)) / 86400000)
+  if (d === 0) return '현재'
   if (d === 1) return '내일'
   if (d === 2) return '모레'
   if (d === 3) return '글피'
@@ -96,6 +106,8 @@ export function HourlyWeatherStrip({
   sunsetTime,
   suitabilityByHour,
 }: Props) {
+  const [activeDayOffset, setActiveDayOffset] = useState(0)
+
   if (!hourly.length) {
     return (
       <div className="glass-card p-4">
@@ -123,6 +135,21 @@ export function HourlyWeatherStrip({
     prevHour = parseInt(hourly[i].time.split(':')[0], 10)
   }
 
+  // 고유 날짜 목록 (데이터 순서대로)
+  const uniqueDayYmds: string[] = []
+  for (const ymd of slotYmds) {
+    if (!uniqueDayYmds.includes(ymd)) uniqueDayYmds.push(ymd)
+  }
+
+  // 선택된 날짜 — activeDayOffset 범위 초과 시 마지막 날짜로 보정
+  const clampedOffset = Math.min(activeDayOffset, uniqueDayYmds.length - 1)
+  const activeDayYmd = uniqueDayYmds[clampedOffset] ?? todayYmd
+
+  // 활성 날짜 항목만 필터링
+  const activeEntries: { h: HourlyForecast; ymd: string }[] = hourly
+    .map((h, i) => ({ h, ymd: slotYmds[i] ?? todayYmd }))
+    .filter(e => e.ymd === activeDayYmd)
+
   const selectedTargetYmd =
     highlightTargetYmd ??
     (() => {
@@ -148,9 +175,30 @@ export function HourlyWeatherStrip({
           : undefined
       }
     >
-      <h3 className="text-base font-semibold mb-2.5" style={{ color: 'var(--muted)' }}>
-        시간별 예보
-      </h3>
+      <div className="flex items-center justify-between mb-2.5">
+        <h3 className="text-base font-semibold" style={{ color: 'var(--muted)' }}>
+          시간별 예보
+        </h3>
+        {uniqueDayYmds.length > 1 && (
+          <div className="flex gap-1">
+            {uniqueDayYmds.map((ymd, i) => (
+              <button
+                key={ymd}
+                type="button"
+                onClick={() => setActiveDayOffset(i)}
+                className="text-xs px-2 py-0.5 rounded-full font-semibold transition-colors"
+                style={{
+                  background: clampedOffset === i ? 'var(--primary)' : 'var(--surface)',
+                  color: clampedOffset === i ? 'white' : 'var(--muted)',
+                  border: `1px solid ${clampedOffset === i ? 'var(--primary)' : 'var(--border)'}`,
+                }}
+              >
+                {dayNavLabel(todayYmd, ymd)}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
       <div className="flex gap-0.5 sm:gap-1 pb-1">
         {/* 좌측 고정 라벨 열 */}
         <div className="grid grid-rows-[14px_14px_20px_14px_14px_14px_14px_14px] min-w-[46px] sm:min-w-[54px] py-1.5 px-1 rounded-xl bg-white/35">
@@ -179,10 +227,9 @@ export function HourlyWeatherStrip({
           </div>
         </div>
 
-        <div className="scroll-strip flex gap-1.5 sm:gap-2.5">
-          {hourly.map((h, i) => {
+        <div key={activeDayOffset} className="scroll-strip flex gap-1.5 sm:gap-2.5">
+          {activeEntries.map(({ h, ymd: slotYmd }, idx) => {
             const hourNum = parseInt(h.time.split(':')[0], 10)
-            const slotYmd = slotYmds[i] ?? todayYmd
             const isCurrent = hourNum === currentHour && slotYmd === todayYmd
             const isInPeriod = (() => {
               if (selectedPeriodStart === undefined || selectedPeriodEnd === undefined) return false
@@ -196,10 +243,10 @@ export function HourlyWeatherStrip({
                 (slotYmd === nextTargetYmd && hourNum <= e)
               )
             })()
-            const prevYmd = i > 0 ? slotYmds[i - 1]! : null
-            const showDayBanner = i === 0 ? dayBannerLabel(todayYmd, slotYmd) !== null : slotYmd !== prevYmd
+            const prevYmd = idx > 0 ? activeEntries[idx - 1]!.ymd : null
+            const showDayBanner = idx === 0 ? dayBannerLabel(todayYmd, slotYmd) !== null : slotYmd !== prevYmd
             const dayBanner = showDayBanner ? dayBannerLabel(todayYmd, slotYmd) : null
-            const dayChanged = i > 0 && slotYmd !== prevYmd
+            const dayChanged = idx > 0 && slotYmd !== prevYmd
             const fadeThisSlot =
               fadeNonMatchingTargetYmd &&
               !!highlightTargetYmd &&
@@ -217,7 +264,7 @@ export function HourlyWeatherStrip({
                 ? '🌙'
                 : baseEmoji
             return (
-            <div key={`${slotYmd}-${h.time}-${i}`} className="relative">
+            <div key={`${slotYmd}-${h.time}-${idx}`} className="relative">
               {dayChanged && (
                 <span
                   className="absolute -left-1 top-1 bottom-1 w-px"
