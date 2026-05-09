@@ -36,7 +36,7 @@ export function MobileLayout({ tabs, defaultTab, selectedTab, onTabChange }: Pro
   if (!current) return null
 
   return (
-    <div className="flex flex-col" style={{ height: '100dvh', background: 'var(--colors-cream-soft)' }}>
+    <div className="flex flex-col" style={{ minHeight: '100dvh', background: 'var(--colors-cream-soft)' }}>
       {/* 상단 헤더 — 항상 최상단 */}
       <div
         className="flex-shrink-0 z-40"
@@ -49,27 +49,30 @@ export function MobileLayout({ tabs, defaultTab, selectedTab, onTabChange }: Pro
         {current.header}
       </div>
 
-      {/* 스크롤 가능한 콘텐츠 — 모든 탭을 마운트 유지, 비활성 탭만 숨김 */}
+      {/* 스크롤 가능한 콘텐츠 — 고정 탭 바 높이만큼 하단 패딩 확보 */}
       {tabs.map(tab => (
         <main
           key={tab.key}
-          className="flex-1 overflow-y-auto px-3 pt-4 pb-6 space-y-6 max-w-[1280px] mx-auto w-full"
-          style={{ display: tab.key === activeTab ? undefined : 'none' }}
+          className="flex-1 overflow-y-auto px-3 pt-4 space-y-6 max-w-[1280px] mx-auto w-full"
+          style={{
+            display: tab.key === activeTab ? undefined : 'none',
+            paddingBottom: 'calc(56px + env(safe-area-inset-bottom) + 16px)',
+          }}
         >
           {tab.content}
         </main>
       ))}
 
-      {/* 하단 탭 — 항상 최하단에 고정 */}
+      {/* 하단 탭 — 화면 하단 고정 */}
       <nav
         role="tablist"
         aria-label="섹션 전환"
-        className="flex-shrink-0 flex z-50"
+        className="fixed bottom-0 inset-x-0 flex z-50"
         style={{
           background: 'var(--colors-canvas)',
           borderTop: '1px solid var(--colors-hairline-soft)',
           paddingBottom: 'env(safe-area-inset-bottom)',
-          boxShadow: '0 -4px 16px rgba(0, 0, 0, 0.04)',
+          boxShadow: '0 -4px 16px rgba(0, 0, 0, 0.06)',
         }}
       >
         {tabs.map(t => {

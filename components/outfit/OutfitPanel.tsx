@@ -70,9 +70,9 @@ const SENSITIVITY_OPTIONS: { value: SensitivityLevel; label: string; emoji: stri
 ]
 
 const SENSITIVITY_LABEL_MAP: Record<SensitivityLevel, string> = {
-  [-2]: '🥶 더위 강함',
-  [0]: '😊 체감 보통',
-  [2]: '🥵 추위 강함',
+  [-2]: '더위 강함',
+  [0]: '체감 보통',
+  [2]: '추위 강함',
 }
 
 const ACTIVITY_DEFAULT_DURATION_HOURS: Record<ActivityType, number> = {
@@ -793,7 +793,7 @@ export function OutfitPanel({
                     color: 'var(--muted)',
                   }}
                 >
-                  {gender === 'male' ? '남성' : '여성'} · {sensitivity === 0 ? '보통' : sensitivity < 0 ? '더위에 강함' : '추위에 강함'}
+                  {gender === 'male' ? '남성' : '여성'} · {SENSITIVITY_LABEL_MAP[sensitivity]}
                 </button>
               ) : undefined
             }
