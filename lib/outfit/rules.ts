@@ -250,9 +250,9 @@ export function getBaseItems(
   // MID layer
   if (zone === 'mild') {
     if (gender === 'male') {
-      items.push({ id: 'mid-hoodie', name: '맨투맨', icon: '🧥', category: 'mid', required: false, condition: '아침저녁 쌀쌀할 때' })
+      items.push({ id: 'mid-hoodie', name: '맨투맨', icon: '🧥', category: 'mid', required: false, condition: '아침저녁 쌀쌀할 때', timePeriodIds: ['h07_09', 'h19_21'] })
     } else {
-      items.push({ id: 'mid-cardigan-light', name: '얇은 가디건', icon: '🧥', category: 'mid', required: false, condition: '아침저녁 쌀쌀할 때' })
+      items.push({ id: 'mid-cardigan-light', name: '얇은 가디건', icon: '🧥', category: 'mid', required: false, condition: '아침저녁 쌀쌀할 때', timePeriodIds: ['h07_09', 'h19_21'] })
     }
   } else if (zone === 'cool') {
     if (gender === 'male') {

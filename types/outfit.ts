@@ -29,6 +29,7 @@ export interface OutfitItem {
   condition?: string     // 착용 조건 설명
   colorHint?: string     // 추천 색상 힌트
   activityTag?: string   // 활동 전용 아이템 표시 (예: '달리기 특화')
+  timePeriodIds?: string[] // 이 아이템이 적용되는 OUTFIT_PERIOD id 목록 (선택 시간대 필터용)
 }
 
 export type OutfitCategory =

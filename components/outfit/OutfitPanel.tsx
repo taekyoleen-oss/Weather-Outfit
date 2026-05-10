@@ -938,6 +938,7 @@ export function OutfitPanel({
                 ? { skyCode: effectiveWeatherForOutfit.skyCode, ptyCode: effectiveWeatherForOutfit.ptyCode }
                 : undefined
             }
+            selectedOutfitPeriodIndices={selectedOutfitPeriodIndices}
             headerEnd={
               isMobileSheet ? (
                 <button

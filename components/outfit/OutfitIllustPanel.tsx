@@ -8,6 +8,7 @@ import {
   accessoriesByOutfitCategory,
   outfitItemToAccessoryKey,
 } from '@/lib/outfit/outfitWeatherAccessories'
+import { OUTFIT_PERIODS } from '@/lib/utils/timePeriods'
 import { OutfitHeroIllustration } from './OutfitHeroIllustration'
 import { AutoShrinkText } from './AutoShrinkText'
 
@@ -52,15 +53,21 @@ const WEATHER_ACCESSORY_TOOLTIP: Partial<Record<OutfitAccessoryKey, string>> = {
   trekkingPole: '등산·트레킹 시 무릎 보호용 스틱',
 }
 
-/** 조건에서 시간대 레이블 추출 — "19~21시 기준 추가" → "19~21시", 일반 조건은 null */
-function coldPeriodTimeLabel(condition?: string): string | null {
-  if (!condition?.includes('기준 추가')) return null
-  return condition.split(' 기준')[0] ?? null
+/** timePeriodIds 또는 조건 문자열에서 칩에 표시할 시간대 레이블 추출 */
+function resolveChipTimeLabel(item: OutfitItem, selectedPeriodIndices?: number[]): string | null {
+  if (item.timePeriodIds?.length && selectedPeriodIndices?.length) {
+    const selectedIds = new Set(selectedPeriodIndices.map((i) => OUTFIT_PERIODS[i]?.id).filter(Boolean))
+    const matching = item.timePeriodIds
+      .filter((id) => selectedIds.has(id))
+      .map((id) => OUTFIT_PERIODS.find((p) => p.id === id)?.label ?? id)
+    if (matching.length > 0) return matching.join(', ')
+  }
+  return null
 }
 
-function itemChip(item: OutfitItem, idx: number, iconOnly?: boolean) {
+function itemChip(item: OutfitItem, idx: number, iconOnly?: boolean, selectedPeriodIndices?: number[]) {
   const tooltip = itemIllustTooltip(item)
-  const timeLabel = coldPeriodTimeLabel(item.condition)
+  const timeLabel = resolveChipTimeLabel(item, selectedPeriodIndices)
   if (iconOnly) {
     return (
       <span
@@ -98,7 +105,7 @@ function itemChip(item: OutfitItem, idx: number, iconOnly?: boolean) {
 }
 
 /** 액세서리 PNG: `acc` 이거나, 바람막이·윈드쉘 계열(`windbreaker` 키)은 아우터/미들에서도 동일 에셋 표시 */
-function itemChipsOrAccessoryImages(items: OutfitItem[], gender: GenderType, accVariantRow: boolean) {
+function itemChipsOrAccessoryImages(items: OutfitItem[], gender: GenderType, accVariantRow: boolean, selectedPeriodIndices?: number[]) {
   return items.map((item, idx) => {
     const accKey = outfitItemToAccessoryKey(item, gender)
     const useAccessoryImage =
@@ -135,7 +142,7 @@ function itemChipsOrAccessoryImages(items: OutfitItem[], gender: GenderType, acc
         </span>
       )
     }
-    return itemChip(item, idx, accVariantRow)
+    return itemChip(item, idx, accVariantRow, selectedPeriodIndices)
   })
 }
 
@@ -147,6 +154,7 @@ function CategoryBlock({
   accessoryKeys,
   gender,
   variantLabel,
+  selectedPeriodIndices,
 }: {
   cat: OutfitCategoryKey | null
   items: OutfitItem[]
@@ -155,6 +163,7 @@ function CategoryBlock({
   accessoryKeys?: OutfitAccessoryKey[]
   gender: GenderType
   variantLabel?: '필수' | '선택'
+  selectedPeriodIndices?: number[]
 }) {
   /** PC에서도 flex-1 줄 수 유지 — `hidden`이면 좌·우 단수가 달라져 하의 등이 어긋남 */
   if (!cat) {
@@ -227,7 +236,7 @@ function CategoryBlock({
         {showVariant ? (
           <span className="lg:hidden inline-flex shrink-0">{variantBadge}</span>
         ) : null}
-        {hasItems ? itemChipsOrAccessoryImages(items, gender, isVariantAccRow) : null}
+        {hasItems ? itemChipsOrAccessoryImages(items, gender, isVariantAccRow, selectedPeriodIndices) : null}
         {accessoryKeys?.map((key, idx) => {
           const tip = WEATHER_ACCESSORY_TOOLTIP[key] ?? ACCESSORY_ALT[key]
           const imgPx = isVariantAccRow ? ACC_VARIANT_IMG_PX : 20
@@ -271,9 +280,10 @@ interface Props {
   calendarMonth?: number
   showSunshine?: boolean
   weatherSky?: OutfitWeatherSnapshot
+  selectedOutfitPeriodIndices?: number[]
 }
 
-export function OutfitIllustPanel({ result, gender, calendarMonth, showSunshine, weatherSky }: Props) {
+export function OutfitIllustPanel({ result, gender, calendarMonth, showSunshine, weatherSky, selectedOutfitPeriodIndices }: Props) {
   const byCategory = CATEGORY_ORDER.reduce(
     (acc, cat) => {
       const items = result.items.filter((i) => i.category === cat && !i.activityTag)
@@ -307,6 +317,7 @@ export function OutfitIllustPanel({ result, gender, calendarMonth, showSunshine,
               accessoryKeys={cat === 'acc' ? undefined : cat ? weatherAccessories[cat] : undefined}
               gender={gender}
               variantLabel={cat === 'acc' ? '필수' : undefined}
+              selectedPeriodIndices={selectedOutfitPeriodIndices}
             />
           ))}
         </div>
@@ -337,6 +348,7 @@ export function OutfitIllustPanel({ result, gender, calendarMonth, showSunshine,
               accessoryKeys={cat === 'acc' ? undefined : cat ? weatherAccessories[cat] : undefined}
               gender={gender}
               variantLabel={cat === 'acc' ? '선택' : undefined}
+              selectedPeriodIndices={selectedOutfitPeriodIndices}
             />
           ))}
         </div>

@@ -241,6 +241,7 @@ export function TimePeriodPicker({
         const isNight = isNightByHour(displayHour, sunsetHm)
         const weatherEmoji = emojiForHourAndLabel(displayHour, label, period.emoji, sunsetHm)
         const temperature = findHourlyAtHour(period.start, selectedScheduleYmd, hourly, slotYmds)?.temperature
+        const endTemperature = findHourlyAtHour(period.end, selectedScheduleYmd, hourly, slotYmds)?.temperature
 
         // 첫 번째 칩에만 날짜 배지 표시
         const fullDayLabel: string | null = idx === 0
@@ -254,7 +255,7 @@ export function TimePeriodPicker({
           isTomorrow: false,
           dayOffset: targetDayOffset,
           isCurrent: false,
-          temperature, weatherEmoji, isNight,
+          temperature, endTemperature, weatherEmoji, isNight,
           isSelected: isChipSelected(idx, targetDayOffset),
           fullDayLabel,
         }
@@ -287,10 +288,11 @@ export function TimePeriodPicker({
           const atStart = findHourlyAtHour(period.start, targetYmd, hourly, slotYmds)
           temperature = atStart?.temperature
         }
+        const endTemperature = findHourlyAtHour(period.end, targetYmd, hourly, slotYmds)?.temperature
 
         return {
           period, idx, isTomorrow, dayOffset, isCurrent,
-          temperature, weatherEmoji, isNight,
+          temperature, endTemperature, weatherEmoji, isNight,
           isSelected: isChipSelected(idx, dayOffset),
           fullDayLabel: null as string | null,
         }
@@ -315,7 +317,7 @@ export function TimePeriodPicker({
           : '시간대 선택'}
       </h3>
       <div className="grid grid-cols-7 gap-1">
-        {chips.map(({ period, idx, isTomorrow, dayOffset, isCurrent, temperature, weatherEmoji, isNight, isSelected, fullDayLabel }, visualPos) => {
+        {chips.map(({ period, idx, isTomorrow, dayOffset, isCurrent, temperature, endTemperature, weatherEmoji, isNight, isSelected, fullDayLabel }, visualPos) => {
           const isRangeStart = isSelected && visualPos === selMin
           const isRangeEnd = isSelected && visualPos === selMax
           const isRangeMiddle = isSelected && !isRangeStart && !isRangeEnd
@@ -407,10 +409,10 @@ export function TimePeriodPicker({
 
               {temperature !== undefined ? (
                 <span
-                  className="text-[8px] font-bold tabular-nums leading-none"
+                  className="text-[7px] font-bold tabular-nums leading-none"
                   style={{ color: isSelected ? 'var(--accent)' : 'var(--muted)' }}
                 >
-                  {formatTemp1(temperature)}°
+                  {formatTemp1(temperature)}°{endTemperature !== undefined && Math.round(endTemperature) !== Math.round(temperature) ? `~${formatTemp1(endTemperature)}°` : ''}
                 </span>
               ) : (
                 <span className="text-[10px] leading-none" style={{ color: 'var(--muted)' }}>

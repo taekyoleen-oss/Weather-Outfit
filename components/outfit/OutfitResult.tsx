@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from 'react'
 import type {
   OutfitResult as OutfitResultType,
+  OutfitItem,
   OutfitWeatherSnapshot,
   DangerLevel,
   GenderType,
@@ -10,6 +11,18 @@ import type {
 import { OutfitItemCard } from './OutfitItemCard'
 import { OutfitIllustPanel } from './OutfitIllustPanel'
 import { formatTemp1 } from '@/lib/utils/formatWeather'
+import { OUTFIT_PERIODS } from '@/lib/utils/timePeriods'
+
+function resolveItemConditionText(item: OutfitItem, selectedPeriodIndices?: number[]): string {
+  if (item.timePeriodIds?.length && selectedPeriodIndices?.length) {
+    const selectedIds = new Set(selectedPeriodIndices.map((i) => OUTFIT_PERIODS[i]?.id).filter(Boolean))
+    const matching = item.timePeriodIds
+      .filter((id) => selectedIds.has(id))
+      .map((id) => OUTFIT_PERIODS.find((p) => p.id === id)?.label ?? id)
+    if (matching.length > 0) return `(${matching.join(', ')})`
+  }
+  return item.condition ?? '기온/체감/바람 변화 시 추가 착용'
+}
 
 export type OutfitPeriodWeather =
   | {
@@ -43,6 +56,8 @@ interface Props {
   weatherSky?: OutfitWeatherSnapshot
   /** 모바일 등 제목행 우측 액션(예: 세부 옵션 버튼) */
   headerEnd?: ReactNode
+  /** 선택된 OUTFIT_PERIOD 인덱스 배열 — 시간 조건부 아이템 레이블 필터용 */
+  selectedOutfitPeriodIndices?: number[]
 }
 
 const LAYER_BAR_COLORS = ['#22C55E', '#FFB547', '#EF4444']
@@ -59,6 +74,7 @@ export function OutfitResult({
   showSunshine,
   weatherSky,
   headerEnd,
+  selectedOutfitPeriodIndices,
 }: Props) {
   const [tab, setTab] = useState<TabId>('illust')
 
@@ -66,9 +82,10 @@ export function OutfitResult({
   const requiredItems = result.items.filter((i) => i.required && !i.activityTag)
   const optionalItems = result.items.filter((i) => !i.required && !i.activityTag)
   const hh = (h: number) => `${String(h).padStart(2, '0')}:00`
-  const optionalGuideLines = optionalItems.map(
-    (item) => `${item.name}${item.condition ? `: ${item.condition}` : ': 기온/체감/바람 변화 시 추가 착용'}`
-  )
+  const optionalGuideLines = optionalItems.map((item) => {
+    const cond = resolveItemConditionText(item, selectedOutfitPeriodIndices)
+    return cond.startsWith('(') ? `${item.name} ${cond}` : `${item.name}: ${cond}`
+  })
 
   return (
     <div className="space-y-4">
@@ -205,6 +222,7 @@ export function OutfitResult({
             calendarMonth={calendarMonth}
             showSunshine={showSunshine}
             weatherSky={weatherSky}
+            selectedOutfitPeriodIndices={selectedOutfitPeriodIndices}
           />
         </div>
       )}
