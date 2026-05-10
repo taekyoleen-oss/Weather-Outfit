@@ -19,16 +19,11 @@ import {
   feelsLike,
   formatTemp1,
   formatOpenMeteoCompareLine,
-  uvLabel,
-  uvColor,
   formatTime,
-  o3GradeLabel,
-  o3GradeColor,
   computeHeatIndex,
   heatIndexLabel,
   heatIndexColor,
 } from '@/lib/utils/formatWeather'
-import { KMA_WEATHER_WARN_PAGE } from '@/lib/weather/kma-alert'
 
 interface Props {
   weather: CurrentWeather | null
@@ -67,62 +62,10 @@ function extractDongUnit(locationName?: string, addressLine?: string | null): st
   return undefined
 }
 
-function compactAlertSummary(alert: WeatherAlert | null): string {
-  if (!alert) return '특보 없음'
-  const src = `${alert.message ?? ''} ${alert.type ?? ''}`.trim()
-  const matched = src.match(/[가-힣]+(?:주의보|경보)/g) ?? []
-  const uniq = Array.from(new Set(matched))
-  if (uniq.length > 0) return uniq.join(', ')
-  const fallbackType = alert.type?.trim()
-  if (fallbackType) return fallbackType
-  return '특보'
-}
-
-/** 동일 요약끼리 건수 합산 후 한 줄. 유형 3개↑는 앞 2개만 + 「등」, 원본 특보가 3건↑이면 끝에 「등」 */
-function formatAlertsSingleLine(alerts: WeatherAlert[]): string {
-  if (alerts.length === 0) return ''
-  const summaries = alerts.map((a) => compactAlertSummary(a))
-  const counts = new Map<string, number>()
-  for (const s of summaries) {
-    counts.set(s, (counts.get(s) ?? 0) + 1)
-  }
-  const entries = Array.from(counts.entries())
-  const segments = entries.map(([label, n]) => (n > 1 ? `${label} ${n}건` : label))
-
-  let line: string
-  if (segments.length > 2) {
-    line = `${segments[0]} · ${segments[1]} 등`
-  } else {
-    line = segments.join(' · ')
-  }
-
-  const alreadyHasEtc = line.endsWith(' 등')
-  if (alerts.length > 2 && !alreadyHasEtc) {
-    line += ' 등'
-  }
-
-  return line
-}
-
 // ─── 기상 지수 안내 데이터 ─────────────────────────────────────────────────────
 // 근거: weather-outdoor-clothing-guide.md 다. 공식 위험 기준
 
 interface IndexRow { level: string; range: string; colorHex: string; clothing: string }
-
-const UV_LEVELS: IndexRow[] = [
-  { level: '낮음', range: '0–2', colorHex: '#22C55E', clothing: '일반 외출 가능. 민감 피부는 선크림 권장.' },
-  { level: '보통', range: '3–5', colorHex: '#84CC16', clothing: '모자, 선글라스, SPF30+ 선크림 권장.' },
-  { level: '높음', range: '6–7', colorHex: '#EAB308', clothing: '한낮 그늘 유지. 긴 소매·챙 넓은 모자·선글라스·선크림 필수.' },
-  { level: '매우높음', range: '8–10', colorHex: '#F97316', clothing: '오전 10시~오후 3시 외출 최소화. 긴 소매·모자·선글라스·선크림 필수.' },
-  { level: '위험', range: '11+', colorHex: '#EF4444', clothing: '가능한 실내에 머물기. 외출 시 완전 차단 필수.' },
-]
-
-const O3_LEVELS: IndexRow[] = [
-  { level: '좋음', range: '~0.030 ppm', colorHex: '#22C55E', clothing: '별도 제한 없음.' },
-  { level: '보통', range: '0.031–0.090 ppm', colorHex: '#84CC16', clothing: '민감군은 유의.' },
-  { level: '나쁨', range: '0.091–0.150 ppm', colorHex: '#F97316', clothing: '한낮(10시~16시) 격한 운동 제한. 아침·저녁 시간대로 조정.' },
-  { level: '매우나쁨', range: '0.151+ ppm', colorHex: '#EF4444', clothing: '실외활동 최소화. 민감군·어린이·노약자 실내 권고.' },
-]
 
 const HEAT_LEVELS: IndexRow[] = [
   { level: '관심', range: '체감 29–32°C', colorHex: '#FCD34D', clothing: '통기성 밝은색 옷, 수분 섭취, 그늘 휴식.' },
@@ -236,7 +179,7 @@ export function WeatherCard({
   morningSummary,
   futureDaily,
 }: Props) {
-  const [modal, setModal] = useState<'uv' | 'heat' | null>(null)
+  const [modal, setModal] = useState<'heat' | null>(null)
 
   const isDark = period === 'night' || period === 'evening'
   const textColor = isDark ? 'var(--colors-on-dark)' : 'var(--colors-ink)'
@@ -264,7 +207,6 @@ export function WeatherCard({
 
   const feels = feelsLike(weather.temperature, weather.windSpeed, weather.humidity)
   const compareLine = formatOpenMeteoCompareLine(weather.temperature, openMeteoCompare ?? null)
-  const uv = uvDisplay ?? weather.uvIndex
   const showAddress =
     addressLine &&
     addressLine.trim() !== '' &&
@@ -276,12 +218,6 @@ export function WeatherCard({
     ? '10km 이상'
     : `${(weather.visibility / 1000).toFixed(1)}km`
   const visSub = weather.visibility < 1000 ? '매우 나쁨' : weather.visibility < 5000 ? '나쁨' : '좋음'
-
-  const o3Label = o3GradeLabel(dust?.o3Grade)
-  const o3Color = o3GradeColor(dust?.o3Grade)
-  const o3Value = dust?.o3Value != null ? `${dust.o3Value.toFixed(3)} ppm` : undefined
-  const alertCount = alerts?.length ?? 0
-  const alertLine = alertCount > 0 && alerts ? formatAlertsSingleLine(alerts) : ''
 
   const heatIdx = computeHeatIndex(weather.temperature, weather.humidity)
   const heatIdxDiff = heatIdx != null ? heatIdx - weather.temperature : null
@@ -378,8 +314,8 @@ export function WeatherCard({
       <div className="mt-2 grid grid-cols-3 gap-x-2 gap-y-2 text-sm sm:text-base">
         {/* 체감온도 with ℹ — 폭염/한파 기준 안내 */}
         <div className="text-center min-w-0 relative">
-          <p className="text-xs sm:text-sm" style={{ color: mutedColor }}>체감</p>
-          <p className="text-[10px] font-semibold mt-0.5 tabular-nums" style={{ color: textColor }}>{formatTemp1(feels)}°</p>
+          <p className="text-[9px] sm:text-[10px]" style={{ color: mutedColor }}>체감</p>
+          <p className="text-[8px] font-semibold mt-0.5 tabular-nums" style={{ color: textColor }}>{formatTemp1(feels)}°</p>
           <button
             onClick={() => setModal('heat')}
             className="absolute -top-4 -right-4 flex items-center justify-center"
@@ -453,107 +389,6 @@ export function WeatherCard({
         </div>
       )}
 
-      {/* UV + 오존 + 기상특보 하단 전용 섹션 */}
-      <div
-        className="mt-2 pt-2 flex items-start gap-1"
-        style={{
-          borderTop: `1px solid ${isDark ? 'var(--colors-hairline-dark)' : 'var(--colors-hairline-light)'}`,
-        }}
-      >
-        {/* 자외선 */}
-        <div className="flex-[0.9] flex items-center gap-2 min-w-0">
-          <span className="text-base">☀️</span>
-          <div className="min-w-0">
-            <p className="text-[10px] leading-none mb-0.5" style={{ color: mutedColor }}>자외선</p>
-            <p className="text-[10px] font-bold leading-none" style={{ color: uvColor(uv) }}>UV {uv}</p>
-            <p className="text-[10px] mt-0.5" style={{ color: uvColor(uv) }}>{uvLabel(uv)}</p>
-          </div>
-        </div>
-
-        {/* 오존 */}
-        <div className="flex-[0.9] flex items-center gap-2 min-w-0">
-          <span className="text-base">⚗️</span>
-          <div className="min-w-0">
-            <p className="text-[10px] leading-none mb-0.5" style={{ color: mutedColor }}>오존</p>
-            <p className="text-[10px] font-bold leading-none" style={{ color: o3Color }}>
-              {o3Label}
-            </p>
-            {o3Value && (
-              <p className="text-[10px] mt-0.5" style={{ color: mutedColor }}>{o3Value}</p>
-            )}
-          </div>
-        </div>
-
-        {/* 기상특보 */}
-        <div className="flex-[1.3] flex items-start gap-1 min-w-0">
-          <span className="text-base">⚠️</span>
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold leading-none" style={{ color: alertCount > 0 ? 'var(--danger)' : mutedColor }}>
-              기상특보 {alertCount > 0 ? `${alertCount}건` : '없음'}
-            </p>
-            {alertCount > 0 ? (
-              <p
-                className="mt-0.5 text-[10px] leading-snug line-clamp-1 break-words min-w-0"
-                style={{ color: mutedColor }}
-                title={alertLine}
-                aria-label={`발효 특보 ${alertCount}건: ${alertLine}`}
-              >
-                {alertLine}
-              </p>
-            ) : (
-              <p className="text-[10px] mt-0.5 leading-none" style={{ color: mutedColor }}>
-                {compactAlertSummary(null)}
-              </p>
-            )}
-            {alertCount > 0 ? (
-              <a
-                href={KMA_WEATHER_WARN_PAGE}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[10px] mt-0.5 inline-block leading-none underline underline-offset-2"
-                style={{ color: isDark ? 'var(--colors-link-dark)' : 'var(--colors-link-light)' }}
-              >
-                특보 상세보기
-              </a>
-            ) : null}
-          </div>
-        </div>
-
-        {/* ℹ 기준 보기 버튼 */}
-        <button
-          onClick={() => setModal('uv')}
-          className="flex-shrink-0 flex items-center gap-1 px-2 rounded-lg text-[10px] font-semibold transition-opacity hover:opacity-80"
-          style={{ background: infoBtnBg, color: '#fff', minHeight: 44 }}
-          aria-label="자외선·오존 기준 보기"
-        >
-          <span>ℹ</span>
-          <span>기준</span>
-        </button>
-      </div>
-
-      {/* 모달: 자외선·오존 */}
-      {modal === 'uv' && (
-        <IndexModal title="☀️ 자외선 · ⚗️ 오존 기준" onClose={() => setModal(null)}>
-          <div>
-            <p className="text-xs font-semibold mb-2" style={{ color: 'var(--primary)' }}>☀️ 자외선 지수 (UV Index)</p>
-            <IndexTable
-              rows={UV_LEVELS}
-              source="기상청 생활기상지수 · US EPA · 미국 피부과학회(AAD)"
-            />
-          </div>
-          <div>
-            <p className="text-xs font-semibold mb-2" style={{ color: 'var(--primary)' }}>⚗️ 오존 (O₃) 농도</p>
-            <p className="text-[10px] mb-2 leading-relaxed" style={{ color: 'var(--muted)' }}>
-              오존은 자외선·고온 조건에서 높아집니다. 한낮(오전 10시~오후 4시)에 최고 농도를 보이며, 호흡량이 많은 운동 시 특히 주의가 필요합니다.
-            </p>
-            <IndexTable
-              rows={O3_LEVELS}
-              source="에어코리아 오존 행동요령"
-            />
-          </div>
-        </IndexModal>
-      )}
-
       {/* 모달: 폭염·한파 */}
       {modal === 'heat' && (
         <IndexModal title="🌡️ 폭염·체감온도 / 🥶 한파·바람 기준" onClose={() => setModal(null)}>
@@ -598,10 +433,10 @@ function Stat({
 }) {
   return (
     <div className="text-center min-w-0">
-      <p className="text-xs sm:text-sm" style={{ color: muted }}>{label}</p>
-      <p className="text-[10px] font-semibold mt-0.5 tabular-nums break-words" style={{ color }}>{value}</p>
+      <p className="text-[9px] sm:text-[10px]" style={{ color: muted }}>{label}</p>
+      <p className="text-[8px] font-semibold mt-0.5 tabular-nums break-words" style={{ color }}>{value}</p>
       {sub && (
-        <p className="text-xs mt-0.5 leading-tight line-clamp-2" style={{ color: muted }}>
+        <p className="text-[8px] mt-0.5 leading-tight line-clamp-2" style={{ color: muted }}>
           {sub}
         </p>
       )}

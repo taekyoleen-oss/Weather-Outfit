@@ -25,7 +25,7 @@ const ILLUST_ACC_VARIANT_ROW_CLASS = 'h-[30px] w-[30px] shrink-0 object-contain 
 const ACC_VARIANT_IMG_PX = 30
 
 const ITEM_CHIP_CLASS =
-  'inline-flex max-w-full min-w-0 items-start gap-0.5 text-[7px] px-0.5 py-0.5 rounded-full sm:text-[8px]'
+  'inline-flex max-w-full min-w-0 items-start gap-0.5 text-[14px] px-0.5 py-0.5 rounded-full sm:text-[16px]'
 
 function itemChipShellStyle(required: boolean): CSSProperties {
   return {
@@ -91,7 +91,7 @@ function itemChip(item: OutfitItem, idx: number, iconOnly?: boolean) {
       <span className="flex-shrink-0">{item.icon}</span>
       <AutoShrinkText text={item.name} className="font-medium" />
       {timeLabel && (
-        <span className="shrink-0 text-[6px] sm:text-[6px] leading-none text-gray-800">{timeLabel}</span>
+        <span className="shrink-0 ml-auto pl-1 text-[8px] leading-none opacity-55 self-end">{timeLabel}</span>
       )}
     </span>
   )

@@ -136,6 +136,9 @@ export function TimePeriodPicker({
   const curHourStr = String(currentHour).padStart(2, '0') + ':00'
   const sunsetHm = sunsetHmFromText(sunsetTime)
 
+  const targetDayOffset = Math.max(0, diffDaysYmd(todayYmd, selectedScheduleYmd))
+  const isFullDayMode = targetDayOffset > 0
+
   // ── 선택 상태: (periodIdx, dayOffset) 쌍 배열로 관리 ─────────────────────
   // currentIdx 변화에 독립적이므로 시간이 지나도 올바른 칩이 유지됨
   const [selectedChips, setSelectedChips] = useState<SelectedChip[]>(() => {
@@ -227,49 +230,71 @@ export function TimePeriodPicker({
     return hourly[0]?.temperature
   }
 
-  const chips = Array.from({ length: periodCount }, (_, i) => {
-    const rawIdx = currentIdx + i
-    const idx = rawIdx % periodCount
-    const period = OUTFIT_PERIODS[idx]!
-    const dayOffset = Math.floor(rawIdx / periodCount)
-    const isTomorrow = dayOffset >= 1
-    const targetYmd = addDaysYmd(todayYmd, dayOffset)
-    const isCurrent = i === 0
+  // 풀데이 모드: 미래 날짜 선택 시 새벽부터 7개 시간대 전부 표시
+  const chips = isFullDayMode
+    ? OUTFIT_PERIODS.map((period, idx) => {
+        const displayHour = period.start
+        const iconEntry =
+          findHourlyAtHour(displayHour, selectedScheduleYmd, hourly, slotYmds) ??
+          findHourlyAtHour(period.repHour, selectedScheduleYmd, hourly, slotYmds)
+        const label = iconEntry ? weatherLabel(iconEntry.skyCode, iconEntry.ptyCode) : null
+        const isNight = isNightByHour(displayHour, sunsetHm)
+        const weatherEmoji = emojiForHourAndLabel(displayHour, label, period.emoji, sunsetHm)
+        const temperature = findHourlyAtHour(period.start, selectedScheduleYmd, hourly, slotYmds)?.temperature
 
-    const displayHour = isCurrent ? currentHour : period.start
-    const displayEntry = findHourlyAtHour(displayHour, targetYmd, hourly, slotYmds)
-    const repFallback = findHourlyAtHour(period.repHour, targetYmd, hourly, slotYmds)
-    const iconEntry = displayEntry ?? repFallback
-    const label = iconEntry
-      ? weatherLabel(iconEntry.skyCode, iconEntry.ptyCode)
-      : isCurrent && currentConditions
-        ? weatherLabel(currentConditions.skyCode, currentConditions.ptyCode)
-        : null
-    const isNight = isNightByHour(displayHour, sunsetHm)
-    const weatherEmoji = emojiForHourAndLabel(displayHour, label, period.emoji, sunsetHm)
+        // 첫 번째 칩에만 날짜 배지 표시
+        const fullDayLabel: string | null = idx === 0
+          ? (targetDayOffset === 1 ? '내일'
+              : targetDayOffset === 2 ? '모레'
+              : `${selectedScheduleYmd.slice(4, 6)}/${selectedScheduleYmd.slice(6, 8)}`)
+          : null
 
-    let temperature: number | undefined
-    if (isCurrent) {
-      temperature = currentConditions?.temperature ?? fallbackTempForNow()
-    } else {
-      const atStart = findHourlyAtHour(period.start, targetYmd, hourly, slotYmds)
-      temperature = atStart?.temperature
-    }
+        return {
+          period, idx,
+          isTomorrow: false,
+          dayOffset: targetDayOffset,
+          isCurrent: false,
+          temperature, weatherEmoji, isNight,
+          isSelected: isChipSelected(idx, targetDayOffset),
+          fullDayLabel,
+        }
+      })
+    : Array.from({ length: periodCount }, (_, i) => {
+        const rawIdx = currentIdx + i
+        const idx = rawIdx % periodCount
+        const period = OUTFIT_PERIODS[idx]!
+        const dayOffset = Math.floor(rawIdx / periodCount)
+        const isTomorrow = dayOffset >= 1
+        const targetYmd = addDaysYmd(todayYmd, dayOffset)
+        const isCurrent = i === 0
 
-    const isSelected = isChipSelected(idx, dayOffset)
+        const displayHour = isCurrent ? currentHour : period.start
+        const displayEntry = findHourlyAtHour(displayHour, targetYmd, hourly, slotYmds)
+        const repFallback = findHourlyAtHour(period.repHour, targetYmd, hourly, slotYmds)
+        const iconEntry = displayEntry ?? repFallback
+        const label = iconEntry
+          ? weatherLabel(iconEntry.skyCode, iconEntry.ptyCode)
+          : isCurrent && currentConditions
+            ? weatherLabel(currentConditions.skyCode, currentConditions.ptyCode)
+            : null
+        const isNight = isNightByHour(displayHour, sunsetHm)
+        const weatherEmoji = emojiForHourAndLabel(displayHour, label, period.emoji, sunsetHm)
 
-    return {
-      period,
-      idx,
-      isTomorrow,
-      dayOffset,
-      isCurrent,
-      temperature,
-      weatherEmoji,
-      isNight,
-      isSelected,
-    }
-  })
+        let temperature: number | undefined
+        if (isCurrent) {
+          temperature = currentConditions?.temperature ?? fallbackTempForNow()
+        } else {
+          const atStart = findHourlyAtHour(period.start, targetYmd, hourly, slotYmds)
+          temperature = atStart?.temperature
+        }
+
+        return {
+          period, idx, isTomorrow, dayOffset, isCurrent,
+          temperature, weatherEmoji, isNight,
+          isSelected: isChipSelected(idx, dayOffset),
+          fullDayLabel: null as string | null,
+        }
+      })
 
   // 선택된 칩 중 첫/마지막 시각적 위치 (연결 표시용)
   const selectedVisualPositions = chips
@@ -284,10 +309,13 @@ export function TimePeriodPicker({
         className="text-sm max-lg:text-[15px] font-semibold mb-2.5 max-lg:mb-3 max-lg:tracking-tight"
         style={{ color: 'var(--muted)' }}
       >
-        🕐 시간대 선택
+        🕐{' '}
+        {isFullDayMode
+          ? `${selectedScheduleYmd.slice(0, 4)}년 ${parseInt(selectedScheduleYmd.slice(4, 6), 10)}월 ${parseInt(selectedScheduleYmd.slice(6, 8), 10)}일 시간대`
+          : '시간대 선택'}
       </h3>
       <div className="grid grid-cols-7 gap-1">
-        {chips.map(({ period, idx, isTomorrow, dayOffset, isCurrent, temperature, weatherEmoji, isNight, isSelected }, visualPos) => {
+        {chips.map(({ period, idx, isTomorrow, dayOffset, isCurrent, temperature, weatherEmoji, isNight, isSelected, fullDayLabel }, visualPos) => {
           const isRangeStart = isSelected && visualPos === selMin
           const isRangeEnd = isSelected && visualPos === selMax
           const isRangeMiddle = isSelected && !isRangeStart && !isRangeEnd
@@ -329,6 +357,14 @@ export function TimePeriodPicker({
                     style={{ background: 'var(--primary-tint-10)', color: 'var(--humidity)' }}
                   >
                     내일
+                  </span>
+                )}
+                {fullDayLabel && (
+                  <span
+                    className="text-[8px] px-1 py-0.5 rounded-full font-semibold leading-none"
+                    style={{ background: 'var(--primary-tint-10)', color: 'var(--humidity)' }}
+                  >
+                    {fullDayLabel}
                   </span>
                 )}
               </div>

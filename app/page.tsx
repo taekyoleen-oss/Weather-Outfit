@@ -33,7 +33,8 @@ import {
   addCalendarDaysFromKstYmd,
 } from '@/lib/utils/timeOfDay'
 import { useNowMinute } from '@/lib/hooks/useNowMinute'
-import { feelsLike, weatherLabel, weatherEmojiFromLabel, pickIllustKey, illustFile } from '@/lib/utils/formatWeather'
+import { feelsLike, weatherLabel, weatherEmojiFromLabel, pickIllustKey, illustFile, uvLabel, uvColor, o3GradeLabel, o3GradeColor } from '@/lib/utils/formatWeather'
+import { KMA_WEATHER_WARN_PAGE } from '@/lib/weather/kma-alert'
 import {
   TIME_PERIODS,
   OUTFIT_PERIODS,
@@ -700,9 +701,52 @@ export default function HomePage() {
   // ── Mobile Tab 2 header (외출옷) ──────────────────────────────────────────
   const tab2Header = (
     <div className="px-3 pt-2 pb-1 space-y-2">
-      <p className="text-xs" style={{ color: 'var(--muted)' }}>
-        📍 {location.name} 날씨 기준
-      </p>
+      <div className="flex items-center gap-2">
+        <p className="text-xs flex-1 min-w-0 truncate" style={{ color: 'var(--muted)' }}>
+          📍 {location.name} 날씨 기준
+        </p>
+        <input
+          type="date"
+          className="text-xs rounded-lg px-2 py-1.5 outline-none flex-shrink-0"
+          style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            color: 'var(--text)',
+            maxWidth: 130,
+          }}
+          value={scheduleYmd.length === 8
+            ? `${scheduleYmd.slice(0, 4)}-${scheduleYmd.slice(4, 6)}-${scheduleYmd.slice(6, 8)}`
+            : ''}
+          min={outfitForecastYmdBounds.min.length === 8
+            ? `${outfitForecastYmdBounds.min.slice(0, 4)}-${outfitForecastYmdBounds.min.slice(4, 6)}-${outfitForecastYmdBounds.min.slice(6, 8)}`
+            : ''}
+          max={outfitForecastYmdBounds.max.length === 8
+            ? `${outfitForecastYmdBounds.max.slice(0, 4)}-${outfitForecastYmdBounds.max.slice(4, 6)}-${outfitForecastYmdBounds.max.slice(6, 8)}`
+            : ''}
+          onChange={(e) => {
+            if (!e.target.value) return
+            const newYmd = e.target.value.replace(/-/g, '')
+            const dayOff = Math.max(0, diffCalendarDaysYmd(todayYmdKst, newYmd))
+            if (dayOff === 0) {
+              // 오늘: 현재 시간대로 복귀
+              handleSelectPreset(TIME_PERIODS[getPeriodIndex(hour)].repHour, 0)
+            } else {
+              // 미래 날짜: 새벽(0시)부터 시작
+              handleSelectPreset(OUTFIT_PERIODS[0]!.repHour, dayOff)
+            }
+          }}
+        />
+        {scheduleYmd !== todayYmdKst && (
+          <button
+            type="button"
+            onClick={() => handleSelectPreset(TIME_PERIODS[getPeriodIndex(hour)].repHour, 0)}
+            className="flex-shrink-0 text-xs px-2 py-1.5 rounded-lg"
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)' }}
+          >
+            오늘
+          </button>
+        )}
+      </div>
       {timePeriodPicker}
       <div className="flex gap-1.5 overflow-x-auto scroll-strip">
         {COMPANION_PROFILES.map(p => (
@@ -787,6 +831,67 @@ export default function HomePage() {
 
   const tab3Content = (
     <>
+      {/* 자외선 / 오존 / 기상특보 카드 */}
+      <div className="grid grid-cols-3 gap-1.5">
+        <div className="glass-card p-2.5 flex flex-col items-center gap-0.5 text-center">
+          <span className="text-xl">☀️</span>
+          <p className="text-[9px] font-semibold" style={{ color: 'var(--muted)' }}>자외선</p>
+          <p className="text-base font-bold" style={{ color: uvColor(uvForCard ?? 0) }}>
+            UV {uvForCard ?? '--'}
+          </p>
+          <p className="text-[10px]" style={{ color: uvColor(uvForCard ?? 0) }}>
+            {uvLabel(uvForCard ?? 0)}
+          </p>
+        </div>
+
+        <div className="glass-card p-2.5 flex flex-col items-center gap-0.5 text-center">
+          <span className="text-xl">⚗️</span>
+          <p className="text-[9px] font-semibold" style={{ color: 'var(--muted)' }}>오존</p>
+          <p className="text-base font-bold" style={{ color: o3GradeColor(dust?.o3Grade) }}>
+            {o3GradeLabel(dust?.o3Grade)}
+          </p>
+          {dust?.o3Value != null && (
+            <p className="text-[9px]" style={{ color: 'var(--muted)' }}>
+              {dust.o3Value.toFixed(3)} ppm
+            </p>
+          )}
+        </div>
+
+        <div
+          className="glass-card p-2.5 flex flex-col items-center gap-0.5 text-center"
+          style={
+            alerts.length > 0
+              ? { border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.04)' }
+              : undefined
+          }
+        >
+          <span className="text-xl">⚠️</span>
+          <p
+            className="text-[9px] font-semibold"
+            style={{ color: alerts.length > 0 ? 'var(--danger)' : 'var(--muted)' }}
+          >
+            기상특보
+          </p>
+          <p
+            className="text-base font-bold"
+            style={{ color: alerts.length > 0 ? 'var(--danger)' : 'var(--muted)' }}
+          >
+            {alerts.length > 0 ? `${alerts.length}건` : '없음'}
+          </p>
+          {alerts.length > 0 && (
+            <a
+              href={KMA_WEATHER_WARN_PAGE}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[9px] underline underline-offset-2"
+              style={{ color: 'var(--danger)' }}
+            >
+              상세보기
+            </a>
+          )}
+        </div>
+      </div>
+
       {highlightsGrid}
       <WeeklyForecastInline key="weekly-inline-mobile" {...weeklyProps} />
 
