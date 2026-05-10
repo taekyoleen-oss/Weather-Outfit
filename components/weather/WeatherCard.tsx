@@ -15,6 +15,7 @@ import type {
 import type { OpenMeteoDailyCompare } from '@/lib/weather/openMeteoCompare'
 import {
   weatherLabel,
+  weatherEmojiFromLabel,
   windDirectionLabel,
   feelsLike,
   formatTemp1,
@@ -43,6 +44,8 @@ interface Props {
   morningSummary?: MorningSummary | null
   /** 내일/모레 요약(작은 텍스트): 날씨 + 최고/최저 */
   futureDaily?: DailyForecast[]
+  /** 오늘 날씨 변화 (현재와 다른 시간대 날씨가 있을 때) */
+  todayWeatherChange?: { laterLabel: string; laterPeriodName: string } | null
 }
 
 const BG_MAP: Record<TimeOfDay, string> = {
@@ -178,6 +181,7 @@ export function WeatherCard({
   openMeteoCompare,
   morningSummary,
   futureDaily,
+  todayWeatherChange,
 }: Props) {
   const [modal, setModal] = useState<'heat' | null>(null)
 
@@ -207,6 +211,16 @@ export function WeatherCard({
 
   const feels = feelsLike(weather.temperature, weather.windSpeed, weather.humidity)
   const compareLine = formatOpenMeteoCompareLine(weather.temperature, openMeteoCompare ?? null)
+  const currentLabel = weatherLabel(weather.skyCode, weather.ptyCode)
+  const currentEmoji =
+    isDark && (currentLabel === '맑음' || currentLabel === '구름 많음')
+      ? '🌙'
+      : weatherEmojiFromLabel(currentLabel)
+  const laterEmoji = todayWeatherChange
+    ? todayWeatherChange.laterPeriodName === '밤' && todayWeatherChange.laterLabel === '맑음'
+      ? '🌙'
+      : weatherEmojiFromLabel(todayWeatherChange.laterLabel)
+    : null
   const showAddress =
     addressLine &&
     addressLine.trim() !== '' &&
@@ -240,15 +254,40 @@ export function WeatherCard({
             <FreshnessBadge fetchedAt={weather.fetchedAt} />
           </div>
         </div>
-        <WeatherHeroIllustration
-          skyCode={weather.skyCode}
-          ptyCode={weather.ptyCode}
-          period={period}
-          iconSrc={heroIconSrc}
-          iconHour={heroIconHour}
-          sunsetHm={heroSunsetHm}
-          size={120}
-        />
+        {todayWeatherChange ? (
+          <div className="flex items-center gap-1 flex-shrink-0" aria-hidden="true">
+            <span
+              className="leading-none"
+              style={{
+                fontSize: 46,
+                fontFamily: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif',
+                filter: isDark && (currentLabel === '맑음' || currentLabel === '구름 많음') ? 'grayscale(1) saturate(0)' : 'none',
+              }}
+            >
+              {currentEmoji}
+            </span>
+            <span className="font-bold" style={{ fontSize: 13, color: mutedColor }}>→</span>
+            <span
+              className="leading-none"
+              style={{
+                fontSize: 46,
+                fontFamily: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif',
+              }}
+            >
+              {laterEmoji}
+            </span>
+          </div>
+        ) : (
+          <WeatherHeroIllustration
+            skyCode={weather.skyCode}
+            ptyCode={weather.ptyCode}
+            period={period}
+            iconSrc={heroIconSrc}
+            iconHour={heroIconHour}
+            sunsetHm={heroSunsetHm}
+            size={100}
+          />
+        )}
       </div>
 
       {/* Temperature */}
@@ -270,17 +309,16 @@ export function WeatherCard({
             </div>
           )}
         </div>
-        <p className="text-base mt-0.5 leading-snug" style={{ color: textColor }}>
-          <span className="font-medium">{weatherLabel(weather.skyCode, weather.ptyCode)}</span>
-          {compareLine ? (
-            <>
-              {' '}
-              <span className="font-normal text-sm sm:text-base" style={{ color: mutedColor }}>
-                {compareLine}
-              </span>
-            </>
-          ) : null}
+        <p className="text-base mt-0.5 leading-snug font-medium" style={{ color: textColor }}>
+          {todayWeatherChange
+            ? `${currentLabel} · ${todayWeatherChange.laterPeriodName}에 ${todayWeatherChange.laterLabel}`
+            : currentLabel}
         </p>
+        {compareLine && (
+          <p className="text-sm mt-0.5 leading-snug" style={{ color: mutedColor }}>
+            {compareLine}
+          </p>
+        )}
       </div>
 
       {morningSummary && (

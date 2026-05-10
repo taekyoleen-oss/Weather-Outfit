@@ -8,7 +8,6 @@ import { GpsButton } from '@/components/weather/GpsButton'
 import { RecentChips, saveRecentLocation } from '@/components/weather/RecentChips'
 import { WeatherCard } from '@/components/weather/WeatherCard'
 import { HourlyWeatherStrip } from '@/components/weather/HourlyWeatherStrip'
-import { UltraSrtFcstCard } from '@/components/weather/UltraSrtFcstCard'
 import { TempGraph48h } from '@/components/weather/TempGraph48h'
 import dynamic from 'next/dynamic'
 const WeeklyForecastInline = dynamic(
@@ -536,6 +535,42 @@ export default function HomePage() {
     [weatherData, hour, activityStartHour, effectiveScheduleYmd, selectedCalendarDayOffset, todayYmdKst],
   )
 
+  const todayWeatherChange = useMemo((): { laterLabel: string; laterPeriodName: string } | null => {
+    if (!weatherData?.current) return null
+    const hourly = weatherData.hourly ?? []
+    const todayYmd = kstTodayYmd()
+    const currentLabel = weatherLabel(weatherData.current.skyCode, weatherData.current.ptyCode)
+
+    const periods = [
+      { name: '오전', start: 6, end: 11 },
+      { name: '오후', start: 12, end: 17 },
+      { name: '저녁', start: 18, end: 21 },
+      { name: '밤', start: 22, end: 23 },
+    ]
+
+    for (const period of periods) {
+      if (period.end <= hour) continue
+      if (period.start <= hour && hour <= period.end) continue
+
+      const slots = hourly.filter((h) => {
+        const hh = parseInt(h.time.split(':')[0], 10)
+        return (h.fcstDate === todayYmd || !h.fcstDate) && hh >= period.start && hh <= period.end
+      })
+      if (!slots.length) continue
+
+      const counts: Record<string, number> = {}
+      for (const s of slots) {
+        const label = weatherLabel(s.skyCode, s.ptyCode)
+        counts[label] = (counts[label] ?? 0) + 1
+      }
+      const dominant = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0]
+      if (dominant && dominant !== currentLabel) {
+        return { laterLabel: dominant, laterPeriodName: period.name }
+      }
+    }
+    return null
+  }, [weatherData, hour])
+
   const morningSummary = useMemo((): MorningSummary | null => {
     if (hour < 12) return null
     const hourly = weatherData?.hourly ?? []
@@ -622,6 +657,7 @@ export default function HomePage() {
       openMeteoCompare={openMeteoCompare}
       morningSummary={morningSummary}
       futureDaily={weeklyDisplayDaily.slice(0, 2)}
+      todayWeatherChange={todayWeatherChange}
     />
   )
 
@@ -806,12 +842,6 @@ export default function HomePage() {
         sunsetTime={sunriseSunset?.sunset}
         suitabilityByHour={suitabilityByHour}
       />
-      {spotData && (
-        <UltraSrtFcstCard
-          strip10m={spotData.strip10m}
-          lightningNow={spotData.lightningNow}
-        />
-      )}
       <TempGraph48h hourly={weatherData?.hourly ?? []} loading={weatherLoading && !weatherData} />
     </>
   )
