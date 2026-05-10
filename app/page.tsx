@@ -481,7 +481,14 @@ export default function HomePage() {
     saveRecentLocation(loc)
   }
 
+  // TimePeriodPicker 칩 클릭: scheduleYmd는 변경하지 않아 롤링 모드 유지
   function handleSelectPreset(repHour: number, dayOffset: number) {
+    setPeriodPreset({ repHour, dayOffset })
+    setWxActivityHours(null)
+  }
+
+  // 날짜 입력·오늘 버튼: scheduleYmd도 함께 변경해 풀데이 모드 전환
+  function handleSelectPresetWithDateUpdate(repHour: number, dayOffset: number) {
     setPeriodPreset({ repHour, dayOffset })
     setScheduleYmd(addCalendarDaysFromKstYmd(kstTodayYmd(), dayOffset))
     setWxActivityHours(null)
@@ -506,18 +513,27 @@ export default function HomePage() {
 
   const period = getTimeOfDay(activityStartHour, sunriseSunset?.sunrise, sunriseSunset?.sunset)
 
+  // periodPreset.dayOffset 기반 실질 날짜: 롤링 모드에서 내일 칩을 눌러도 scheduleYmd는 오늘로 유지하되
+  // 날씨·복장 조회는 실제 대상 날짜(dayOffset 반영)를 사용한다
+  const effectiveScheduleYmd = useMemo(
+    () => periodPreset.dayOffset > 0
+      ? addCalendarDaysFromKstYmd(todayYmdKst, periodPreset.dayOffset)
+      : scheduleYmd,
+    [periodPreset.dayOffset, todayYmdKst, scheduleYmd],
+  )
+
   // ── Display weather ───────────────────────────────────────────────────────
   const displayWeather = useMemo(
-    () => computeDisplayWeather(weatherData, hour, periodPreset, scheduleYmd, activityBand, todayYmdKst),
-    [weatherData, hour, periodPreset, scheduleYmd, activityBand, todayYmdKst],
+    () => computeDisplayWeather(weatherData, hour, periodPreset, effectiveScheduleYmd, activityBand, todayYmdKst),
+    [weatherData, hour, periodPreset, effectiveScheduleYmd, activityBand, todayYmdKst],
   )
 
   // ── Displayed hourly: desktop/outfit period-adjusted ─────────────────────
   const displayedHourly = useMemo(
     () => computeDisplayedHourly(
-      weatherData?.hourly ?? [], hour, activityStartHour, scheduleYmd, selectedCalendarDayOffset, todayYmdKst,
+      weatherData?.hourly ?? [], hour, activityStartHour, effectiveScheduleYmd, selectedCalendarDayOffset, todayYmdKst,
     ),
-    [weatherData, hour, activityStartHour, scheduleYmd, selectedCalendarDayOffset, todayYmdKst],
+    [weatherData, hour, activityStartHour, effectiveScheduleYmd, selectedCalendarDayOffset, todayYmdKst],
   )
 
   const morningSummary = useMemo((): MorningSummary | null => {
@@ -642,7 +658,7 @@ export default function HomePage() {
     outfitIsNowPeriod,
     outfitCurrentKstHour: hour,
     outfitScheduleSyncKey,
-    scheduleYmd,
+    scheduleYmd: effectiveScheduleYmd,
     scheduleYmdMin: outfitForecastYmdBounds.min,
     scheduleYmdMax: outfitForecastYmdBounds.max,
     onScheduleYmdChange: handleScheduleYmdChange,
@@ -729,17 +745,17 @@ export default function HomePage() {
             const dayOff = Math.max(0, diffCalendarDaysYmd(todayYmdKst, newYmd))
             if (dayOff === 0) {
               // 오늘: 현재 시간대로 복귀
-              handleSelectPreset(TIME_PERIODS[getPeriodIndex(hour)].repHour, 0)
+              handleSelectPresetWithDateUpdate(TIME_PERIODS[getPeriodIndex(hour)].repHour, 0)
             } else {
               // 미래 날짜: 새벽(0시)부터 시작
-              handleSelectPreset(OUTFIT_PERIODS[0]!.repHour, dayOff)
+              handleSelectPresetWithDateUpdate(OUTFIT_PERIODS[0]!.repHour, dayOff)
             }
           }}
         />
         {scheduleYmd !== todayYmdKst && (
           <button
             type="button"
-            onClick={() => handleSelectPreset(TIME_PERIODS[getPeriodIndex(hour)].repHour, 0)}
+            onClick={() => handleSelectPresetWithDateUpdate(TIME_PERIODS[getPeriodIndex(hour)].repHour, 0)}
             className="flex-shrink-0 text-xs px-2 py-1.5 rounded-lg"
             style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)' }}
           >
