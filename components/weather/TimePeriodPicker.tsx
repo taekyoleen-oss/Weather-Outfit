@@ -316,7 +316,7 @@ export function TimePeriodPicker({
           ? `${selectedScheduleYmd.slice(0, 4)}년 ${parseInt(selectedScheduleYmd.slice(4, 6), 10)}월 ${parseInt(selectedScheduleYmd.slice(6, 8), 10)}일 시간대`
           : '시간대 선택'}
       </h3>
-      <div className="grid grid-cols-7 gap-1">
+      <div className="flex flex-nowrap gap-1 overflow-x-auto pb-0.5">
         {chips.map(({ period, idx, isTomorrow, dayOffset, isCurrent, temperature, endTemperature, weatherEmoji, isNight, isSelected, fullDayLabel }, visualPos) => {
           const isRangeStart = isSelected && visualPos === selMin
           const isRangeEnd = isSelected && visualPos === selMax
@@ -327,7 +327,7 @@ export function TimePeriodPicker({
               key={period.id + (isTomorrow ? '-t' : '')}
               type="button"
               onClick={() => handleChipClick(idx, dayOffset)}
-              className="flex flex-col items-center gap-0.5 py-2 px-0.5 rounded-lg transition-all"
+              className="flex flex-col items-center gap-0.5 py-2 px-0.5 rounded-lg transition-all flex-1 min-w-[42px] flex-shrink-0"
               style={{
                 background: isSelected ? 'var(--colors-canvas-light)' : 'var(--colors-surface-filter)',
                 border: `1.5px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}`,
@@ -401,7 +401,7 @@ export function TimePeriodPicker({
               </div>
 
               <span
-                className="text-[7px] font-semibold mt-0.5 leading-tight"
+                className="text-[6px] font-semibold mt-0.5 leading-tight"
                 style={{ color: isSelected ? 'var(--accent)' : 'var(--text)' }}
               >
                 {period.label}
@@ -409,13 +409,13 @@ export function TimePeriodPicker({
 
               {temperature !== undefined ? (
                 <span
-                  className="text-[7px] font-bold tabular-nums leading-none"
+                  className="text-[6px] font-bold tabular-nums leading-none"
                   style={{ color: isSelected ? 'var(--accent)' : 'var(--muted)' }}
                 >
                   {formatTemp1(temperature)}°{endTemperature !== undefined && Math.round(endTemperature) !== Math.round(temperature) ? `~${formatTemp1(endTemperature)}°` : ''}
                 </span>
               ) : (
-                <span className="text-[10px] leading-none" style={{ color: 'var(--muted)' }}>
+                <span className="text-[6px] leading-none" style={{ color: 'var(--muted)' }}>
                   --
                 </span>
               )}
