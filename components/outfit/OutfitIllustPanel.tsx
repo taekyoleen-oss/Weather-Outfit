@@ -98,7 +98,7 @@ function itemChip(item: OutfitItem, idx: number, iconOnly?: boolean, selectedPer
       <span className="flex-shrink-0">{item.icon}</span>
       <AutoShrinkText text={item.name} className="font-medium" />
       {timeLabel && (
-        <span className="shrink-0 ml-auto pl-1 text-[8px] leading-none opacity-55 self-end">{timeLabel}</span>
+        <span className="shrink-0 ml-auto pl-1 text-[7px] leading-none opacity-55 self-end">{timeLabel}</span>
       )}
     </span>
   )
