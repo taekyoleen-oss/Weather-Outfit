@@ -327,7 +327,7 @@ export function TimePeriodPicker({
               key={period.id + (isTomorrow ? '-t' : '')}
               type="button"
               onClick={() => handleChipClick(idx, dayOffset)}
-              className="flex flex-col items-center gap-0.5 py-2 px-0.5 rounded-lg transition-all flex-1 min-w-[46px] flex-shrink-0"
+              className="flex flex-col items-center gap-0.5 py-2 px-1 rounded-lg transition-all flex-1 min-w-[60px] flex-shrink-0"
               style={{
                 background: isSelected ? 'var(--colors-canvas-light)' : 'var(--colors-surface-filter)',
                 border: `1.5px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}`,
@@ -401,7 +401,7 @@ export function TimePeriodPicker({
               </div>
 
               <span
-                className="text-[10px] font-semibold mt-0.5 leading-tight"
+                className="text-[10px] font-semibold mt-0.5 leading-tight whitespace-nowrap"
                 style={{ color: isSelected ? 'var(--accent)' : 'var(--text)' }}
               >
                 {period.label}
@@ -409,7 +409,7 @@ export function TimePeriodPicker({
 
               {temperature !== undefined ? (
                 <span
-                  className="text-[9px] font-bold tabular-nums leading-none"
+                  className="text-[9px] font-bold tabular-nums leading-none whitespace-nowrap"
                   style={{ color: isSelected ? 'var(--accent)' : 'var(--muted)' }}
                 >
                   {formatTemp1(temperature)}°{endTemperature !== undefined && Math.round(endTemperature) !== Math.round(temperature) ? `~${formatTemp1(endTemperature)}°` : ''}
