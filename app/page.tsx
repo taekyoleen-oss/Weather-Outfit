@@ -504,14 +504,16 @@ export default function HomePage() {
     return () => { ac.abort() }
   }, [location])
 
-  // ── 강수 알림: 당일 첫 진입 시 1회 표시 ─────────────────────────────────────
+  // ── 강수 알림: 4시간 간격으로 반복 표시 ─────────────────────────────────────
   useEffect(() => {
     if (!weatherData?.hourly?.length) return
-    const todayYmd = kstTodayYmd()
-    const key = `wf_precip_alert_${todayYmd}`
-    if (typeof window === 'undefined' || localStorage.getItem(key)) return
-    const result = computeTodayPrecipAlerts(weatherData.hourly, todayYmd)
-    if (result) setPrecipAlertData(result)
+    const result = computeTodayPrecipAlerts(weatherData.hourly, kstTodayYmd())
+    if (!result) return
+    if (typeof window === 'undefined') return
+    const lastShown = parseInt(localStorage.getItem('wf_precip_alert_ts') ?? '0', 10)
+    if (Date.now() - lastShown >= 4 * 60 * 60 * 1000) {
+      setPrecipAlertData(result)
+    }
   }, [weatherData])
 
   // ── Spot data fetch (page-level) ──────────────────────────────────────────
@@ -532,8 +534,7 @@ export default function HomePage() {
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   function handleClosePrecipAlert() {
-    const key = `wf_precip_alert_${kstTodayYmd()}`
-    localStorage.setItem(key, '1')
+    localStorage.setItem('wf_precip_alert_ts', String(Date.now()))
     setPrecipAlertData(null)
   }
 
