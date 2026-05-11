@@ -126,6 +126,8 @@ export function TempGraph48h({ hourly, loading, sunriseSunset, daily }: Props) {
 
   const hasTomorrow = chartData.some(d => d.label === '내일')
   const hasDayAfter = chartData.some(d => d.label === '모레')
+  const hasSunrise = chartData.some(d => d.label === '일출')
+  const hasSunset = chartData.some(d => d.label === '일몰')
 
   if (loading || !hourly.length) {
     return (
@@ -203,10 +205,10 @@ export function TempGraph48h({ hourly, loading, sunriseSunset, daily }: Props) {
             {hasDayAfter && (
               <ReferenceLine x="모레" stroke="#5B8DEE" strokeDasharray="4 3" strokeOpacity={0.55} />
             )}
-            {srHour !== null && (
+            {hasSunrise && (
               <ReferenceLine x="일출" stroke="#F59E0B" strokeDasharray="3 3" strokeOpacity={0.45} />
             )}
-            {ssHour !== null && (
+            {hasSunset && (
               <ReferenceLine x="일몰" stroke="#818CF8" strokeDasharray="3 3" strokeOpacity={0.45} />
             )}
             <Area
@@ -223,19 +225,19 @@ export function TempGraph48h({ hourly, loading, sunriseSunset, daily }: Props) {
       </div>
 
       {/* 범례 */}
-      {(hasTomorrow || srHour !== null || ssHour !== null) && (
+      {(hasTomorrow || hasSunrise || hasSunset) && (
         <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 px-1">
           {hasTomorrow && (
             <span className="text-[10px]" style={{ color: '#5B8DEE' }}>
               ━━ 내일/모레
             </span>
           )}
-          {srHour !== null && (
+          {hasSunrise && (
             <span className="text-[10px]" style={{ color: '#F59E0B' }}>
               ┄┄ 일출
             </span>
           )}
-          {ssHour !== null && (
+          {hasSunset && (
             <span className="text-[10px]" style={{ color: '#818CF8' }}>
               ┄┄ 일몰
             </span>
