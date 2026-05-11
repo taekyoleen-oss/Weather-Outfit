@@ -1,8 +1,8 @@
 /**
- * 복장 캐릭터 프레임 뒤에 깔리는 반투명 날씨 배경 SVG.
- * - 캐릭터(PNG) 위에 텍스트가 없으므로 칩 가독성과 무관하나,
- *   본체 실루엣을 침해하지 않도록 데코는 상단·외곽으로 집중하고
- *   전체 알파는 낮게 유지(틴트 ≤0.18, 데코 ≤0.55).
+ * 복장 캐릭터 프레임 뒤에 깔리는 반투명 날씨 데코 SVG.
+ * - 색상 틴트 배경 사각형은 사용하지 않음 (모바일에서 푸른 박스처럼 두드러져 제외).
+ * - 데코 요소(구름·빗방울·눈송이·해·바람선)만 표시해 캐릭터 실루엣과 자연스럽게 합성.
+ * - 데코는 상단·외곽으로 집중, 알파 ≤0.65 — 캐릭터에 `mix-blend-mode: darken` 적용 시 적정 가시성.
  */
 import type { PtyCode, SkyCode } from '@/types/weather'
 
@@ -83,13 +83,6 @@ function RainLightLayer() {
   const blue = '#5B8DEE'
   return (
     <g>
-      <defs>
-        <linearGradient id="rainLightTint" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={blue} stopOpacity="0.16" />
-          <stop offset="100%" stopColor={blue} stopOpacity="0.04" />
-        </linearGradient>
-      </defs>
-      <rect width={VB_W} height={VB_H} fill="url(#rainLightTint)" />
       {/* 옅은 구름 */}
       <path
         d="M 28 30 C 18 30 14 22 22 18 C 20 10 36 6 44 14 C 52 6 70 12 70 22 C 80 22 84 32 74 36 L 32 36 C 22 38 18 32 28 30 Z"
@@ -118,13 +111,6 @@ function RainHeavyLayer() {
   const blue = '#3B6FD8'
   return (
     <g>
-      <defs>
-        <linearGradient id="rainHeavyTint" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={blue} stopOpacity="0.22" />
-          <stop offset="100%" stopColor={blue} stopOpacity="0.06" />
-        </linearGradient>
-      </defs>
-      <rect width={VB_W} height={VB_H} fill="url(#rainHeavyTint)" />
       {/* 짙은 구름 두 덩이 */}
       <path
         d="M 18 26 C 8 26 4 18 12 14 C 10 6 26 2 34 10 C 42 2 60 8 60 18 C 70 18 74 28 64 32 L 22 32 C 12 34 8 28 18 26 Z"
@@ -159,13 +145,6 @@ function SnowLayer() {
   const white = '#FFFFFF'
   return (
     <g>
-      <defs>
-        <linearGradient id="snowTint" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={slate} stopOpacity="0.18" />
-          <stop offset="100%" stopColor={slate} stopOpacity="0.05" />
-        </linearGradient>
-      </defs>
-      <rect width={VB_W} height={VB_H} fill="url(#snowTint)" />
       {/* 부드러운 구름 */}
       <path
         d="M 22 28 C 12 28 8 20 16 16 C 14 8 30 4 38 12 C 46 4 64 10 64 20 C 74 20 78 30 68 34 L 26 34 C 16 36 12 30 22 28 Z"
@@ -188,14 +167,6 @@ function SunnyLayer() {
   const cream = '#FCD34D'
   return (
     <g>
-      <defs>
-        <radialGradient id="sunGlow" cx="0.78" cy="0.18" r="0.7">
-          <stop offset="0%" stopColor={cream} stopOpacity="0.40" />
-          <stop offset="55%" stopColor={cream} stopOpacity="0.14" />
-          <stop offset="100%" stopColor={cream} stopOpacity="0.02" />
-        </radialGradient>
-      </defs>
-      <rect width={VB_W} height={VB_H} fill="url(#sunGlow)" />
       {/* 태양 디스크 */}
       <circle cx={156} cy={50} r={20} fill={cream} opacity="0.55" />
       <circle cx={156} cy={50} r={14} fill={gold} opacity="0.35" />
@@ -218,19 +189,11 @@ function SunnyLayer() {
 }
 
 function PartlyCloudyLayer() {
-  const sky = '#7DD3FC'
   const gold = '#F59E0B'
   const cream = '#FCD34D'
   const cloud = '#94A3B8'
   return (
     <g>
-      <defs>
-        <linearGradient id="partlyTint" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={sky} stopOpacity="0.18" />
-          <stop offset="100%" stopColor={sky} stopOpacity="0.04" />
-        </linearGradient>
-      </defs>
-      <rect width={VB_W} height={VB_H} fill="url(#partlyTint)" />
       {/* 작은 해 (좌상단) */}
       <circle cx={42} cy={38} r={14} fill={cream} opacity="0.45" />
       <circle cx={42} cy={38} r={9} fill={gold} opacity="0.30" />
@@ -252,16 +215,8 @@ function PartlyCloudyLayer() {
 
 function CloudyLayer() {
   const gray = '#94A3B8'
-  const slate = '#64748B'
   return (
     <g>
-      <defs>
-        <linearGradient id="cloudyTint" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={slate} stopOpacity="0.16" />
-          <stop offset="100%" stopColor={slate} stopOpacity="0.04" />
-        </linearGradient>
-      </defs>
-      <rect width={VB_W} height={VB_H} fill="url(#cloudyTint)" />
       {/* 큰 구름 — 좌상단 */}
       <path
         d="M 18 36 C 8 36 4 26 12 22 C 10 12 28 8 36 16 C 44 8 64 14 64 24 C 76 24 80 36 70 40 L 26 40 C 14 42 8 36 18 36 Z"
@@ -288,13 +243,6 @@ function WindyLayer() {
   const teal = '#7EC8C8'
   return (
     <g>
-      <defs>
-        <linearGradient id="windTint" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={teal} stopOpacity="0.16" />
-          <stop offset="100%" stopColor={teal} stopOpacity="0.04" />
-        </linearGradient>
-      </defs>
-      <rect width={VB_W} height={VB_H} fill="url(#windTint)" />
       {/* 부드러운 바람 곡선 — 좌→우 흐름, 상·중단 */}
       {WIND_CURVES.map((d, i) => (
         <path
