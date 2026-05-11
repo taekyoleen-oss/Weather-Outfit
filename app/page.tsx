@@ -9,6 +9,7 @@ import { RecentChips, saveRecentLocation } from '@/components/weather/RecentChip
 import { WeatherCard } from '@/components/weather/WeatherCard'
 import { HourlyWeatherStrip } from '@/components/weather/HourlyWeatherStrip'
 import { TempGraph48h } from '@/components/weather/TempGraph48h'
+import { ChartErrorBoundary } from '@/components/ui/ChartErrorBoundary'
 import dynamic from 'next/dynamic'
 const WeeklyForecastInline = dynamic(
   () => import('@/components/weather/WeeklyForecastInline').then((m) => m.WeeklyForecastInline),
@@ -900,12 +901,14 @@ export default function HomePage() {
           lightningNow={spotData.lightningNow}
         />
       )}
-      <TempGraph48h
-        hourly={weatherData?.hourly ?? []}
-        loading={weatherLoading && !weatherData}
-        sunriseSunset={sunriseSunset}
-        daily={weeklyDisplayDaily}
-      />
+      <ChartErrorBoundary>
+        <TempGraph48h
+          hourly={weatherData?.hourly ?? []}
+          loading={weatherLoading && !weatherData}
+          sunriseSunset={sunriseSunset}
+          daily={weeklyDisplayDaily}
+        />
+      </ChartErrorBoundary>
     </>
   )
 
@@ -1192,7 +1195,9 @@ export default function HomePage() {
           right={
             <>
               {hourlyStripDesktop}
-              <WeeklyForecastInline key="weekly-inline-desktop" {...weeklyProps} />
+              <ChartErrorBoundary>
+                <WeeklyForecastInline key="weekly-inline-desktop" {...weeklyProps} />
+              </ChartErrorBoundary>
               {outfitPanel}
             </>
           }
