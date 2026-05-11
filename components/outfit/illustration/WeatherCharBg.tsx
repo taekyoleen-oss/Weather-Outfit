@@ -6,9 +6,26 @@
  */
 import type { PtyCode, SkyCode } from '@/types/weather'
 
-export type WeatherBgMode = 'rain-light' | 'rain-heavy' | 'snow' | 'sunny' | 'windy' | 'none'
+export type WeatherBgMode =
+  | 'rain-light'
+  | 'rain-heavy'
+  | 'snow'
+  | 'sunny'
+  | 'partly-cloudy'
+  | 'cloudy'
+  | 'windy'
+  | 'none'
 
-/** 우천/강설/맑음/강풍 우선순위로 모드 결정 */
+/**
+ * 우선순위:
+ * 1. 강설(ptyCode 2/3) → snow
+ * 2. 강수(ptyCode 1/4) → rain-light/rain-heavy (강수량 3mm/h 분기)
+ * 3. 강풍 → windy
+ * 4. 맑음(skyCode 1 또는 showSunshine) → sunny
+ * 5. 구름많음(skyCode 3) → partly-cloudy
+ * 6. 흐림(skyCode 4) → cloudy
+ * 7. 데이터 없음 → none
+ */
 export function resolveWeatherBgMode(params: {
   ptyCode?: PtyCode
   skyCode?: SkyCode
@@ -16,13 +33,15 @@ export function resolveWeatherBgMode(params: {
   showSunshine?: boolean
   windAlert?: boolean
 }): WeatherBgMode {
-  const { ptyCode, precipitation = 0, showSunshine, windAlert } = params
+  const { ptyCode, skyCode, precipitation = 0, showSunshine, windAlert } = params
   if (ptyCode === '3' || ptyCode === '2') return 'snow'
   if (ptyCode === '1' || ptyCode === '4') {
     return precipitation >= 3 ? 'rain-heavy' : 'rain-light'
   }
-  if (showSunshine) return 'sunny'
   if (windAlert) return 'windy'
+  if (showSunshine || skyCode === '1') return 'sunny'
+  if (skyCode === '3') return 'partly-cloudy'
+  if (skyCode === '4') return 'cloudy'
   return 'none'
 }
 
@@ -43,6 +62,8 @@ export function WeatherCharBg({ mode, className }: Props) {
       viewBox={`0 0 ${VB_W} ${VB_H}`}
       preserveAspectRatio="xMidYMid slice"
       xmlns="http://www.w3.org/2000/svg"
+      width="100%"
+      height="100%"
       className={className}
       aria-hidden
       focusable={false}
@@ -51,6 +72,8 @@ export function WeatherCharBg({ mode, className }: Props) {
       {mode === 'rain-heavy' && <RainHeavyLayer />}
       {mode === 'snow' && <SnowLayer />}
       {mode === 'sunny' && <SunnyLayer />}
+      {mode === 'partly-cloudy' && <PartlyCloudyLayer />}
+      {mode === 'cloudy' && <CloudyLayer />}
       {mode === 'windy' && <WindyLayer />}
     </svg>
   )
@@ -190,6 +213,73 @@ function SunnyLayer() {
           opacity="0.45"
         />
       ))}
+    </g>
+  )
+}
+
+function PartlyCloudyLayer() {
+  const sky = '#7DD3FC'
+  const gold = '#F59E0B'
+  const cream = '#FCD34D'
+  const cloud = '#94A3B8'
+  return (
+    <g>
+      <defs>
+        <linearGradient id="partlyTint" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={sky} stopOpacity="0.18" />
+          <stop offset="100%" stopColor={sky} stopOpacity="0.04" />
+        </linearGradient>
+      </defs>
+      <rect width={VB_W} height={VB_H} fill="url(#partlyTint)" />
+      {/* 작은 해 (좌상단) */}
+      <circle cx={42} cy={38} r={14} fill={cream} opacity="0.45" />
+      <circle cx={42} cy={38} r={9} fill={gold} opacity="0.30" />
+      {/* 우상단 구름 한 덩이 */}
+      <path
+        d="M 118 36 C 110 36 106 28 112 24 C 110 16 124 12 132 20 C 140 12 156 18 156 26 C 166 26 168 36 158 40 L 122 40 C 114 42 110 38 118 36 Z"
+        fill={cloud}
+        opacity="0.30"
+      />
+      {/* 우하단 보조 구름 */}
+      <path
+        d="M 80 88 C 74 88 70 82 74 78 C 72 72 84 70 90 74 C 96 70 108 74 108 82 C 116 82 118 90 110 92 L 84 92 C 76 94 74 90 80 88 Z"
+        fill={cloud}
+        opacity="0.22"
+      />
+    </g>
+  )
+}
+
+function CloudyLayer() {
+  const gray = '#94A3B8'
+  const slate = '#64748B'
+  return (
+    <g>
+      <defs>
+        <linearGradient id="cloudyTint" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={slate} stopOpacity="0.16" />
+          <stop offset="100%" stopColor={slate} stopOpacity="0.04" />
+        </linearGradient>
+      </defs>
+      <rect width={VB_W} height={VB_H} fill="url(#cloudyTint)" />
+      {/* 큰 구름 — 좌상단 */}
+      <path
+        d="M 18 36 C 8 36 4 26 12 22 C 10 12 28 8 36 16 C 44 8 64 14 64 24 C 76 24 80 36 70 40 L 26 40 C 14 42 8 36 18 36 Z"
+        fill={gray}
+        opacity="0.35"
+      />
+      {/* 중간 구름 — 우상단 */}
+      <path
+        d="M 118 64 C 110 64 106 56 112 52 C 110 44 124 40 132 48 C 140 40 156 46 156 54 C 166 54 168 64 158 68 L 122 68 C 114 70 110 66 118 64 Z"
+        fill={gray}
+        opacity="0.28"
+      />
+      {/* 하단 작은 구름 */}
+      <path
+        d="M 60 132 C 54 132 50 126 54 122 C 52 116 64 114 70 118 C 76 114 88 118 88 126 C 96 126 98 134 90 136 L 64 136 C 56 138 54 134 60 132 Z"
+        fill={gray}
+        opacity="0.22"
+      />
     </g>
   )
 }
