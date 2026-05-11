@@ -9,17 +9,16 @@ interface Props {
 
 interface State {
   hasError: boolean
-  errorMessage: string
 }
 
 export class ChartErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props)
-    this.state = { hasError: false, errorMessage: '' }
+    this.state = { hasError: false }
   }
 
-  static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, errorMessage: error?.message ?? String(error) }
+  static getDerivedStateFromError(): State {
+    return { hasError: true }
   }
 
   override componentDidCatch(error: Error) {
@@ -28,14 +27,7 @@ export class ChartErrorBoundary extends Component<Props, State> {
 
   override render() {
     if (this.state.hasError) {
-      return this.props.fallback ?? (
-        <div className="glass-card p-3 sm:p-4">
-          <p className="text-sm" style={{ color: 'var(--muted)' }}>차트를 불러올 수 없습니다.</p>
-          <p className="text-[10px] mt-1 break-all" style={{ color: 'var(--muted)', opacity: 0.7 }}>
-            {this.state.errorMessage}
-          </p>
-        </div>
-      )
+      return this.props.fallback ?? null
     }
     return this.props.children
   }

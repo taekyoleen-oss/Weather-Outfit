@@ -8,9 +8,17 @@ import { GpsButton } from '@/components/weather/GpsButton'
 import { RecentChips, saveRecentLocation } from '@/components/weather/RecentChips'
 import { WeatherCard } from '@/components/weather/WeatherCard'
 import { HourlyWeatherStrip } from '@/components/weather/HourlyWeatherStrip'
-import { TempGraph48h } from '@/components/weather/TempGraph48h'
 import { ChartErrorBoundary } from '@/components/ui/ChartErrorBoundary'
 import dynamic from 'next/dynamic'
+const TempGraph48h = dynamic(
+  () => import('@/components/weather/TempGraph48h').then((m) => m.TempGraph48h),
+  { ssr: false, loading: () => (
+    <div className="glass-card p-3 sm:p-4">
+      <p className="text-base font-semibold mb-2" style={{ color: 'var(--muted)' }}>48시간 기온</p>
+      <div className="h-28 bg-gray-100 rounded-xl animate-pulse" />
+    </div>
+  )}
+)
 const WeeklyForecastInline = dynamic(
   () => import('@/components/weather/WeeklyForecastInline').then((m) => m.WeeklyForecastInline),
   { ssr: false, loading: () => <div className="h-24 animate-pulse rounded-lg" style={{ background: 'var(--colors-surface-soft)' }} /> }
