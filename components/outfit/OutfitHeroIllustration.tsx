@@ -66,10 +66,12 @@ export function OutfitHeroIllustration({
   const displaySize = large ? 320 : Math.round(size * 1.12)
   const frameClass = 'relative rounded-3xl flex items-center justify-center overflow-hidden'
   const framePadClass = large ? 'p-2' : 'px-0.5 py-1 sm:px-1.5 sm:py-2'
+  /** isolation: 'isolate' — mix-blend-mode 가 프레임 안쪽에서만 합성되도록 격리 */
   const frameBaseStyle = {
     background: 'rgba(255,255,255,0.6)',
     border: '1px solid var(--surface-border)',
     width: displaySize,
+    isolation: 'isolate',
   } as const
 
   const slot = pickCharacterSlot({
@@ -90,6 +92,12 @@ export function OutfitHeroIllustration({
     windAlert,
   })
 
+  /**
+   * mix-blend-mode: darken — 캐릭터 PNG 흰 배경(#FFFFFF) 픽셀이 뒤 SVG 색상으로 대체되고,
+   * 외곽선·옷·피부 등 더 어두운 픽셀은 그대로 보존됨. PNG 알파 채널 없이도 자연스럽게 합성.
+   */
+  const charBlendStyle = { mixBlendMode: 'darken' as const }
+
   const characterImage = charSrc ? (
     <Image
       src={charSrc}
@@ -97,6 +105,7 @@ export function OutfitHeroIllustration({
       width={CHAR_IMG_W}
       height={CHAR_IMG_H}
       className="h-auto w-full max-w-full"
+      style={charBlendStyle}
       priority
     />
   ) : (
@@ -106,6 +115,7 @@ export function OutfitHeroIllustration({
       width={200}
       height={296}
       className="h-auto w-full max-w-full"
+      style={charBlendStyle}
       priority
     />
   )
@@ -114,7 +124,7 @@ export function OutfitHeroIllustration({
     <div className="flex flex-col items-center gap-2">
       <div className={`${frameClass} ${framePadClass}`} style={{ ...frameBaseStyle }}>
         <WeatherCharBg mode={bgMode} className="absolute inset-0 h-full w-full pointer-events-none" />
-        <div className="relative z-10 w-full">{characterImage}</div>
+        <div className="relative w-full">{characterImage}</div>
       </div>
       <span className="text-xs font-medium" style={{ color: 'var(--muted)' }}>
         {label}
