@@ -333,6 +333,8 @@ export function OutfitIllustPanel({ result, gender, calendarMonth, showSunshine,
             size={220}
             showSunshine={showSunshine}
             weatherSky={weatherSky}
+            precipitation={result.precipitation}
+            windAlert={result.windAlert}
           />
         </div>
 

@@ -128,6 +128,62 @@
 
 ---
 
+## 4-A. 상황 캐릭터 슬롯 (1차 + 2차)
+
+온도 슬롯 외에 **날씨·환경에 특화된 캐릭터**입니다. PNG가 등록되면 `lib/outfit/characterIllust.ts` 의 `AVAILABLE_SITUATION_SLOTS` 에 슬롯명을 추가해야 자동으로 활성화됩니다. 미등록 시 온도 슬롯으로 자동 폴백됩니다.
+
+선택 우선순위 (`pickCharacterSlot`): **강설 > 강수(강/약) > 강한 햇빛 > 강풍 > 온도 폴백**
+
+### 1차 (우천·강설) — 6장 (남·여 × 3)
+
+| 슬롯 | 파일명 (남) | 파일명 (여) | 트리거 조건 |
+|------|-------------|-------------|--------------|
+| `rain-light` | `male-rain-light-v1.png` | `female-rain-light-v1.png` | `ptyCode='1' or '4'`, 1시간 강수량 **<3mm** (약한 비) |
+| `rain-heavy` | `male-rain-heavy-v1.png` | `female-rain-heavy-v1.png` | `ptyCode='1' or '4'`, 1시간 강수량 **≥3mm** (보통 비 이상) |
+| `snow` | `male-snow-v1.png` | `female-snow-v1.png` | `ptyCode='2' or '3'` (눈·비눈) |
+
+### 2차 (햇빛·바람) — 4장 (남·여 × 2)
+
+| 슬롯 | 파일명 (남) | 파일명 (여) | 트리거 조건 |
+|------|-------------|-------------|--------------|
+| `sunny-uv` | `male-sunny-uv-v1.png` | `female-sunny-uv-v1.png` | `showSunshine=true` 이고 `tempZone='hot' or 'warm'` |
+| `windy` | `male-windy-v1.png` | `female-windy-v1.png` | `windAlert=true` (풍속 14m/s↑) |
+
+### 4-A.1 슬롯별 생성 프롬프트 (공통 스타일 블록 + 객체별 한 줄)
+
+공통 스타일 블록 (`outfit-asset` 스킬과 동일):
+
+> Flat 2D vector illustration, thin consistent black outlines, soft muted pastel palette, friendly minimal mobile-app style, pure white background (#FFFFFF), no shadows, no floor, generous margin, centered composition. No text, no watermarks, no logos. Full body standing front pose, vertical 2:3 canvas.
+
+객체별 한 줄(같은 슬롯은 남·여 각각 1장씩 생성):
+
+| 슬롯 | 추가 문구 |
+|------|-----------|
+| `rain-light` (M) | Beige trench coat, slacks and loafers, holding a navy open umbrella tilted slightly above the head, the other arm relaxed at the side, calm expression, dry shoes. |
+| `rain-light` (F) | Trench coat or knee-length raincoat, midi skirt or pants, loafers, holding a pastel yellow open umbrella tilted slightly above the head, calm friendly expression. |
+| `rain-heavy` (M) | Yellow or olive hooded raincoat with the hood up, dark pants, black waterproof ankle boots, both hands tucked near the pockets, slight shoulder hunch. |
+| `rain-heavy` (F) | Belted yellow raincoat with hood up, slim pants, chelsea-style waterproof boots, both hands tucked near pockets, gentle smile. |
+| `snow` (M) | Long charcoal puffer coat, knitted beanie, soft scarf wrapped around the neck, dark thermal pants, winter boots, hands in pockets, subtle breath cloud near the mouth. |
+| `snow` (F) | Ivory or beige puffer coat, knitted beanie, soft scarf, slim thermal pants, winter boots, hands in pockets, soft smile. |
+| `sunny-uv` (M) | Short-sleeve light shirt, beige chinos, white sneakers, baseball cap and sunglasses, one hand lightly touching the cap brim, bright friendly look. |
+| `sunny-uv` (F) | Light linen blouse or short dress, wide-brim sun hat, sunglasses, sandals, one hand softly holding the hat brim, summery vibe. |
+| `windy` (M) | Lightweight windbreaker half-zipped, slim pants, sneakers, hair and jacket hem softly swept sideways by wind, one hand holding the jacket collar. |
+| `windy` (F) | Lightweight windbreaker, midi skirt slightly fluttering, headband keeping hair tidy, sneakers, one hand softly holding the jacket collar. |
+
+### 4-A.2 PNG 등록 순서
+
+1. AI 이미지 도구로 위 프롬프트 + 공통 스타일 블록을 사용해 PNG 생성 (2:3 비율, 흰 배경)
+2. `weatherfit/public/outfit/characters/` 에 `{gender}-{slot}-v1.png` 파일명으로 저장
+3. `node scripts/convert-outfit-to-webp.mjs` 실행 → `.webp` 자동 생성
+4. `lib/outfit/characterIllust.ts` 의 `AVAILABLE_SITUATION_SLOTS` Set 에 슬롯 추가 (주석 해제)
+5. `npm run build` 로 검증, 변경 이력 §5 에 한 줄 기록
+
+### 4-A.3 캐릭터 뒤 반투명 날씨 배경
+
+별도 PNG 없이 **SVG로 자동 렌더**됩니다 — `components/outfit/illustration/WeatherCharBg.tsx` 가 우산·눈송이·햇살·바람 라인을 옅은 색 + 알파 0.10~0.55 로 그려 칩 영역 가독성을 보존합니다. 새 배경 변형 필요 시 이 파일의 `WeatherBgMode` 와 `resolveWeatherBgMode` 만 확장하면 됩니다.
+
+---
+
 ## 5. 변경 이력
 
 | 날짜 | 내용 |
@@ -139,6 +195,7 @@
 | 2026-04-30 | 추천 칩과 동일 종류 소품은 일러스트 탭 PNG 생략(`outfitItemCoversAccessoryIllust`). |
 | 2026-04-30 | 일러스트 탭: 매핑되는 추천 항목은 칩 대신 악세사리 PNG(`outfitItemToAccessoryKey`), 크기 확대. |
 | 2026-04-30 | 목도리 소품 `acc-scarf-v1.png` 추가 및 경로 연동(`accessoryIllust.ts`). |
+| 2026-05-11 | 캐릭터 뒤 반투명 날씨 배경 SVG (`WeatherCharBg`) 추가. 1차+2차 상황 슬롯 5종(`rain-light`, `rain-heavy`, `snow`, `sunny-uv`, `windy`) 인프라(`pickCharacterSlot` + `AVAILABLE_SITUATION_SLOTS`) 배포 — PNG 미등록 상태에서 자동 폴백. |
 
 ---
 

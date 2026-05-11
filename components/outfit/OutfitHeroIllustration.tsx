@@ -1,7 +1,8 @@
 import Image from 'next/image'
 import type { HeroIllustKey, GenderType, OutfitWeatherSnapshot, TempZone } from '@/types/outfit'
 import type { OutfitItem } from '@/types/outfit'
-import { outfitCharacterImageSrc } from '@/lib/outfit/characterIllust'
+import { outfitCharacterImageSrc, pickCharacterSlot } from '@/lib/outfit/characterIllust'
+import { WeatherCharBg, resolveWeatherBgMode } from './illustration/WeatherCharBg'
 
 interface Props {
   illustKey: HeroIllustKey
@@ -17,6 +18,9 @@ interface Props {
   /** 맑은 날 햇빛·광선 레이어 (동적 SVG일 때만) */
   showSunshine?: boolean
   weatherSky?: OutfitWeatherSnapshot
+  /** 캐릭터 뒤 반투명 날씨 배경 선택용 */
+  precipitation?: number
+  windAlert?: boolean
 }
 
 const ILLUST_LABELS: Record<HeroIllustKey, string> = {
@@ -53,10 +57,14 @@ export function OutfitHeroIllustration({
   gender = 'male',
   tempZone = 'mild',
   large,
+  showSunshine,
+  weatherSky,
+  precipitation,
+  windAlert,
 }: Props) {
   const label = heroLabel(illustKey, calendarMonth)
   const displaySize = large ? 320 : Math.round(size * 1.12)
-  const frameClass = 'rounded-3xl flex items-center justify-center overflow-hidden'
+  const frameClass = 'relative rounded-3xl flex items-center justify-center overflow-hidden'
   const framePadClass = large ? 'p-2' : 'px-0.5 py-1 sm:px-1.5 sm:py-2'
   const frameBaseStyle = {
     background: 'rgba(255,255,255,0.6)',
@@ -64,8 +72,23 @@ export function OutfitHeroIllustration({
     width: displaySize,
   } as const
 
-  const charSrc = items != null ? outfitCharacterImageSrc(gender, tempZone) : null
+  const slot = pickCharacterSlot({
+    tempZone,
+    ptyCode: weatherSky?.ptyCode,
+    precipitation,
+    showSunshine,
+    windAlert,
+  })
+  const charSrc = items != null ? outfitCharacterImageSrc(gender, slot) : null
   const altText = gender === 'female' ? `여성 복장 일러스트 — ${label}` : `남성 복장 일러스트 — ${label}`
+
+  const bgMode = resolveWeatherBgMode({
+    ptyCode: weatherSky?.ptyCode,
+    skyCode: weatherSky?.skyCode,
+    precipitation,
+    showSunshine,
+    windAlert,
+  })
 
   const characterImage = charSrc ? (
     <Image
@@ -90,7 +113,8 @@ export function OutfitHeroIllustration({
   return (
     <div className="flex flex-col items-center gap-2">
       <div className={`${frameClass} ${framePadClass}`} style={{ ...frameBaseStyle }}>
-        {characterImage}
+        <WeatherCharBg mode={bgMode} className="absolute inset-0 h-full w-full pointer-events-none" />
+        <div className="relative z-10 w-full">{characterImage}</div>
       </div>
       <span className="text-xs font-medium" style={{ color: 'var(--muted)' }}>
         {label}

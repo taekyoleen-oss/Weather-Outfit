@@ -301,6 +301,7 @@ export function recommendOutfit(input: OutfitInput): OutfitResult {
     dustAlert,
     rainAlert,
     windAlert,
+    precipitation: input.precipitation,
     tips,
     microclimateNote,
     dangerLevel: danger.dangerLevel,

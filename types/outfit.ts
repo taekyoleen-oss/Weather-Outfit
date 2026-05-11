@@ -55,6 +55,7 @@ export interface OutfitResult {
   dustAlert: boolean
   rainAlert: boolean
   windAlert: boolean
+  precipitation: number       // mm/h — 일러스트 배경(비 강도 등) 분기용
   tips: string[]              // 추가 착장 팁
   microclimateNote?: string   // 장소별 미기후 설명
   dangerLevel: DangerLevel    // 최우선 위험 등급
