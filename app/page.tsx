@@ -18,6 +18,7 @@ import { HighlightsGrid } from '@/components/weather/HighlightsGrid'
 import { TimePeriodPicker } from '@/components/weather/TimePeriodPicker'
 import { OutfitPanel } from '@/components/outfit/OutfitPanel'
 import { SpotPanel } from '@/components/spot/SpotPanel'
+import { UltraSrtFcstCard } from '@/components/weather/UltraSrtFcstCard'
 import { PrecipAlertModal } from '@/components/weather/PrecipAlertModal'
 import type { PrecipGroup } from '@/components/weather/PrecipAlertModal'
 import { useAutoLocation } from '@/lib/hooks/useAutoLocation'
@@ -893,6 +894,12 @@ export default function HomePage() {
         sunsetTime={sunriseSunset?.sunset}
         suitabilityByHour={suitabilityByHour}
       />
+      {spotData && (
+        <UltraSrtFcstCard
+          strip10m={spotData.strip10m}
+          lightningNow={spotData.lightningNow}
+        />
+      )}
       <TempGraph48h hourly={weatherData?.hourly ?? []} loading={weatherLoading && !weatherData} />
     </>
   )
