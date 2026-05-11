@@ -24,6 +24,7 @@ const WeeklyForecastInline = dynamic(
   { ssr: false, loading: () => <div className="h-24 animate-pulse rounded-lg" style={{ background: 'var(--colors-surface-soft)' }} /> }
 )
 import { HighlightsGrid } from '@/components/weather/HighlightsGrid'
+import { HighlightCard } from '@/components/weather/HighlightCard'
 import { TimePeriodPicker } from '@/components/weather/TimePeriodPicker'
 import { OutfitPanel } from '@/components/outfit/OutfitPanel'
 import { SpotPanel } from '@/components/spot/SpotPanel'
@@ -951,68 +952,68 @@ export default function HomePage() {
 
   const tab3Content = (
     <>
-      {/* 자외선 / 오존 / 기상특보 카드 */}
-      <div className="grid grid-cols-3 gap-1.5">
-        <div className="glass-card p-2.5 flex flex-col items-center gap-0.5 text-center">
-          <span className="text-xl">☀️</span>
-          <p className="text-[9px] font-semibold" style={{ color: 'var(--muted)' }}>자외선</p>
-          <p className="text-base font-bold" style={{ color: uvColor(uvForCard ?? 0) }}>
-            UV {uvForCard ?? '--'}
-          </p>
-          <p className="text-[10px]" style={{ color: uvColor(uvForCard ?? 0) }}>
-            {uvLabel(uvForCard ?? 0)}
-          </p>
-        </div>
-
-        <div className="glass-card p-2.5 flex flex-col items-center gap-0.5 text-center">
-          <span className="text-xl">⚗️</span>
-          <p className="text-[9px] font-semibold" style={{ color: 'var(--muted)' }}>오존</p>
-          <p className="text-base font-bold" style={{ color: o3GradeColor(dust?.o3Grade) }}>
-            {o3GradeLabel(dust?.o3Grade)}
-          </p>
-          {dust?.o3Value != null && (
-            <p className="text-[9px]" style={{ color: 'var(--muted)' }}>
-              {dust.o3Value.toFixed(3)} ppm
-            </p>
-          )}
-        </div>
-
-        <div
-          className="glass-card p-2.5 flex flex-col items-center gap-0.5 text-center"
-          style={
-            alerts.length > 0
-              ? { border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.04)' }
-              : undefined
-          }
-        >
-          <span className="text-xl">⚠️</span>
-          <p
-            className="text-[9px] font-semibold"
-            style={{ color: alerts.length > 0 ? 'var(--danger)' : 'var(--muted)' }}
-          >
-            기상특보
-          </p>
-          <p
-            className="text-base font-bold"
-            style={{ color: alerts.length > 0 ? 'var(--danger)' : 'var(--muted)' }}
-          >
-            {alerts.length > 0 ? `${alerts.length}건` : '없음'}
-          </p>
-          {alerts.length > 0 && (
-            <a
-              href={KMA_WEATHER_WARN_PAGE}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[9px] underline underline-offset-2"
-              style={{ color: 'var(--danger)' }}
-            >
-              상세보기
-            </a>
-          )}
+      {/* 자외선 / 오존 — 대기정보와 동일 스타일 */}
+      <div>
+        <h2 className="text-sm font-semibold mb-1.5" style={{ color: 'var(--muted)' }}>
+          일사·오존
+        </h2>
+        <div className="grid grid-cols-2 gap-1.5">
+          <HighlightCard
+            compact
+            icon="☀️"
+            label="자외선지수"
+            value={uvForCard != null ? `UV ${uvForCard}` : '--'}
+            sub={uvLabel(uvForCard ?? 0)}
+            accent={uvColor(uvForCard ?? 0)}
+          />
+          <HighlightCard
+            compact
+            icon="⚗️"
+            label="오존"
+            value={o3GradeLabel(dust?.o3Grade)}
+            sub={dust?.o3Value != null ? `${dust.o3Value.toFixed(3)} ppm` : ''}
+            accent={o3GradeColor(dust?.o3Grade)}
+          />
         </div>
       </div>
 
       {highlightsGrid}
+
+      {/* 기상특보 */}
+      <div
+        className="glass-card p-3"
+        style={combinedAlerts.length > 0 ? { border: '1px solid rgba(220,38,38,0.25)', background: 'rgba(239,68,68,0.03)' } : undefined}
+      >
+        <h3
+          className="text-base font-semibold mb-2.5"
+          style={{ color: combinedAlerts.length > 0 ? 'var(--danger)' : 'var(--muted)' }}
+        >
+          ⚠️ 기상특보
+        </h3>
+        {combinedAlerts.length === 0 ? (
+          <p className="text-sm" style={{ color: 'var(--muted)' }}>현재 발효 중인 특보가 없습니다.</p>
+        ) : (
+          <div className="space-y-2">
+            {combinedAlerts.map((a, i) => (
+              <div
+                key={i}
+                className="flex gap-2 px-3 py-2 rounded-xl"
+                style={{ background: 'rgba(220,38,38,0.06)', border: '1px solid rgba(220,38,38,0.2)' }}
+              >
+                <span className="text-sm flex-shrink-0">⚠️</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold" style={{ color: '#b91c1c' }}>
+                    {a.type} · {a.level}
+                  </p>
+                  <p className="text-xs mt-0.5 leading-snug" style={{ color: 'var(--muted)' }}>
+                    {a.message}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Mountain weather */}
       {spotData?.mountainHourly && spotData.mountainHourly.length > 0 && (
@@ -1062,34 +1063,6 @@ export default function HomePage() {
                   {wildfireLevelText(w.level)}
                 </span>
                 <span style={{ fontSize: 10, color: 'var(--muted)' }}>점수 {w.score}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Weather alerts */}
-      {combinedAlerts.length > 0 && (
-        <div className="glass-card p-3">
-          <h3 className="text-base font-semibold mb-2.5" style={{ color: 'var(--danger)' }}>
-            기상특보
-          </h3>
-          <div className="space-y-2">
-            {combinedAlerts.map((a, i) => (
-              <div
-                key={i}
-                className="flex gap-2 px-3 py-2 rounded-xl"
-                style={{ background: 'rgba(220,38,38,0.06)', border: '1px solid rgba(220,38,38,0.2)' }}
-              >
-                <span className="text-sm flex-shrink-0">⚠️</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold" style={{ color: '#b91c1c' }}>
-                    {a.type} · {a.level}
-                  </p>
-                  <p className="text-xs mt-0.5 leading-snug" style={{ color: 'var(--muted)' }}>
-                    {a.message}
-                  </p>
-                </div>
               </div>
             ))}
           </div>
