@@ -18,6 +18,8 @@ import { HighlightsGrid } from '@/components/weather/HighlightsGrid'
 import { TimePeriodPicker } from '@/components/weather/TimePeriodPicker'
 import { OutfitPanel } from '@/components/outfit/OutfitPanel'
 import { SpotPanel } from '@/components/spot/SpotPanel'
+import { PrecipAlertModal } from '@/components/weather/PrecipAlertModal'
+import type { PrecipGroup } from '@/components/weather/PrecipAlertModal'
 import { useAutoLocation } from '@/lib/hooks/useAutoLocation'
 import { useWeather } from '@/lib/hooks/useWeather'
 import { useWeeklyForecast } from '@/lib/hooks/useWeeklyForecast'
@@ -272,6 +274,36 @@ function getRegCodeForLocation(nx: number, ny: number): string {
   return '108'
 }
 
+// ── 오늘 강수 예보 그룹 계산 ──────────────────────────────────────────────────────
+function computeTodayPrecipAlerts(
+  hourly: HourlyForecast[],
+  todayYmd: string,
+): { groups: PrecipGroup[]; isAllDay: boolean } | null {
+  const toHour = (t: string) => parseInt(t.split(':')[0], 10)
+
+  const precipSlots = hourly
+    .filter((h) => (h.fcstDate === todayYmd || !h.fcstDate) && h.ptyCode !== '0')
+    .map((h) => ({ hour: toHour(h.time), label: weatherLabel(h.skyCode, h.ptyCode) }))
+    .sort((a, b) => a.hour - b.hour)
+
+  if (!precipSlots.length) return null
+
+  // 연속 같은 타입 그룹화 (1시간 간격 허용)
+  const groups: PrecipGroup[] = []
+  for (const { hour, label } of precipSlots) {
+    const last = groups[groups.length - 1]
+    if (last && last.label === label && hour <= last.endHour + 2) {
+      last.endHour = hour
+    } else {
+      groups.push({ label, startHour: hour, endHour: hour })
+    }
+  }
+
+  const isAllDay = precipSlots.length >= 12
+
+  return { groups, isAllDay }
+}
+
 export default function HomePage() {
   // ── Location + weather ────────────────────────────────────────────────────
   const { location, gpsLoading, gpsError, requestGps, setManualLocation } = useAutoLocation()
@@ -289,6 +321,9 @@ export default function HomePage() {
   const [alerts, setAlerts] = useState<WeatherAlert[]>([])
   const [openMeteoCompare, setOpenMeteoCompare] = useState<OpenMeteoDailyCompare | null>(null)
   const [mobileLayoutTab, setMobileLayoutTab] = useState<string>('weather')
+
+  // ── 강수 알림 팝업 ────────────────────────────────────────────────────────────
+  const [precipAlertData, setPrecipAlertData] = useState<{ groups: PrecipGroup[]; isAllDay: boolean } | null>(null)
 
   // ── Spot data (page-level fetch for suitability bars + precip/lightning) ──
   const [spotData, setSpotData] = useState<SpotData | null>(null)
@@ -458,6 +493,16 @@ export default function HomePage() {
     return () => { ac.abort() }
   }, [location])
 
+  // ── 강수 알림: 당일 첫 진입 시 1회 표시 ─────────────────────────────────────
+  useEffect(() => {
+    if (!weatherData?.hourly?.length) return
+    const todayYmd = kstTodayYmd()
+    const key = `wf_precip_alert_${todayYmd}`
+    if (typeof window === 'undefined' || localStorage.getItem(key)) return
+    const result = computeTodayPrecipAlerts(weatherData.hourly, todayYmd)
+    if (result) setPrecipAlertData(result)
+  }, [weatherData])
+
   // ── Spot data fetch (page-level) ──────────────────────────────────────────
   useEffect(() => {
     if (!location) return
@@ -475,6 +520,12 @@ export default function HomePage() {
   }, [location])
 
   // ── Handlers ──────────────────────────────────────────────────────────────
+  function handleClosePrecipAlert() {
+    const key = `wf_precip_alert_${kstTodayYmd()}`
+    localStorage.setItem(key, '1')
+    setPrecipAlertData(null)
+  }
+
   function handleSelectLocation(loc: LocationInfo) {
     setManualLocation(loc)
     saveRecentLocation(loc)
@@ -1136,6 +1187,15 @@ export default function HomePage() {
           }
         />
       </div>
+
+      {/* ── 강수 알림 팝업 (당일 첫 진입 1회) ── */}
+      {precipAlertData && (
+        <PrecipAlertModal
+          groups={precipAlertData.groups}
+          isAllDay={precipAlertData.isAllDay}
+          onClose={handleClosePrecipAlert}
+        />
+      )}
 
       <div className="hidden" aria-hidden>
         <span>{locationSummaryLine}</span>
