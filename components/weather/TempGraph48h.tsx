@@ -23,6 +23,8 @@ const TOOLTIP_STYLE = {
   fontSize: 12,
   padding: '4px 8px',
 }
+const ACTIVE_DOT = { r: 4, fill: '#FFB547', strokeWidth: 0 }
+const YAXIS_TICK = { fontSize: 10, fill: '#64748B' }
 
 const WEATHER_EMOJI: Record<string, string> = {
   '맑음': '☀️', '구름 많음': '🌤', '흐림': '☁️',
@@ -58,6 +60,32 @@ function dayRelativeLabel(dateStr: string, todayYmd: string): string {
   if (delta === 1) return '내일'
   if (delta === 2) return '모레'
   return dayOfWeek(dateStr)
+}
+
+// ── 모듈 레벨 상수: 렌더마다 새 참조 생성 방지 (Recharts useEffect 의존성 루프 차단) ──
+function xAxisTick(props: Record<string, unknown>) {
+  const x = Number(props.x ?? 0)
+  const y = Number(props.y ?? 0)
+  const pl = props.payload as { value?: unknown } | undefined
+  const v = String(pl?.value ?? '')
+  let fill = '#64748B'
+  let fontWeight = 400
+  if (v === '내일' || v === '모레') { fill = '#5B8DEE'; fontWeight = 700 }
+  else if (v === '일출') fill = '#F59E0B'
+  else if (v === '일몰') fill = '#818CF8'
+  return (
+    <text x={x} y={y + 12} textAnchor="middle" fill={fill} fontSize={10} fontWeight={fontWeight}>
+      {v}
+    </text>
+  )
+}
+
+function tooltipLabelFormatter(_: unknown, payload: ReadonlyArray<{ payload?: { fullLabel?: string } }>) {
+  return payload?.[0]?.payload?.fullLabel ?? ''
+}
+
+function tooltipFormatter(v: unknown): [string, string] {
+  return [`${typeof v === 'number' ? v.toFixed(1) : v}°`, '기온']
 }
 
 export function TempGraph48h({ hourly, loading, sunriseSunset, daily }: Props) {
@@ -149,7 +177,7 @@ export function TempGraph48h({ hourly, loading, sunriseSunset, daily }: Props) {
       </h3>
 
       {/* 48시간 기온 차트 */}
-      <div className="min-w-0 w-full" style={{ minHeight: 120 }}>
+      <div className="min-w-0 w-full" style={{ height: 120 }}>
         <ResponsiveContainer width="100%" height={120} debounce={50}>
           <AreaChart data={chartData} margin={MARGIN}>
             <defs>
@@ -160,35 +188,13 @@ export function TempGraph48h({ hourly, loading, sunriseSunset, daily }: Props) {
             </defs>
             <XAxis
               dataKey="label"
-              tick={(props: Record<string, unknown>) => {
-                const x = Number(props.x ?? 0)
-                const y = Number(props.y ?? 0)
-                const pl = props.payload as { value?: unknown } | undefined
-                const v = String(pl?.value ?? '')
-                let fill = '#64748B'
-                let fontWeight = 400
-                if (v === '내일' || v === '모레') { fill = '#5B8DEE'; fontWeight = 700 }
-                else if (v === '일출') fill = '#F59E0B'
-                else if (v === '일몰') fill = '#818CF8'
-                return (
-                  <text
-                    x={x}
-                    y={y + 12}
-                    textAnchor="middle"
-                    fill={fill}
-                    fontSize={10}
-                    fontWeight={fontWeight}
-                  >
-                    {v}
-                  </text>
-                )
-              }}
+              tick={xAxisTick}
               axisLine={false}
               tickLine={false}
               interval={0}
             />
             <YAxis
-              tick={{ fontSize: 10, fill: '#64748B' }}
+              tick={YAXIS_TICK}
               axisLine={false}
               tickLine={false}
               domain={['auto', 'auto']}
@@ -196,8 +202,8 @@ export function TempGraph48h({ hourly, loading, sunriseSunset, daily }: Props) {
             />
             <Tooltip
               contentStyle={TOOLTIP_STYLE}
-              labelFormatter={(_, payload) => payload?.[0]?.payload?.fullLabel ?? ''}
-              formatter={(v: unknown) => [`${typeof v === 'number' ? v.toFixed(1) : v}°`, '기온']}
+              labelFormatter={tooltipLabelFormatter}
+              formatter={tooltipFormatter}
             />
             {hasTomorrow && (
               <ReferenceLine x="내일" stroke="#5B8DEE" strokeDasharray="4 3" strokeOpacity={0.55} />
@@ -218,7 +224,7 @@ export function TempGraph48h({ hourly, loading, sunriseSunset, daily }: Props) {
               strokeWidth={2}
               fill="url(#wf-temp48-grad)"
               dot={false}
-              activeDot={{ r: 4, fill: '#FFB547', strokeWidth: 0 }}
+              activeDot={ACTIVE_DOT}
             />
           </AreaChart>
         </ResponsiveContainer>
