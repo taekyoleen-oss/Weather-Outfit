@@ -215,18 +215,25 @@ export function recommendOutfit(input: OutfitInput): OutfitResult {
   }
 
   // Rain / snow items
+  // 기상청 강우 강도 분류(시간당 강수량): 약한 비 <3mm, 보통 비 3~15mm, 강한 비 ≥15mm
+  // 약한 비(<3mm/h)에선 우산만으로 충분 — 방수 신발·우의는 보통 비 이상(≥3mm/h)에서만 선택 추천
+  const RAIN_GEAR_THRESHOLD_MMH = 3
   const rainAlert = input.ptyCode !== '0'
   if (rainAlert) {
     if (input.ptyCode === '1' || input.ptyCode === '4') {
       // 낙뢰 위험 시 우산보다 비옷 권장 (기상청 낙뢰 행동요령)
       const lightningRisk = input.ptyCode === '4' || input.precipitation >= 5
       if (lightningRisk) {
-        allItems.push({ id: 'rain-coat', name: '비옷 (낙뢰 시)', icon: '🌂', category: 'rain', required: true, condition: '낙뢰 위험 시 우산 사용 자제' })
+        allItems.push({ id: 'rain-coat', name: '우의', icon: '🌂', category: 'rain', required: true, condition: '낙뢰 위험 시 우산 사용 자제' })
       } else {
         allItems.push({ id: 'rain-umbrella', name: '우산', icon: '☂️', category: 'rain', required: true })
-        allItems.push({ id: 'rain-coat', name: '우의 / 레인자켓', icon: '🌂', category: 'rain', required: false })
+        if (input.precipitation >= RAIN_GEAR_THRESHOLD_MMH) {
+          allItems.push({ id: 'rain-coat', name: '우의', icon: '🌂', category: 'rain', required: false, condition: `보통 비 이상(${RAIN_GEAR_THRESHOLD_MMH}mm/h↑) — 기상청 강우 강도 기준` })
+        }
       }
-      allItems.push({ id: 'rain-shoes', name: '방수 신발', icon: '🥾', category: 'foot', required: false, condition: '젖은 노면 안전' })
+      if (input.precipitation >= RAIN_GEAR_THRESHOLD_MMH) {
+        allItems.push({ id: 'rain-shoes', name: '방수 신발', icon: '🥾', category: 'foot', required: false, condition: `보통 비 이상(${RAIN_GEAR_THRESHOLD_MMH}mm/h↑) — 젖은 노면 안전` })
+      }
     } else if (input.ptyCode === '3' || input.ptyCode === '2') {
       allItems.push({ id: 'rain-boots', name: '방수 신발', icon: '🥾', category: 'foot', required: true })
     }
