@@ -896,11 +896,16 @@ export default function HomePage() {
       />
       {spotData && (
         <UltraSrtFcstCard
-          strip10m={spotData.strip10m}
+          strip10m={spotData.strip10m.filter(s => s.minuteOffset <= 120)}
           lightningNow={spotData.lightningNow}
         />
       )}
-      <TempGraph48h hourly={weatherData?.hourly ?? []} loading={weatherLoading && !weatherData} />
+      <TempGraph48h
+        hourly={weatherData?.hourly ?? []}
+        loading={weatherLoading && !weatherData}
+        sunriseSunset={sunriseSunset}
+        daily={weeklyDisplayDaily}
+      />
     </>
   )
 
@@ -997,7 +1002,6 @@ export default function HomePage() {
       </div>
 
       {highlightsGrid}
-      <WeeklyForecastInline key="weekly-inline-mobile" {...weeklyProps} />
 
       {/* Mountain weather */}
       {spotData?.mountainHourly && spotData.mountainHourly.length > 0 && (
