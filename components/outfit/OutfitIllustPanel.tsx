@@ -104,12 +104,12 @@ function itemChip(item: OutfitItem, idx: number, iconOnly?: boolean, selectedPer
   )
 }
 
-/** 액세서리 PNG: `acc` 이거나, 바람막이·윈드쉘 계열(`windbreaker` 키)은 아우터/미들에서도 동일 에셋 표시 */
+/** 액세서리 PNG: `acc` 이거나, 바람막이·윈드쉘 계열(`windbreaker`)·우산(`umbrellaOpen`)은 카테고리와 무관하게 같은 에셋 표시 */
 function itemChipsOrAccessoryImages(items: OutfitItem[], gender: GenderType, accVariantRow: boolean, selectedPeriodIndices?: number[]) {
   return items.map((item, idx) => {
     const accKey = outfitItemToAccessoryKey(item, gender)
     const useAccessoryImage =
-      accKey && (item.category === 'acc' || accKey === 'windbreaker')
+      accKey && (item.category === 'acc' || accKey === 'windbreaker' || accKey === 'umbrellaOpen')
     if (useAccessoryImage) {
       const tip = itemIllustTooltip(item)
       const imgPx = accVariantRow ? ACC_VARIANT_IMG_PX : 20
