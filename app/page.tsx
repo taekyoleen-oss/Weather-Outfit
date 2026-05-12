@@ -763,6 +763,8 @@ export default function HomePage() {
     onScheduleYmdChange: handleScheduleYmdChange,
     activityStartHourMin: outfitIsNowPeriod ? (hour + 1) % 24 : 0,
     onActivityHoursChange: (s: number, e: number) => setWxActivityHours({ start: s, end: e }),
+    sunsetTime: sunriseSunset?.sunset,
+    sunriseTime: sunriseSunset?.sunrise,
   }
   const outfitPanel = <OutfitPanel {...outfitPanelProps} variant="default" />
   const outfitPanelMobile = <OutfitPanel {...outfitPanelProps} variant="mobileSheet" />

@@ -62,6 +62,10 @@ interface Props {
   /** 모바일: 관심지역 탭 일정과 동기화·±4h 조정 */
   mobileInterestSchedule?: VisitSchedule | null
   onMobileInterestScheduleChange?: (s: VisitSchedule) => void
+  /** KST 일몰 시각 (예: "1830") — 일러스트 밤·낮 판정용 */
+  sunsetTime?: string
+  /** KST 일출 시각 (예: "0630") — 일러스트 밤·낮 판정용 */
+  sunriseTime?: string
 }
 
 type SensitivityLevel = -2 | 0 | 2
@@ -260,6 +264,43 @@ function activityStartFloor(periodStart: number, isNow: boolean, kstHour: number
   return isNow ? (kstHour + 1) % 24 : periodStart
 }
 
+/** "1830" / "18:30" → 1830. 실패 시 null */
+function parseHmText(t?: string): number | null {
+  if (!t) return null
+  const compact = t.trim().includes(':') ? t.trim().replace(':', '') : t.trim()
+  const n = parseInt(compact, 10)
+  return Number.isFinite(n) ? n : null
+}
+
+/**
+ * 선택된 시간대 범위 [startHour, endHour]가 밤(일몰 후 또는 일출 전)에 속하는지 판정.
+ * - 일몰/일출이 주어지면 그 시각 기준, 없으면 19시 이후·6시 이전 휴리스틱.
+ * - 다중 시간대(예: 오후+저녁)는 시간 슬롯의 과반이 밤이면 night.
+ */
+function isOutfitRangeNight(
+  startHour: number,
+  endHour: number,
+  sunsetTime?: string,
+  sunriseTime?: string,
+): boolean {
+  const sunsetHm = parseHmText(sunsetTime)
+  const sunriseHm = parseHmText(sunriseTime)
+  const inclusiveEnd = endHour >= startHour ? endHour : endHour + 24
+  let night = 0
+  let total = 0
+  for (let h = startHour; h <= inclusiveEnd; h++) {
+    const hh = h % 24
+    const slotHm = hh * 100
+    const isNight =
+      sunsetHm == null || sunriseHm == null
+        ? hh >= 19 || hh < 6
+        : slotHm > sunsetHm || slotHm < sunriseHm
+    if (isNight) night++
+    total++
+  }
+  return total > 0 && night * 2 > total
+}
+
 function MobileBottomSheet({
   title,
   children,
@@ -327,6 +368,8 @@ export function OutfitPanel({
   variant = 'default',
   mobileInterestSchedule,
   onMobileInterestScheduleChange,
+  sunsetTime,
+  sunriseTime,
 }: Props) {
   const isMobileSheet = variant === 'mobileSheet'
   const [sheetSettings, setSheetSettings] = useState(false)
@@ -721,6 +764,19 @@ export function OutfitPanel({
     return [0, 1, 2, 3, 4, 5, 6] as number[]
   }, [])
 
+  /**
+   * 선택된 시간대 범위가 밤인지 — 일러스트의 해→달 전환에 사용.
+   * 다중 시간대(예: 16~18 + 19~21) 시 선택 슬롯의 과반이 일몰 후이면 night.
+   */
+  const isNightForOutfit = useMemo(() => {
+    const sorted = selectedOutfitPeriodIndices.length > 0
+      ? [...selectedOutfitPeriodIndices].sort((a, b) => a - b)
+      : [getOutfitPeriodIndex(startHour)]
+    const fp = OUTFIT_PERIODS[sorted[0]!]!
+    const lp = OUTFIT_PERIODS[sorted[sorted.length - 1]!]!
+    return isOutfitRangeNight(fp.start, lp.end, sunsetTime, sunriseTime)
+  }, [selectedOutfitPeriodIndices, startHour, sunsetTime, sunriseTime])
+
   const genderSensitivityBlock = (
     <>
       <div className="flex items-end gap-3">
@@ -973,7 +1029,8 @@ export function OutfitPanel({
             showSunshine={
               !!effectiveWeatherForOutfit &&
               effectiveWeatherForOutfit.ptyCode === '0' &&
-              effectiveWeatherForOutfit.skyCode === '1'
+              effectiveWeatherForOutfit.skyCode === '1' &&
+              !isNightForOutfit
             }
             weatherSky={
               effectiveWeatherForOutfit
@@ -981,6 +1038,7 @@ export function OutfitPanel({
                 : undefined
             }
             selectedOutfitPeriodIndices={selectedOutfitPeriodIndices}
+            isNight={isNightForOutfit}
             headerEnd={
               isMobileSheet ? (
                 <button

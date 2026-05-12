@@ -281,9 +281,11 @@ interface Props {
   showSunshine?: boolean
   weatherSky?: OutfitWeatherSnapshot
   selectedOutfitPeriodIndices?: number[]
+  /** 선택 시간대가 밤이면 일러스트 배경의 해→달 전환 */
+  isNight?: boolean
 }
 
-export function OutfitIllustPanel({ result, gender, calendarMonth, showSunshine, weatherSky, selectedOutfitPeriodIndices }: Props) {
+export function OutfitIllustPanel({ result, gender, calendarMonth, showSunshine, weatherSky, selectedOutfitPeriodIndices, isNight }: Props) {
   const byCategory = CATEGORY_ORDER.reduce(
     (acc, cat) => {
       const items = result.items.filter((i) => i.category === cat && !i.activityTag)
@@ -335,6 +337,7 @@ export function OutfitIllustPanel({ result, gender, calendarMonth, showSunshine,
             weatherSky={weatherSky}
             precipitation={result.precipitation}
             windAlert={result.windAlert}
+            isNight={isNight}
           />
         </div>
 

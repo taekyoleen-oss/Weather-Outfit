@@ -11,7 +11,9 @@ export type WeatherBgMode =
   | 'rain-heavy'
   | 'snow'
   | 'sunny'
+  | 'sunny-night'
   | 'partly-cloudy'
+  | 'partly-cloudy-night'
   | 'cloudy'
   | 'windy'
   | 'none'
@@ -21,9 +23,9 @@ export type WeatherBgMode =
  * 1. 강설(ptyCode 2/3) → snow
  * 2. 강수(ptyCode 1/4) → rain-light/rain-heavy (강수량 3mm/h 분기)
  * 3. 강풍 → windy
- * 4. 맑음(skyCode 1 또는 showSunshine) → sunny
- * 5. 구름많음(skyCode 3) → partly-cloudy
- * 6. 흐림(skyCode 4) → cloudy
+ * 4. 맑음(skyCode 1 또는 showSunshine) → sunny / sunny-night (isNight)
+ * 5. 구름많음(skyCode 3) → partly-cloudy / partly-cloudy-night (isNight)
+ * 6. 흐림(skyCode 4) → cloudy (밤낮 동일 — 달이 가려 보이지 않음)
  * 7. 데이터 없음 → none
  */
 export function resolveWeatherBgMode(params: {
@@ -32,15 +34,16 @@ export function resolveWeatherBgMode(params: {
   precipitation?: number
   showSunshine?: boolean
   windAlert?: boolean
+  isNight?: boolean
 }): WeatherBgMode {
-  const { ptyCode, skyCode, precipitation = 0, showSunshine, windAlert } = params
+  const { ptyCode, skyCode, precipitation = 0, showSunshine, windAlert, isNight } = params
   if (ptyCode === '3' || ptyCode === '2') return 'snow'
   if (ptyCode === '1' || ptyCode === '4') {
     return precipitation >= 3 ? 'rain-heavy' : 'rain-light'
   }
   if (windAlert) return 'windy'
-  if (showSunshine || skyCode === '1') return 'sunny'
-  if (skyCode === '3') return 'partly-cloudy'
+  if (showSunshine || skyCode === '1') return isNight ? 'sunny-night' : 'sunny'
+  if (skyCode === '3') return isNight ? 'partly-cloudy-night' : 'partly-cloudy'
   if (skyCode === '4') return 'cloudy'
   return 'none'
 }
@@ -72,7 +75,9 @@ export function WeatherCharBg({ mode, className }: Props) {
       {mode === 'rain-heavy' && <RainHeavyLayer />}
       {mode === 'snow' && <SnowLayer />}
       {mode === 'sunny' && <SunnyLayer />}
+      {mode === 'sunny-night' && <NightClearLayer />}
       {mode === 'partly-cloudy' && <PartlyCloudyLayer />}
+      {mode === 'partly-cloudy-night' && <NightPartlyCloudyLayer />}
       {mode === 'cloudy' && <CloudyLayer />}
       {mode === 'windy' && <WindyLayer />}
     </svg>
@@ -213,6 +218,75 @@ function PartlyCloudyLayer() {
   )
 }
 
+/** 밤·맑음 — 초승달(crescent) + 잔별 */
+function NightClearLayer() {
+  const moonFill = '#E5E7EB'
+  const moonStroke = '#64748B'
+  const starColor = '#94A3B8'
+  return (
+    <g>
+      {/* 초승달: 외원에서 내원을 잘라낸 마스크로 표현 */}
+      <defs>
+        <mask id="wf-moon-mask">
+          <rect width={VB_W} height={VB_H} fill="#000" />
+          <circle cx={156} cy={50} r={18} fill="#FFF" />
+          <circle cx={148} cy={46} r={16} fill="#000" />
+        </mask>
+      </defs>
+      <g mask="url(#wf-moon-mask)">
+        <circle cx={156} cy={50} r={18} fill={moonFill} opacity="0.85" />
+      </g>
+      <circle
+        cx={156}
+        cy={50}
+        r={18}
+        fill="none"
+        stroke={moonStroke}
+        strokeWidth="1"
+        opacity="0.35"
+      />
+      {/* 별 */}
+      {NIGHT_STARS.map(([x, y, r], i) => (
+        <circle key={i} cx={x} cy={y} r={r} fill={starColor} opacity="0.55" />
+      ))}
+    </g>
+  )
+}
+
+/** 밤·구름많음 — 달 + 우상단 구름 (구름이 달 일부를 가림) */
+function NightPartlyCloudyLayer() {
+  const moonFill = '#E5E7EB'
+  const moonStroke = '#64748B'
+  const starColor = '#94A3B8'
+  const cloud = '#64748B'
+  return (
+    <g>
+      <defs>
+        <mask id="wf-moon-mask-pc">
+          <rect width={VB_W} height={VB_H} fill="#000" />
+          <circle cx={44} cy={40} r={14} fill="#FFF" />
+          <circle cx={38} cy={37} r={12} fill="#000" />
+        </mask>
+      </defs>
+      {/* 좌상단 달 */}
+      <g mask="url(#wf-moon-mask-pc)">
+        <circle cx={44} cy={40} r={14} fill={moonFill} opacity="0.78" />
+      </g>
+      <circle cx={44} cy={40} r={14} fill="none" stroke={moonStroke} strokeWidth="1" opacity="0.35" />
+      {/* 우상단 구름 */}
+      <path
+        d="M 118 38 C 110 38 106 30 112 26 C 110 18 124 14 132 22 C 140 14 156 20 156 28 C 166 28 168 38 158 42 L 122 42 C 114 44 110 40 118 38 Z"
+        fill={cloud}
+        opacity="0.32"
+      />
+      {/* 잔별 (적게) */}
+      {NIGHT_STARS_SPARSE.map(([x, y, r], i) => (
+        <circle key={i} cx={x} cy={y} r={r} fill={starColor} opacity="0.45" />
+      ))}
+    </g>
+  )
+}
+
 function CloudyLayer() {
   const gray = '#94A3B8'
   return (
@@ -318,6 +392,25 @@ const SUN_RAYS: [number, number, number, number][] = [
   [126, 50, 116, 50],
   [132, 70, 124, 78],
   [156, 82, 156, 90],
+]
+
+// 밤 잔별 — [x, y, r]
+const NIGHT_STARS: [number, number, number][] = [
+  [28, 32, 1.4],
+  [68, 22, 1.1],
+  [98, 36, 1.3],
+  [118, 20, 1.0],
+  [134, 60, 1.0],
+  [186, 22, 1.2],
+  [44, 70, 1.0],
+  [82, 78, 1.2],
+  [180, 78, 1.0],
+]
+
+const NIGHT_STARS_SPARSE: [number, number, number][] = [
+  [82, 22, 1.0],
+  [100, 60, 1.0],
+  [176, 60, 1.0],
 ]
 
 const WIND_CURVES: string[] = [

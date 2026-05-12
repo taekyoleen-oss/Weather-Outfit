@@ -58,6 +58,8 @@ interface Props {
   headerEnd?: ReactNode
   /** 선택된 OUTFIT_PERIOD 인덱스 배열 — 시간 조건부 아이템 레이블 필터용 */
   selectedOutfitPeriodIndices?: number[]
+  /** 선택 시간대가 밤이면 일러스트 배경의 해→달 전환 */
+  isNight?: boolean
 }
 
 const LAYER_BAR_COLORS = ['#22C55E', '#FFB547', '#EF4444']
@@ -75,6 +77,7 @@ export function OutfitResult({
   weatherSky,
   headerEnd,
   selectedOutfitPeriodIndices,
+  isNight,
 }: Props) {
   const [tab, setTab] = useState<TabId>('illust')
 
@@ -223,6 +226,7 @@ export function OutfitResult({
             showSunshine={showSunshine}
             weatherSky={weatherSky}
             selectedOutfitPeriodIndices={selectedOutfitPeriodIndices}
+            isNight={isNight}
           />
         </div>
       )}

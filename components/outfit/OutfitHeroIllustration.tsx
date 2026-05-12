@@ -21,6 +21,8 @@ interface Props {
   /** 캐릭터 뒤 반투명 날씨 배경 선택용 */
   precipitation?: number
   windAlert?: boolean
+  /** 선택된 시간대가 밤인지 (맑음·구름많음 일 때 해→달 전환용) */
+  isNight?: boolean
 }
 
 const ILLUST_LABELS: Record<HeroIllustKey, string> = {
@@ -61,6 +63,7 @@ export function OutfitHeroIllustration({
   weatherSky,
   precipitation,
   windAlert,
+  isNight,
 }: Props) {
   const label = heroLabel(illustKey, calendarMonth)
   const displaySize = large ? 320 : Math.round(size * 1.12)
@@ -90,6 +93,7 @@ export function OutfitHeroIllustration({
     precipitation,
     showSunshine,
     windAlert,
+    isNight,
   })
 
   /**
