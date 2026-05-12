@@ -442,30 +442,72 @@ export function OutfitPanel({
     return scheduleYmd
   }, [isMobileSheet, outfitEffectiveYmd, mobileInterestSchedule?.visitDateYmd, scheduleYmd])
 
-  /** 칩으로 선택된 날짜·시간대에 맞는 날씨 — 다른 날(내일 등)이면 hourly에서 도출 */
+  /**
+   * 칩으로 선택된 날짜·시간대에 맞는 날씨.
+   * - 시간별 예보가 있으면 **선택된 시간대 전체 슬롯에서 집계** (강수·바람은 최댓값 = 가장 보수적):
+   *   · ptyCode/precipitation: 시간대 내 강수량이 최대인 슬롯 기준 (해당 시간대에 비가 안 오면 ptyCode='0')
+   *   · windSpeed: 시간대 내 최대 풍속
+   *   · 온도·습도·sky: startHour 기준 슬롯
+   * - 시간별 예보가 없거나 매칭 슬롯이 없으면 현재 `weather` 폴백.
+   */
   const effectiveWeatherForOutfit = useMemo(() => {
     if (!weather) return null
-    if (effectiveOutfitYmd === scheduleYmd || !hourly.length) return weather
+    if (!hourly.length) return weather
     const todayYmd = kstTodayYmd()
     const slotYmds = buildHourlySlotYmds(hourly, todayYmd)
-    const entry = hourly.find((h, i) => {
+    const nextYmd = addCalendarDaysFromKstYmd(effectiveOutfitYmd, 1)
+
+    // 선택된 시간대 범위 [pStart, pEnd] — periodWeather 와 동일 로직
+    let pStart: number
+    let pEnd: number
+    const isMultiSel = selectedOutfitPeriodIndices.length > 1
+    if ((isMobileSheet && selectedOutfitPeriodIndices.length > 0) || (!isMobileSheet && isMultiSel)) {
+      const sorted = [...selectedOutfitPeriodIndices].sort((a, b) => a - b)
+      pStart = OUTFIT_PERIODS[sorted[0]!]!.start
+      pEnd = OUTFIT_PERIODS[sorted[sorted.length - 1]!]!.end
+    } else {
+      const chipPeriod = TIME_PERIODS[getPeriodIndex(startHour)]!
+      pStart = chipPeriod.start
+      pEnd = chipPeriod.end
+    }
+
+    const inRange = hourly.filter((h, i) => {
       const slotYmd = slotYmds[i]
-      const hourNum = parseInt(h.time.slice(0, 2), 10)
-      return slotYmd === effectiveOutfitYmd && hourNum >= startHour
+      if (!slotYmd) return false
+      const hNum = parseInt(h.time.slice(0, 2), 10)
+      if (Number.isNaN(hNum)) return false
+      if (pStart <= pEnd) return slotYmd === effectiveOutfitYmd && hNum >= pStart && hNum <= pEnd
+      return (
+        (slotYmd === effectiveOutfitYmd && hNum >= pStart) ||
+        (slotYmd === nextYmd && hNum <= pEnd)
+      )
     })
-    if (!entry) return weather
+
+    if (inRange.length === 0) return weather
+
+    // 베이스 슬롯: startHour 이상 첫 슬롯 (없으면 시간대 첫 슬롯)
+    const baseEntry =
+      inRange.find((h) => parseInt(h.time.slice(0, 2), 10) >= startHour) ?? inRange[0]!
+
+    // 강수 집계: 시간대 내 강수량 최대 슬롯 기준 → 시간대에 비가 안 오면 ptyCode='0'
+    const wettest = inRange.reduce((max, h) => (h.precipitation > max.precipitation ? h : max), inRange[0]!)
+    const hasRainInRange = inRange.some((h) => h.ptyCode !== '0')
+    const ptyCode = hasRainInRange ? (wettest.ptyCode !== '0' ? wettest.ptyCode : inRange.find((h) => h.ptyCode !== '0')!.ptyCode) : '0'
+    const precipitation = wettest.precipitation
+    const maxWind = Math.max(...inRange.map((h) => h.windSpeed))
+
     return {
       ...weather,
-      temperature: entry.temperature,
-      feelsLike: feelsLike(entry.temperature, entry.windSpeed, entry.humidity),
-      humidity: entry.humidity,
-      windSpeed: entry.windSpeed,
-      skyCode: entry.skyCode,
-      ptyCode: entry.ptyCode,
-      precipitation: entry.precipitation,
+      temperature: baseEntry.temperature,
+      feelsLike: feelsLike(baseEntry.temperature, maxWind, baseEntry.humidity),
+      humidity: baseEntry.humidity,
+      windSpeed: maxWind,
+      skyCode: baseEntry.skyCode,
+      ptyCode,
+      precipitation,
       basisDateKst: effectiveOutfitYmd,
     }
-  }, [weather, effectiveOutfitYmd, scheduleYmd, hourly, startHour])
+  }, [weather, effectiveOutfitYmd, hourly, startHour, selectedOutfitPeriodIndices, isMobileSheet])
 
   const periodWeather = useMemo(() => {
     let pStart: number
