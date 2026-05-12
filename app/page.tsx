@@ -1169,17 +1169,17 @@ export default function HomePage() {
           top={desktopTop}
           left={
             <>
-              {timePeriodPicker}
               {weatherCard}
               {highlightsGrid}
-            </>
-          }
-          right={
-            <>
               {hourlyStripDesktop}
               <ChartErrorBoundary>
                 <WeeklyForecastInline key="weekly-inline-desktop" {...weeklyProps} />
               </ChartErrorBoundary>
+            </>
+          }
+          right={
+            <>
+              {timePeriodPicker}
               {outfitPanel}
             </>
           }

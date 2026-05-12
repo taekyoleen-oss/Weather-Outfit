@@ -23,12 +23,11 @@ const SLOT_BY_ZONE: Record<TempZone, string> = {
  * 2차 권장 PNG: `sunny-uv`, `windy` (남·여 총 4장)
  */
 const AVAILABLE_SITUATION_SLOTS = new Set<string>([
-  // 1차/2차 PNG 추가 후 주석 해제
-  // 'rain-light',
-  // 'rain-heavy',
-  // 'snow',
-  // 'sunny-uv',
-  // 'windy',
+  'rain-light',
+  'rain-heavy',
+  'snow',
+  'sunny-uv',
+  'windy',
 ])
 
 export interface CharacterSlotContext {

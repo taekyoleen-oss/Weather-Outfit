@@ -5,6 +5,45 @@
 
 ---
 
+## 0. 캐릭터 캐논 (Locked Reference)
+
+> **남자·여자 캐릭터 두 명은 각각 고정된 한 명**입니다. 슬롯·계절·날씨에 따라 **복장만** 바꾸고 얼굴·체형·헤어·라인 스타일은 **모든 변형에서 동일하게** 유지합니다.
+
+| 성별 | 캐논 파일 | 잠금 항목 |
+|------|-----------|------------|
+| 남자 | `public/outfit/characters/male-cool-v1.webp` | 한국 웹툰풍, 얇은 회갈색 라인 + 가벼운 수채 워시, 슬림 톨 ~7등신, 짧은 흑갈색 부드러운 웨이브 헤어, 아몬드형 눈·옅은 갈색 동공, 무표정에 가까운 차분함, 머리만 살짝 우측 |
+| 여자 | `public/outfit/characters/female-warm-v1.png` | 모바일 앱 플랫 카툰, 얇고 균일한 검정 외곽선 + 플랫 파스텔, ~5.5등신, 어깨선 밤색 단발 + 안쪽 끝말림, 둥근 얼굴·점 같은 까만 눈·옅은 미소·핑크 볼터치, **코·속눈썹·귀 디테일 없음** |
+
+### 0.1 잠금 프롬프트
+
+캐논 잠금 프롬프트는 `.claude/skills/outfit-asset/SKILL.md` §1-A 의 **MALE / FEMALE STYLE LOCK** 블록을 그대로 사용합니다. 새 캐릭터를 생성할 때는 항상 그 블록을 가장 앞에 통째로 붙여 넣고, **그 뒤에 슬롯별 한 줄(의상)** 만 갈아끼웁니다.
+
+### 0.2 절대 규칙
+
+- **두 캐논 파일은 절대 덮어쓰지 않습니다.** 새 버전이 필요하면 `-v2` 로 추가.
+- 같은 성별의 모든 슬롯은 **얼굴·체형·헤어·라인 스타일이 캐논과 100% 동일**해야 합니다. 다른 사람으로 보이면 재생성.
+- 베이스 슬롯에는 **우산·모자·선글라스·가방 금지** — 이는 `public/outfit/accessories/` 에서 별도 조합.
+- 남자 캐논은 회갈색 얇은 라인 + 수채, 여자 캐논은 검정 얇은 라인 + 플랫 파스텔 — **두 스타일을 섞지 않습니다.**
+
+### 0.3 현재 자산 스타일 매트릭스
+
+| 파일 | 캐논 적합도 | 액션 |
+|------|--------------|------|
+| `male-cool-v1.webp` ★ | 캐논 | 유지 (수정 금지) |
+| `male-cold-v1.png` | 유사 (인물 다름) | 재생성 권장 |
+| `male-freezing-v1.png` | 유사 (인물 다름) | 재생성 권장 |
+| `male-mild-v1.png` | **완전 다름** (두꺼운 검정 카툰) | **재생성 필수** |
+| `male-warm-v1.png` | **완전 다름** (두꺼운 검정 카툰) | **재생성 필수** |
+| `male-hot-v1.png` | **완전 다름** (두꺼운 검정 카툰) | **재생성 필수** |
+| `female-warm-v1.png` ★ | 캐논 | 유지 (수정 금지) |
+| `female-mild-v1.png` | 매우 유사 | 유지 (선택적 미세 재생성) |
+| `female-hot-v1.png` | 매우 유사 | 유지 |
+| `female-cold-v1.png` | **다름** (세미리얼 애니) | **재생성 필수** |
+| `female-cool-v1.png` | **다름** (세미리얼 애니) | **재생성 필수** |
+| `female-freezing-v1.png` | **다름** (세미리얼 애니) | **재생성 필수** |
+
+---
+
 ## 1. 전신 캐릭터 (TempZone 슬롯)
 
 ### 1.1 파일 규칙 (현재 앱과 동일)
@@ -149,26 +188,24 @@
 | `sunny-uv` | `male-sunny-uv-v1.png` | `female-sunny-uv-v1.png` | `showSunshine=true` 이고 `tempZone='hot' or 'warm'` |
 | `windy` | `male-windy-v1.png` | `female-windy-v1.png` | `windAlert=true` (풍속 14m/s↑) |
 
-### 4-A.1 슬롯별 생성 프롬프트 (공통 스타일 블록 + 객체별 한 줄)
+### 4-A.1 슬롯별 생성 프롬프트 (캐논 블록 + 객체별 한 줄)
 
-공통 스타일 블록 (`outfit-asset` 스킬과 동일):
-
-> Flat 2D vector illustration, thin consistent black outlines, soft muted pastel palette, friendly minimal mobile-app style, pure white background (#FFFFFF), no shadows, no floor, generous margin, centered composition. No text, no watermarks, no logos. Full body standing front pose, vertical 2:3 canvas.
+> ⚠️ **공통 스타일 블록을 더 이상 사용하지 않습니다.** 남자 캐릭터는 `.claude/skills/outfit-asset/SKILL.md` §1-A 의 **MALE STYLE LOCK**, 여자 캐릭터는 **FEMALE STYLE LOCK** 을 그대로 가장 앞에 붙여넣고, 아래 한 줄만 갈아끼웁니다. 두 캐논 잠금 블록은 절대 변형하지 않습니다.
 
 객체별 한 줄(같은 슬롯은 남·여 각각 1장씩 생성):
 
 | 슬롯 | 추가 문구 |
 |------|-----------|
-| `rain-light` (M) | Beige trench coat, slacks and loafers, holding a navy open umbrella tilted slightly above the head, the other arm relaxed at the side, calm expression, dry shoes. |
-| `rain-light` (F) | Trench coat or knee-length raincoat, midi skirt or pants, loafers, holding a pastel yellow open umbrella tilted slightly above the head, calm friendly expression. |
+| `rain-light` (M) | Beige trench coat, slacks and loafers, holding a navy open umbrella tilted slightly above the head, the other arm relaxed at the side, dry shoes. |
+| `rain-light` (F) | Trench coat or knee-length raincoat, midi skirt or pants, loafers, holding a pastel-yellow open umbrella tilted slightly above the head. |
 | `rain-heavy` (M) | Yellow or olive hooded raincoat with the hood up, dark pants, black waterproof ankle boots, both hands tucked near the pockets, slight shoulder hunch. |
-| `rain-heavy` (F) | Belted yellow raincoat with hood up, slim pants, chelsea-style waterproof boots, both hands tucked near pockets, gentle smile. |
+| `rain-heavy` (F) | Belted yellow raincoat with the hood up, slim pants, chelsea-style waterproof boots, both hands tucked near pockets. |
 | `snow` (M) | Long charcoal puffer coat, knitted beanie, soft scarf wrapped around the neck, dark thermal pants, winter boots, hands in pockets, subtle breath cloud near the mouth. |
-| `snow` (F) | Ivory or beige puffer coat, knitted beanie, soft scarf, slim thermal pants, winter boots, hands in pockets, soft smile. |
-| `sunny-uv` (M) | Short-sleeve light shirt, beige chinos, white sneakers, baseball cap and sunglasses, one hand lightly touching the cap brim, bright friendly look. |
-| `sunny-uv` (F) | Light linen blouse or short dress, wide-brim sun hat, sunglasses, sandals, one hand softly holding the hat brim, summery vibe. |
-| `windy` (M) | Lightweight windbreaker half-zipped, slim pants, sneakers, hair and jacket hem softly swept sideways by wind, one hand holding the jacket collar. |
-| `windy` (F) | Lightweight windbreaker, midi skirt slightly fluttering, headband keeping hair tidy, sneakers, one hand softly holding the jacket collar. |
+| `snow` (F) | Ivory puffer coat, knitted beanie, soft cream scarf, slim thermal pants, white snow boots, hands in pockets, soft smile, tiny breath cloud near the mouth. |
+| `sunny-uv` (M) | Short-sleeve light shirt, beige chinos, white sneakers, baseball cap and sunglasses, one hand lightly touching the cap brim. |
+| `sunny-uv` (F) | Light linen short-sleeve blouse, beige knee-length shorts or skirt, wide-brim straw sun hat, sunglasses, white sandals, one hand softly holding the hat brim. |
+| `windy` (M) | Lightweight grey windbreaker half-zipped, slim pants, sneakers, hair and jacket hem softly swept sideways by wind, one hand holding the jacket collar. |
+| `windy` (F) | Lightweight pastel windbreaker, ankle pants, sneakers, hair softly swept sideways by wind with a small headband keeping the fringe tidy, one hand softly holding the jacket collar. |
 
 ### 4-A.2 PNG 등록 순서
 
@@ -184,6 +221,28 @@
 
 ---
 
+## 4-B. 여성 라이프스타일 v2 베리에이션 (선택 슬롯)
+
+남자 캐릭터 대비 여성 캐릭터의 시각적 다양성을 키우기 위한 **선택적 v2 변형**입니다. 같은 캐논(얼굴·체형·헤어 동일)을 유지하면서 베이스 슬롯과 다른 무드의 의상을 제공합니다. v1 베이스를 우선 노출하고, 코드에서 옵션이 켜졌을 때만 v2 로 스왑합니다.
+
+| 슬롯 | 파일명 | 의상 한 줄 (FEMALE STYLE LOCK 뒤에 붙임) |
+|------|---------|---------------------------------------------|
+| `warm-v2` | `female-warm-v2.png` | Knee-length floral pastel sundress with thin shoulder straps, tan flat sandals. |
+| `cool-v2` | `female-cool-v2.png` | Beige trench coat open over a white blouse, ankle-length camel midi skirt, brown ankle boots. |
+| `mild-v2` | `female-mild-v2.png` | Cream wide-collar blouse, A-line beige midi skirt, white sneakers, small shoulder bag strap visible (no bag drawn). |
+
+### 4-B.1 v2 등록 순서
+
+1. AI 이미지 도구로 위 한 줄 + `FEMALE STYLE LOCK` 으로 PNG 생성
+2. `weatherfit/public/outfit/characters/` 에 `female-{slot}-v2.png` 로 저장
+3. `node scripts/convert-outfit-to-webp.mjs` 실행 → `.webp` 자동 생성
+4. (선택) `lib/outfit/characterIllust.ts` 의 `outfitCharacterImageSrc` 에 v2 분기 추가 — 예: 사용자 설정·요일·날짜 기반 토글
+5. 본 문서 §5 변경 이력에 기록
+
+코드 분기를 추가하지 않더라도 PNG·WebP 만 자산 폴더에 두면 추후 손쉽게 활성화할 수 있습니다.
+
+---
+
 ## 5. 변경 이력
 
 | 날짜 | 내용 |
@@ -196,6 +255,9 @@
 | 2026-04-30 | 일러스트 탭: 매핑되는 추천 항목은 칩 대신 악세사리 PNG(`outfitItemToAccessoryKey`), 크기 확대. |
 | 2026-04-30 | 목도리 소품 `acc-scarf-v1.png` 추가 및 경로 연동(`accessoryIllust.ts`). |
 | 2026-05-11 | 캐릭터 뒤 반투명 날씨 배경 SVG (`WeatherCharBg`) 추가. 1차+2차 상황 슬롯 5종(`rain-light`, `rain-heavy`, `snow`, `sunny-uv`, `windy`) 인프라(`pickCharacterSlot` + `AVAILABLE_SITUATION_SLOTS`) 배포 — PNG 미등록 상태에서 자동 폴백. |
+| 2026-05-12 | **캐릭터 캐논 잠금**: 남자 = `male-cool-v1.webp`, 여자 = `female-warm-v1.png`. §0 신설, §1·§4-A.1 의 공통 스타일 블록을 **성별별 STYLE LOCK** 으로 교체. 스킬(`outfit-asset/SKILL.md` §1-A) 동기화. **재생성 대상**: `male-mild`/`warm`/`hot`-v1 (필수), `male-cold`/`freezing`-v1 (권장), `female-cold`/`cool`/`freezing`-v1 (필수). 여성 라이프스타일 v2 슬롯 3종 (§4-B) 신설. |
+| 2026-05-12 | **캐릭터 PNG 자동 생성 스크립트 도입** — `scripts/generate-character-asset.mjs` (Google Gemini `gemini-2.5-flash-image`, 캐논 레퍼런스 첨부 + STYLE LOCK + 슬롯 한 줄). `@google/genai`, `sharp` devDependency 추가. 스킬 §2 신설. **전체 23장 일괄 재생성 완료**: 베이스 10 (male/female × hot/warm/mild/cool/cold/freezing, 캐논 2장 제외) + 상황 10 (rain-light/rain-heavy/snow/sunny-uv/windy × 남·여) + 여성 v2 3 (warm/cool/mild). |
+| 2026-05-12 | **상황 슬롯 활성화** — `lib/outfit/characterIllust.ts` `AVAILABLE_SITUATION_SLOTS` 에 5개 슬롯(`rain-light`, `rain-heavy`, `snow`, `sunny-uv`, `windy`) 등록. 이제 `pickCharacterSlot` 이 강수·강설·강한 햇빛·강풍 조건에서 자동으로 상황 캐릭터를 선택. |
 
 ---
 
