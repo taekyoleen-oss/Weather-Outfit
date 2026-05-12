@@ -1,8 +1,8 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine,
+  AreaChart, Area, XAxis, YAxis, Tooltip, ReferenceLine, Label,
 } from 'recharts'
 import type { HourlyForecast, SunriseSunset, DailyForecast } from '@/types/weather'
 import { currentHourKst, kstTodayYmd } from '@/lib/utils/timeOfDay'
@@ -15,7 +15,13 @@ interface Props {
   daily?: DailyForecast[]
 }
 
-const MARGIN = { top: 8, right: 8, left: -22, bottom: 0 }
+/** 화면에 동시에 보이는 시간 수. 컨테이너 폭을 이만큼으로 나눠 1시간 폭을 산출 */
+const VISIBLE_HOURS = 24
+/** 시간 1칸 최소 폭(px) — 좁은 화면에서 가독성이 너무 떨어지지 않도록 하한 */
+const MIN_HOUR_WIDTH = 14
+const CHART_HEIGHT = 160
+/** 상단 마커(오늘·내일·일출 등)·하단 시간 라벨 공간 확보 */
+const MARGIN = { top: 28, right: 18, left: 6, bottom: 18 }
 const TOOLTIP_STYLE = {
   background: 'rgba(255,255,255,0.95)',
   border: '1px solid #E2E8F0',
@@ -52,9 +58,9 @@ function dayOfWeek(dateStr: string): string {
 
 function dayRelativeLabel(dateStr: string, todayYmd: string): string {
   const delta = Math.round(
-    (Date.UTC(+dateStr.slice(0,4), +dateStr.slice(4,6)-1, +dateStr.slice(6,8))
-     - Date.UTC(+todayYmd.slice(0,4), +todayYmd.slice(4,6)-1, +todayYmd.slice(6,8)))
-    / 86400000
+    (Date.UTC(+dateStr.slice(0, 4), +dateStr.slice(4, 6) - 1, +dateStr.slice(6, 8))
+      - Date.UTC(+todayYmd.slice(0, 4), +todayYmd.slice(4, 6) - 1, +todayYmd.slice(6, 8)))
+    / 86400000,
   )
   if (delta === 0) return '오늘'
   if (delta === 1) return '내일'
@@ -62,22 +68,45 @@ function dayRelativeLabel(dateStr: string, todayYmd: string): string {
   return dayOfWeek(dateStr)
 }
 
-// ── 모듈 레벨 상수: 렌더마다 새 참조 생성 방지 (Recharts useEffect 의존성 루프 차단) ──
-function xAxisTick(props: Record<string, unknown>) {
-  const x = Number(props.x ?? 0)
-  const y = Number(props.y ?? 0)
-  const pl = props.payload as { value?: unknown } | undefined
-  const v = String(pl?.value ?? '')
-  let fill = '#64748B'
-  let fontWeight = 400
-  if (v === '내일' || v === '모레') { fill = '#5B8DEE'; fontWeight = 700 }
-  else if (v === '일출') fill = '#F59E0B'
-  else if (v === '일몰') fill = '#818CF8'
-  return (
-    <text x={x} y={y + 12} textAnchor="middle" fill={fill} fontSize={10} fontWeight={fontWeight}>
-      {v}
-    </text>
-  )
+type MarkerType = 'today' | 'tomorrow' | 'dayafter' | 'other-day' | 'sunrise' | 'sunset'
+
+interface PointData {
+  /** 고유 키 — XAxis dataKey & ReferenceLine x 양쪽에서 같은 슬롯을 지목하기 위해 사용 */
+  key: string
+  /** 하단 x축에 표시할 시간 (예: "9시"), 공란이면 표시하지 않음 */
+  hourLabel: string
+  /** 툴팁에 표시할 절대 시각 */
+  fullLabel: string
+  /** 온도(소수 1자리 반올림) */
+  temp: number
+  /** 상단 마커 라벨 (있으면 ReferenceLine + 라벨 표시) */
+  topMarker: string
+  markerType?: MarkerType
+}
+
+const MARKER_STYLE: Record<MarkerType, { color: string; dash?: string; bold: boolean }> = {
+  today:    { color: '#16a34a', bold: true },
+  tomorrow: { color: '#5B8DEE', bold: true },
+  dayafter: { color: '#5B8DEE', bold: true },
+  'other-day': { color: '#64748B', bold: true },
+  sunrise:  { color: '#F59E0B', dash: '3 3', bold: false },
+  sunset:   { color: '#818CF8', dash: '3 3', bold: false },
+}
+
+function makeBottomTick(dataByKey: Map<string, PointData>) {
+  return function BottomTick(props: Record<string, unknown>) {
+    const x = Number(props.x ?? 0)
+    const y = Number(props.y ?? 0)
+    const pl = props.payload as { value?: unknown } | undefined
+    const key = String(pl?.value ?? '')
+    const point = dataByKey.get(key)
+    if (!point || !point.hourLabel) return <g />
+    return (
+      <text x={x} y={y + 12} textAnchor="middle" fill="#64748B" fontSize={10}>
+        {point.hourLabel}
+      </text>
+    )
+  }
 }
 
 function tooltipLabelFormatter(_: unknown, payload: ReadonlyArray<{ payload?: { fullLabel?: string } }>) {
@@ -90,17 +119,22 @@ function tooltipFormatter(v: unknown): [string, string] {
 
 export function TempGraph48h({ hourly, loading, sunriseSunset, daily }: Props) {
   const [expandedDay, setExpandedDay] = useState<string | null>(null)
+  const scrollRef = useRef<HTMLDivElement | null>(null)
+  const [viewportWidth, setViewportWidth] = useState(360)
 
-  const srHour = useMemo(
-    () => (sunriseSunset?.sunrise ? parseHmHour(sunriseSunset.sunrise) : null),
-    [sunriseSunset],
-  )
-  const ssHour = useMemo(
-    () => (sunriseSunset?.sunset ? parseHmHour(sunriseSunset.sunset) : null),
-    [sunriseSunset],
-  )
+  // 스크롤 컨테이너의 가시 폭을 추적 — 컨테이너 폭 = 24h 시각화 폭
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const ro = new ResizeObserver((entries) => {
+      const w = Math.max(280, Math.floor(entries[0]!.contentRect.width))
+      setViewportWidth(w)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
-  const chartData = useMemo(() => {
+  const chartData = useMemo<PointData[]>(() => {
     if (!hourly.length) return []
     const nowKst = currentHourKst()
     const todayYmd = kstTodayYmd()
@@ -112,13 +146,19 @@ export function TempGraph48h({ hourly, loading, sunriseSunset, daily }: Props) {
     })
 
     let startIdx = sorted.findIndex(
-      (h) => (h.fcstDate === todayYmd || !h.fcstDate) && parseInt(h.time.split(':')[0], 10) >= nowKst
+      (h) => (h.fcstDate === todayYmd || !h.fcstDate) && parseInt(h.time.split(':')[0], 10) >= nowKst,
     )
     if (startIdx < 0) startIdx = 0
 
     const sliced = sorted.slice(startIdx, startIdx + 48)
+
+    const srHour = sunriseSunset?.sunrise ? parseHmHour(sunriseSunset.sunrise) : null
+    const ssHour = sunriseSunset?.sunset ? parseHmHour(sunriseSunset.sunset) : null
+
     let prevHour: number | null = null
     let dayCount = 0
+    let sunriseShown = false
+    let sunsetShown = false
 
     return sliced.map((h, i) => {
       const hourNum = parseInt(h.time.split(':')[0], 10)
@@ -126,36 +166,51 @@ export function TempGraph48h({ hourly, loading, sunriseSunset, daily }: Props) {
       if (isMidnight) dayCount++
       const d = h.fcstDate ?? todayYmd
 
-      let label: string
+      // 하단: 3시간 간격으로 시간 라벨
+      const hourLabel = hourNum % 3 === 0 ? `${hourNum}시` : ''
+
+      // 상단 마커: 시작점·자정·일출·일몰
+      let topMarker = ''
+      let markerType: MarkerType | undefined
       if (i === 0) {
-        label = '지금'
+        topMarker = '오늘'
+        markerType = 'today'
       } else if (isMidnight) {
-        if (dayCount === 1) label = '내일'
-        else if (dayCount === 2) label = '모레'
-        else label = mmdd(d)
-      } else if (hourNum === srHour) {
-        label = '일출'
-      } else if (hourNum === ssHour) {
-        label = '일몰'
-      } else if (hourNum % 6 === 0) {
-        label = `${String(hourNum).padStart(2, '0')}시`
-      } else {
-        label = ''
+        if (dayCount === 1) { topMarker = '내일'; markerType = 'tomorrow' }
+        else if (dayCount === 2) { topMarker = '모레'; markerType = 'dayafter' }
+        else { topMarker = mmdd(d); markerType = 'other-day' }
+      } else if (srHour !== null && hourNum === srHour && !sunriseShown) {
+        topMarker = '일출'
+        markerType = 'sunrise'
+        sunriseShown = true
+      } else if (ssHour !== null && hourNum === ssHour && !sunsetShown) {
+        topMarker = '일몰'
+        markerType = 'sunset'
+        sunsetShown = true
       }
 
       prevHour = hourNum
       return {
-        label,
-        fullLabel: `${d.slice(4, 6)}/${d.slice(6, 8)} ${h.time.slice(0, 5)}`,
+        key: `${d}_${h.time}`,
+        hourLabel,
+        fullLabel: `${mmdd(d)} ${h.time.slice(0, 5)}`,
         temp: Math.round(h.temperature * 10) / 10,
+        topMarker,
+        markerType,
       }
     })
-  }, [hourly, srHour, ssHour])
+  }, [hourly, sunriseSunset])
 
-  const hasTomorrow = chartData.some(d => d.label === '내일')
-  const hasDayAfter = chartData.some(d => d.label === '모레')
-  const hasSunrise = chartData.some(d => d.label === '일출')
-  const hasSunset = chartData.some(d => d.label === '일몰')
+  const dataByKey = useMemo(() => {
+    const m = new Map<string, PointData>()
+    for (const p of chartData) m.set(p.key, p)
+    return m
+  }, [chartData])
+
+  /** 스크롤 진입 시 처음에 24h가 보이도록 좌측 정렬(=scrollLeft 0). 데이터 갱신 시 재정렬. */
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollLeft = 0
+  }, [chartData])
 
   if (loading || !hourly.length) {
     return (
@@ -168,7 +223,14 @@ export function TempGraph48h({ hourly, loading, sunriseSunset, daily }: Props) {
     )
   }
 
+  // 24h가 viewportWidth에 들어가도록 시간당 폭을 계산. 데이터가 24h 미만이면 viewport 전체 사용.
+  const hourWidth = Math.max(MIN_HOUR_WIDTH, Math.floor(viewportWidth / VISIBLE_HOURS))
+  const chartInnerWidth = Math.max(viewportWidth, chartData.length * hourWidth)
+  const bottomTick = makeBottomTick(dataByKey)
+  const markedPoints = chartData.filter((p) => p.topMarker && p.markerType)
   const todayYmd = kstTodayYmd()
+
+  const hasMarker = (t: MarkerType) => markedPoints.some((p) => p.markerType === t)
 
   return (
     <div className="glass-card p-3 sm:p-4">
@@ -176,10 +238,19 @@ export function TempGraph48h({ hourly, loading, sunriseSunset, daily }: Props) {
         48시간 기온
       </h3>
 
-      {/* 48시간 기온 차트 */}
-      <div className="min-w-0 w-full" style={{ height: 120 }}>
-        <ResponsiveContainer width="100%" height={120} debounce={50}>
-          <AreaChart data={chartData} margin={MARGIN}>
+      {/* 가로 스크롤 컨테이너: 화면에 24h만 보이고, 우측으로 스크롤하면 나머지 24h가 이어짐 */}
+      <div
+        ref={scrollRef}
+        className="relative w-full overflow-x-auto scroll-strip"
+        aria-label="48시간 기온 그래프 — 우측으로 스크롤하여 이후 시간대 확인"
+      >
+        <div style={{ width: chartInnerWidth, height: CHART_HEIGHT }}>
+          <AreaChart
+            width={chartInnerWidth}
+            height={CHART_HEIGHT}
+            data={chartData}
+            margin={MARGIN}
+          >
             <defs>
               <linearGradient id="wf-temp48-grad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="10%" stopColor="#FFB547" stopOpacity={0.28} />
@@ -187,11 +258,12 @@ export function TempGraph48h({ hourly, loading, sunriseSunset, daily }: Props) {
               </linearGradient>
             </defs>
             <XAxis
-              dataKey="label"
-              tick={xAxisTick}
+              dataKey="key"
+              tick={bottomTick}
               axisLine={false}
               tickLine={false}
               interval={0}
+              padding={{ left: 6, right: 6 }}
             />
             <YAxis
               tick={YAXIS_TICK}
@@ -205,18 +277,31 @@ export function TempGraph48h({ hourly, loading, sunriseSunset, daily }: Props) {
               labelFormatter={tooltipLabelFormatter}
               formatter={tooltipFormatter}
             />
-            {hasTomorrow && (
-              <ReferenceLine x="내일" stroke="#5B8DEE" strokeDasharray="4 3" strokeOpacity={0.55} />
-            )}
-            {hasDayAfter && (
-              <ReferenceLine x="모레" stroke="#5B8DEE" strokeDasharray="4 3" strokeOpacity={0.55} />
-            )}
-            {hasSunrise && (
-              <ReferenceLine x="일출" stroke="#F59E0B" strokeDasharray="3 3" strokeOpacity={0.45} />
-            )}
-            {hasSunset && (
-              <ReferenceLine x="일몰" stroke="#818CF8" strokeDasharray="3 3" strokeOpacity={0.45} />
-            )}
+
+            {markedPoints.map((p) => {
+              const style = MARKER_STYLE[p.markerType!]
+              return (
+                <ReferenceLine
+                  key={`mark-${p.key}`}
+                  x={p.key}
+                  stroke={style.color}
+                  strokeWidth={style.bold ? 1.5 : 1}
+                  strokeDasharray={style.dash}
+                  strokeOpacity={style.bold ? 0.7 : 0.5}
+                  ifOverflow="extendDomain"
+                >
+                  <Label
+                    value={p.topMarker}
+                    position="top"
+                    offset={6}
+                    fill={style.color}
+                    fontSize={10}
+                    fontWeight={style.bold ? 700 : 500}
+                  />
+                </ReferenceLine>
+              )
+            })}
+
             <Area
               type="monotone"
               dataKey="temp"
@@ -227,23 +312,24 @@ export function TempGraph48h({ hourly, loading, sunriseSunset, daily }: Props) {
               activeDot={ACTIVE_DOT}
             />
           </AreaChart>
-        </ResponsiveContainer>
+        </div>
       </div>
 
       {/* 범례 */}
-      {(hasTomorrow || hasSunrise || hasSunset) && (
+      {(hasMarker('tomorrow') || hasMarker('dayafter') || hasMarker('sunrise') || hasMarker('sunset')) && (
         <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 px-1">
-          {hasTomorrow && (
+          <span className="text-[10px]" style={{ color: '#64748B' }}>← 좌우 스크롤 →</span>
+          {(hasMarker('tomorrow') || hasMarker('dayafter')) && (
             <span className="text-[10px]" style={{ color: '#5B8DEE' }}>
               ━━ 내일/모레
             </span>
           )}
-          {hasSunrise && (
+          {hasMarker('sunrise') && (
             <span className="text-[10px]" style={{ color: '#F59E0B' }}>
               ┄┄ 일출
             </span>
           )}
-          {hasSunset && (
+          {hasMarker('sunset') && (
             <span className="text-[10px]" style={{ color: '#818CF8' }}>
               ┄┄ 일몰
             </span>

@@ -1175,6 +1175,13 @@ export default function HomePage() {
               {highlightsGrid}
               {hourlyStripDesktop}
               <ChartErrorBoundary>
+                <TempGraph48h
+                  hourly={weatherData?.hourly ?? []}
+                  loading={weatherLoading && !weatherData}
+                  sunriseSunset={sunriseSunset}
+                />
+              </ChartErrorBoundary>
+              <ChartErrorBoundary>
                 <WeeklyForecastInline key="weekly-inline-desktop" {...weeklyProps} />
               </ChartErrorBoundary>
             </>
