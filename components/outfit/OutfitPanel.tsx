@@ -425,9 +425,14 @@ export function OutfitPanel({
 
   const startHourMin = activityStartHourMin
 
+  // onActivityHoursChange는 부모에서 인라인 화살표 함수로 전달되어 매 렌더마다 ref가 달라진다.
+  // dep에 포함시키면 effect → setWxActivityHours({start,end}) → 부모 리렌더 → 새 함수 ref → effect 재실행…
+  // 무한 루프(Maximum update depth)가 발생하므로 ref로 최신 콜백을 보관하고 startHour/endHour 변경에만 반응한다.
+  const onActivityHoursChangeRef = useRef(onActivityHoursChange)
+  onActivityHoursChangeRef.current = onActivityHoursChange
   useEffect(() => {
-    onActivityHoursChange?.(startHour, endHour)
-  }, [startHour, endHour, onActivityHoursChange])
+    onActivityHoursChangeRef.current?.(startHour, endHour)
+  }, [startHour, endHour])
 
   useEffect(() => {
     const f = activityStartFloor(outfitPeriodStartHour, outfitIsNowPeriod, outfitCurrentKstHour)

@@ -4,6 +4,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer,
 } from 'recharts'
+/**
+ * 폭 측정을 JS(ResizeObserver)로 하지 않는다. 이전 구현은 ResponsiveContainer 내부 ResizeObserver와
+ * 상호작용해 setState → 리렌더 → resize → setState 무한 루프(React "Maximum update depth exceeded")를
+ * 일으켜 모바일에서 차트가 보이지 않았다. 폭은 CSS만으로 처리한다.
+ */
 import type { HourlyForecast, SunriseSunset, DailyForecast } from '@/types/weather'
 import { currentHourKst, kstTodayYmd } from '@/lib/utils/timeOfDay'
 import { weatherLabel, formatTemp1 } from '@/lib/utils/formatWeather'
@@ -15,10 +20,8 @@ interface Props {
   daily?: DailyForecast[]
 }
 
-/** 화면에 동시에 보이는 시간 수. 컨테이너 폭을 이만큼으로 나눠 1시간 폭을 산출 */
+/** 화면에 동시에 보이는 시간 수 — 데이터 길이를 이만큼으로 나눠 폭 배수를 산출 */
 const VISIBLE_HOURS = 24
-/** 시간 1칸 최소 폭(px) — 좁은 화면에서 가독성이 너무 떨어지지 않도록 하한 */
-const MIN_HOUR_WIDTH = 14
 const CHART_HEIGHT = 160
 /** 상단 마커(오늘·내일·일출 등)·하단 시간 라벨 공간 확보 */
 const MARGIN = { top: 28, right: 18, left: 6, bottom: 18 }
@@ -120,27 +123,6 @@ function tooltipFormatter(v: unknown): [string, string] {
 export function TempGraph48h({ hourly, loading, sunriseSunset, daily }: Props) {
   const [expandedDay, setExpandedDay] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement | null>(null)
-  const [viewportWidth, setViewportWidth] = useState(360)
-
-  /**
-   * 스크롤 컨테이너의 가시 폭을 추적 — 컨테이너 폭 = 24h 시각화 폭.
-   * MobileLayout이 비활성 탭을 display:none으로 숨기는 동안에는 contentRect.width=0이 들어올 수 있어
-   * 0 값은 무시한다(그 상태에서 chartInnerWidth가 0이 되면 차트가 아예 보이지 않음).
-   */
-  useEffect(() => {
-    const el = scrollRef.current
-    if (!el) return
-    // 초기 측정: 첫 페인트 직후 clientWidth를 받아옴 (display:none이면 0이라 fallback)
-    const initial = el.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 360)
-    if (initial >= 100) setViewportWidth(Math.floor(initial))
-
-    const ro = new ResizeObserver((entries) => {
-      const w = Math.floor(entries[0]!.contentRect.width)
-      if (w >= 100) setViewportWidth(w)
-    })
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
 
   const chartData = useMemo<PointData[]>(() => {
     if (!hourly.length) return []
@@ -231,9 +213,9 @@ export function TempGraph48h({ hourly, loading, sunriseSunset, daily }: Props) {
     )
   }
 
-  // 24h가 viewportWidth에 들어가도록 시간당 폭을 계산. 데이터가 24h 미만이면 viewport 전체 사용.
-  const hourWidth = Math.max(MIN_HOUR_WIDTH, Math.floor(viewportWidth / VISIBLE_HOURS))
-  const chartInnerWidth = Math.max(viewportWidth, chartData.length * hourWidth)
+  // 컨테이너 폭의 N배만큼 inner 폭을 잡아 가로 스크롤로 48h 전체를 볼 수 있게 한다.
+  // (CSS 백분율 — JS 측정 없음, 측정-루프 회피)
+  const widthPct = Math.max(100, Math.round((chartData.length / VISIBLE_HOURS) * 100))
   const bottomTick = makeBottomTick(dataByKey)
   const markedPoints = chartData.filter((p) => p.topMarker && p.markerType)
   const todayYmd = kstTodayYmd()
@@ -252,7 +234,7 @@ export function TempGraph48h({ hourly, loading, sunriseSunset, daily }: Props) {
         className="relative w-full overflow-x-auto scroll-strip"
         aria-label="48시간 기온 그래프 — 우측으로 스크롤하여 이후 시간대 확인"
       >
-        <div style={{ width: chartInnerWidth, height: CHART_HEIGHT }}>
+        <div style={{ width: `${widthPct}%`, height: CHART_HEIGHT, minWidth: 360 }}>
           <ResponsiveContainer width="100%" height="100%" debounce={50}>
           <AreaChart
             data={chartData}
