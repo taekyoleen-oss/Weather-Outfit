@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ReferenceLine, Label,
+  AreaChart, Area, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer,
 } from 'recharts'
 import type { HourlyForecast, SunriseSunset, DailyForecast } from '@/types/weather'
 import { currentHourKst, kstTodayYmd } from '@/lib/utils/timeOfDay'
@@ -122,13 +122,21 @@ export function TempGraph48h({ hourly, loading, sunriseSunset, daily }: Props) {
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const [viewportWidth, setViewportWidth] = useState(360)
 
-  // 스크롤 컨테이너의 가시 폭을 추적 — 컨테이너 폭 = 24h 시각화 폭
+  /**
+   * 스크롤 컨테이너의 가시 폭을 추적 — 컨테이너 폭 = 24h 시각화 폭.
+   * MobileLayout이 비활성 탭을 display:none으로 숨기는 동안에는 contentRect.width=0이 들어올 수 있어
+   * 0 값은 무시한다(그 상태에서 chartInnerWidth가 0이 되면 차트가 아예 보이지 않음).
+   */
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
+    // 초기 측정: 첫 페인트 직후 clientWidth를 받아옴 (display:none이면 0이라 fallback)
+    const initial = el.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 360)
+    if (initial >= 100) setViewportWidth(Math.floor(initial))
+
     const ro = new ResizeObserver((entries) => {
-      const w = Math.max(280, Math.floor(entries[0]!.contentRect.width))
-      setViewportWidth(w)
+      const w = Math.floor(entries[0]!.contentRect.width)
+      if (w >= 100) setViewportWidth(w)
     })
     ro.observe(el)
     return () => ro.disconnect()
@@ -245,9 +253,8 @@ export function TempGraph48h({ hourly, loading, sunriseSunset, daily }: Props) {
         aria-label="48시간 기온 그래프 — 우측으로 스크롤하여 이후 시간대 확인"
       >
         <div style={{ width: chartInnerWidth, height: CHART_HEIGHT }}>
+          <ResponsiveContainer width="100%" height="100%" debounce={50}>
           <AreaChart
-            width={chartInnerWidth}
-            height={CHART_HEIGHT}
             data={chartData}
             margin={MARGIN}
           >
@@ -288,17 +295,15 @@ export function TempGraph48h({ hourly, loading, sunriseSunset, daily }: Props) {
                   strokeWidth={style.bold ? 1.5 : 1}
                   strokeDasharray={style.dash}
                   strokeOpacity={style.bold ? 0.7 : 0.5}
-                  ifOverflow="extendDomain"
-                >
-                  <Label
-                    value={p.topMarker}
-                    position="top"
-                    offset={6}
-                    fill={style.color}
-                    fontSize={10}
-                    fontWeight={style.bold ? 700 : 500}
-                  />
-                </ReferenceLine>
+                  label={{
+                    value: p.topMarker,
+                    position: 'top',
+                    offset: 6,
+                    fill: style.color,
+                    fontSize: 10,
+                    fontWeight: style.bold ? 700 : 500,
+                  }}
+                />
               )
             })}
 
@@ -312,6 +317,7 @@ export function TempGraph48h({ hourly, loading, sunriseSunset, daily }: Props) {
               activeDot={ACTIVE_DOT}
             />
           </AreaChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
