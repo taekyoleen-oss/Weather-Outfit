@@ -343,8 +343,10 @@ export default function HomePage() {
   const [desktopUltraShortOpen, setDesktopUltraShortOpen] = useState(false)
 
   // ── Time / period state (for outfit panel) ────────────────────────────────
+  // OUTFIT_PERIODS(7개) 기준의 현재 구간을 사용해 「지금」 칩과 초기 선택을 일치시킴.
+  // TIME_PERIODS(4개) repHour를 쓰면 10~12·16~18시처럼 OUTFIT 칩에 없는 시간대가 선택돼 이미 지난 구간이 잡힐 수 있음.
   const [periodPreset, setPeriodPreset] = useState(() => ({
-    repHour: TIME_PERIODS[getPeriodIndex(hour)].repHour,
+    repHour: OUTFIT_PERIODS[getOutfitPeriodIndex(hour)]!.repHour,
     dayOffset: 0,
   }))
   /** 연속 시간대 범위 선택 시 끝 칩 정보. 단일 선택이면 null */
@@ -427,18 +429,37 @@ export default function HomePage() {
 
   // ── Reset outfit period on location change ────────────────────────────────
   useEffect(() => {
-    setPeriodPreset({ repHour: TIME_PERIODS[getPeriodIndex(hour)].repHour, dayOffset: 0 })
+    setPeriodPreset({ repHour: OUTFIT_PERIODS[getOutfitPeriodIndex(hour)]!.repHour, dayOffset: 0 })
+    setPeriodPresetEnd(null)
     setScheduleYmd(kstTodayYmd())
     setWxActivityHours(null)
   }, [location]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (weatherData) {
-      setPeriodPreset({ repHour: TIME_PERIODS[getPeriodIndex(hour)].repHour, dayOffset: 0 })
+      setPeriodPreset({ repHour: OUTFIT_PERIODS[getOutfitPeriodIndex(hour)]!.repHour, dayOffset: 0 })
+      setPeriodPresetEnd(null)
       setScheduleYmd(kstTodayYmd())
       setWxActivityHours(null)
     }
   }, [weatherData]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Auto-shift to '지금' when the selected outfit period has passed ────────
+  // 시간이 흘러 선택된 오늘 구간이 모두 경과(혹은 칩 목록에 없음)하면 자동으로 현재 OUTFIT_PERIODS 구간으로 보정.
+  useEffect(() => {
+    if (periodPreset.dayOffset !== 0) return
+    if (scheduleYmd !== todayYmdKst) return
+    const currentOutfitIdx = getOutfitPeriodIndex(hour)
+    const endChipIdx = periodPresetEnd
+      ? getOutfitPeriodIndex(periodPresetEnd.repHour)
+      : getOutfitPeriodIndex(periodPreset.repHour)
+    const endChipDayOffset = periodPresetEnd?.dayOffset ?? 0
+    const allPassed = endChipDayOffset === 0 && endChipIdx < currentOutfitIdx
+    if (!allPassed) return
+    setPeriodPreset({ repHour: OUTFIT_PERIODS[currentOutfitIdx]!.repHour, dayOffset: 0 })
+    setPeriodPresetEnd(null)
+    setWxActivityHours(null)
+  }, [hour, periodPreset.repHour, periodPreset.dayOffset, periodPresetEnd, scheduleYmd, todayYmdKst])
 
   // ── OpenMeteo compare ────────────────────────────────────────────────────
   useEffect(() => {
@@ -845,8 +866,8 @@ export default function HomePage() {
             const newYmd = e.target.value.replace(/-/g, '')
             const dayOff = Math.max(0, diffCalendarDaysYmd(todayYmdKst, newYmd))
             if (dayOff === 0) {
-              // 오늘: 현재 시간대로 복귀
-              handleSelectPresetWithDateUpdate(TIME_PERIODS[getPeriodIndex(hour)].repHour, 0)
+              // 오늘: 현재 OUTFIT 구간(=「지금」칩)으로 복귀
+              handleSelectPresetWithDateUpdate(OUTFIT_PERIODS[getOutfitPeriodIndex(hour)]!.repHour, 0)
             } else {
               // 미래 날짜: 새벽(0시)부터 시작
               handleSelectPresetWithDateUpdate(OUTFIT_PERIODS[0]!.repHour, dayOff)
@@ -856,7 +877,7 @@ export default function HomePage() {
         {scheduleYmd !== todayYmdKst && (
           <button
             type="button"
-            onClick={() => handleSelectPresetWithDateUpdate(TIME_PERIODS[getPeriodIndex(hour)].repHour, 0)}
+            onClick={() => handleSelectPresetWithDateUpdate(OUTFIT_PERIODS[getOutfitPeriodIndex(hour)]!.repHour, 0)}
             className="flex-shrink-0 text-xs px-2 py-1.5 rounded-lg"
             style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)' }}
           >
