@@ -21,7 +21,7 @@ import { OutfitDayChecklist } from './OutfitDayChecklist'
 import { feelsLike, weatherEmojiFromLabel, weatherLabel } from '@/lib/utils/formatWeather'
 import { buildHourlySlotYmds } from '@/lib/utils/resolveHourlyForPeriod'
 import type { VisitSchedule } from '@/lib/utils/visitSchedule'
-import { getPeriodIndex, PERIOD_CHIP_LABELS_KO, TIME_PERIODS, OUTFIT_PERIODS, getOutfitPeriodIndex } from '@/lib/utils/timePeriods'
+import { PERIOD_CHIP_LABELS_KO, TIME_PERIODS, OUTFIT_PERIODS, getOutfitPeriodIndex } from '@/lib/utils/timePeriods'
 
 function calendarMonthKstFromWeather(w: CurrentWeather | null): number | undefined {
   if (!w) return undefined
@@ -505,16 +505,18 @@ export function OutfitPanel({
     const slotYmds = buildHourlySlotYmds(hourly, todayYmd)
     const nextYmd = addCalendarDaysFromKstYmd(effectiveOutfitYmd, 1)
 
-    // 선택된 시간대 범위 [pStart, pEnd] — periodWeather 와 동일 로직
+    // 선택된 시간대 범위 [pStart, pEnd] — periodWeather 와 동일 로직.
+    // PC·모바일 동일하게 OUTFIT_PERIODS(7분할) 칩의 실제 범위를 사용한다.
+    // 4분할 TIME_PERIODS 로 폭넓게 잡으면 "지금" 칩(예: 16~18시)에서도 18~23시 슬롯이
+    // 함께 집계돼 한참 뒤 시각의 기온이 추천에 영향을 주는 버그가 있었다.
     let pStart: number
     let pEnd: number
-    const isMultiSel = selectedOutfitPeriodIndices.length > 1
-    if ((isMobileSheet && selectedOutfitPeriodIndices.length > 0) || (!isMobileSheet && isMultiSel)) {
+    if (selectedOutfitPeriodIndices.length > 0) {
       const sorted = [...selectedOutfitPeriodIndices].sort((a, b) => a - b)
       pStart = OUTFIT_PERIODS[sorted[0]!]!.start
       pEnd = OUTFIT_PERIODS[sorted[sorted.length - 1]!]!.end
     } else {
-      const chipPeriod = TIME_PERIODS[getPeriodIndex(startHour)]!
+      const chipPeriod = OUTFIT_PERIODS[getOutfitPeriodIndex(startHour)]!
       pStart = chipPeriod.start
       pEnd = chipPeriod.end
     }
@@ -555,7 +557,7 @@ export function OutfitPanel({
       precipitation,
       basisDateKst: effectiveOutfitYmd,
     }
-  }, [weather, effectiveOutfitYmd, hourly, startHour, selectedOutfitPeriodIndices, isMobileSheet])
+  }, [weather, effectiveOutfitYmd, hourly, startHour, selectedOutfitPeriodIndices])
 
   const periodWeather = useMemo(() => {
     let pStart: number
@@ -563,9 +565,8 @@ export function OutfitPanel({
     let periodName: string
     let sortedIndices: number[]
 
-    const isMultiSel = selectedOutfitPeriodIndices.length > 1
-
-    if (isMobileSheet && selectedOutfitPeriodIndices.length > 0) {
+    // PC·모바일 모두 사용자에게 보이는 OUTFIT_PERIODS(7분할) 칩 범위를 그대로 사용한다.
+    if (selectedOutfitPeriodIndices.length > 0) {
       sortedIndices = [...selectedOutfitPeriodIndices].sort((a, b) => a - b)
       const fp = OUTFIT_PERIODS[sortedIndices[0]!]!
       const lp = OUTFIT_PERIODS[sortedIndices[sortedIndices.length - 1]!]!
@@ -576,21 +577,13 @@ export function OutfitPanel({
       } else {
         periodName = fp.start === 0 ? `새벽~${lp.end}시` : `${fp.start}~${lp.end}시`
       }
-    } else if (!isMobileSheet && isMultiSel) {
-      sortedIndices = [...selectedOutfitPeriodIndices].sort((a, b) => a - b)
-      const fp = OUTFIT_PERIODS[sortedIndices[0]!]!
-      const lp = OUTFIT_PERIODS[sortedIndices[sortedIndices.length - 1]!]!
-      pStart = fp.start
-      pEnd = lp.end
-      periodName = fp.start === 0 ? `새벽~${lp.end}시` : `${fp.start}~${lp.end}시`
     } else {
-      sortedIndices = selectedOutfitPeriodIndices.length > 0
-        ? [...selectedOutfitPeriodIndices].sort((a, b) => a - b)
-        : [getOutfitPeriodIndex(startHour)]
-      const chipPeriod = TIME_PERIODS[getPeriodIndex(startHour)]!
+      const fallbackIdx = getOutfitPeriodIndex(startHour)
+      sortedIndices = [fallbackIdx]
+      const chipPeriod = OUTFIT_PERIODS[fallbackIdx]!
       pStart = chipPeriod.start
       pEnd = chipPeriod.end
-      periodName = periodChipNameFromHours(pStart, pEnd)
+      periodName = chipPeriod.label
     }
 
     const isMultiPeriod = sortedIndices.length > 1
@@ -664,20 +657,16 @@ export function OutfitPanel({
       }
     }
     return null
-  }, [hourly, daily, effectiveOutfitYmd, startHour, isMobileSheet, selectedOutfitPeriodIndices])
+  }, [hourly, daily, effectiveOutfitYmd, startHour, selectedOutfitPeriodIndices])
 
   const result = useMemo(() => {
     if (!effectiveWeatherForOutfit) return null
-    const periodMinT = periodWeather?.minTemp
-    const tempForOutfit =
-      periodMinT !== undefined
-        ? Math.min(effectiveWeatherForOutfit.temperature, periodMinT)
-        : effectiveWeatherForOutfit.temperature
-    const flBase =
-      tempForOutfit !== effectiveWeatherForOutfit.temperature
-        ? feelsLike(tempForOutfit, effectiveWeatherForOutfit.windSpeed, effectiveWeatherForOutfit.humidity)
-        : effectiveWeatherForOutfit.feelsLike
-    const adjustedFeelsLike = flBase + sensitivity
+    // 단일 시간대: 시작 시각 슬롯의 기온/체감을 그대로 사용한다.
+    // 과거에는 Math.min(현재 기온, 시간대 최저) 로 추운 쪽으로 강제 보정했는데,
+    // 그 결과 30°C 한낮에도 시간대 안의 최저 슬롯(예: 23°C → wind chill < 6°C 케이스)
+    // 때문에 "매우 추워요"로 분류돼 결울 복장이 추천되는 버그가 있었다.
+    // 다중 시간대일 때만 아래 분기에서 계획 온도(최저+범위×0.3)로 보정한다.
+    const adjustedFeelsLike = effectiveWeatherForOutfit.feelsLike + sensitivity
 
     const sharedArgs = {
       humidity: effectiveWeatherForOutfit.humidity,
@@ -744,7 +733,11 @@ export function OutfitPanel({
       }
     }
 
-    return recommendOutfit({ temperature: tempForOutfit, feelsLike: adjustedFeelsLike, ...sharedArgs })
+    return recommendOutfit({
+      temperature: effectiveWeatherForOutfit.temperature,
+      feelsLike: adjustedFeelsLike,
+      ...sharedArgs,
+    })
   }, [effectiveWeatherForOutfit, periodWeather, dust, activity, gender, terrain, sensitivity, startHour, selectedDuration, selectedOutfitPeriodIndices])
 
   /** 모바일 관심 일정 날짜는 입력값과 즉시 맞춤(페이지 scheduleYmd보다 앞설 수 있음) */

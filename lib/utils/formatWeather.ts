@@ -178,12 +178,12 @@ export function feelsLike(temp: number, windSpeed: number, humidity: number): nu
     return roundTemp1(13.12 + 0.6215 * temp - 11.37 * v + 0.3965 * temp * v)
   }
   if (temp >= 27) {
-    // Heat Index
+    // NWS Heat Index (Rothfusz). computeHeatIndex와 동일 식 — 부호 일관성 유지.
     const T = temp
     const R = humidity
-    let hi = -8.78469475556 + 1.61139411 * T + 2.3385348 * R - 0.14611605 * T * R
-    hi -= 0.012308094 * T * T - 0.016424828 * R * R + 0.002211732 * T * T * R
-    hi += 0.00072546 * T * R * R - 0.000003582 * T * T * R * R
+    let hi = -8.78469475556 + 1.61139411 * T + 2.3385348 * R
+    hi -= 0.14611605 * T * R + 0.012308094 * T * T + 0.016424828 * R * R
+    hi += 0.002211732 * T * T * R + 0.00072546 * T * R * R - 0.000003582 * T * T * R * R
     return roundTemp1(hi)
   }
   return roundTemp1(temp)
