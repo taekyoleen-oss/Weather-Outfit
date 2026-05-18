@@ -107,6 +107,9 @@ const SLOTS = {
   'female-warm-v2': { gender: 'female', outfit: 'Knee-length floral pastel sundress with thin shoulder straps, tan flat sandals.' },
   'female-cool-v2': { gender: 'female', outfit: 'Beige trench coat open over a white blouse, ankle-length camel midi skirt, brown ankle boots.' },
   'female-mild-v2': { gender: 'female', outfit: 'Cream wide-collar blouse, A-line beige midi skirt, white sneakers, small shoulder bag strap visible.' },
+  // 23~27℃ 「얇은 긴팔 셔츠」 슬롯 — 28℃+ 반팔과 시각적으로 명확히 구분되도록 긴팔 셔츠
+  'male-warm-shirt-v1':   { gender: 'male',   outfit: 'Plain ivory thin LONG-SLEEVE button-up cotton shirt with both cuffs fully buttoned at the wrists (sleeves NOT rolled up), slim light-blue jeans, white sneakers. Sleeves must clearly cover the entire arm down to the wrists.' },
+  'female-warm-shirt-v1': { gender: 'female', outfit: 'Plain ivory thin LONG-SLEEVE button-up cotton blouse with both cuffs fully buttoned at the wrists (sleeves NOT rolled up), soft pink ankle pants, white sneakers. Sleeves must clearly cover the entire arm down to the wrists.' },
 }
 
 const ai = new GoogleGenAI({ apiKey: API_KEY })
