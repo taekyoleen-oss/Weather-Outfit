@@ -222,9 +222,9 @@ export function getBaseItems(
     }
   } else if (zone === 'warm') {
     if (gender === 'male') {
-      items.push({ id: 'top-shirt-light', name: '얇은 셔츠', icon: '👕', category: 'top', required: true })
+      items.push({ id: 'top-shirt-light', name: '얇은 긴팔 셔츠', icon: '👕', category: 'top', required: true })
     } else {
-      items.push({ id: 'top-blouse-warm', name: '블라우스', icon: '👚', category: 'top', required: true })
+      items.push({ id: 'top-blouse-warm', name: '얇은 블라우스 (긴팔)', icon: '👚', category: 'top', required: true })
     }
   } else if (zone === 'mild') {
     if (gender === 'male') {

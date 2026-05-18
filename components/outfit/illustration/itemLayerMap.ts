@@ -18,6 +18,8 @@ export interface AccSet {
 const TOP_MAP: Record<string, TopVariant> = {
   'top-tshirt':       'tshirt',
   'top-blouse':       'tshirt',
+  'top-shirt-light':  'longsleeve', // 23~27℃ 얇은 (긴팔) 셔츠 — 28℃+ 반팔과 구분
+  'top-blouse-warm':  'longsleeve', // 23~27℃ 블라우스 — 통상 긴팔 실루엣
   'top-longsleeve':   'longsleeve',
   'top-longsleeve-f': 'longsleeve',
   'top-knit':         'knit',
