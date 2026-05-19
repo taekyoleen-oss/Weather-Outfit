@@ -126,17 +126,49 @@ export async function fetchWeeklyForecast(nx: number, ny: number): Promise<Daily
     const pair = taMap.get(taKey)
     const minTemp = pair?.min ?? 10
     const maxTemp = pair?.max ?? 20
-    const wf = land?.[`wf${taKey}Am`] ?? land?.[`wf${taKey}PM`]
-    const rn = land?.[`rnSt${taKey}Am`] ?? land?.[`rnSt${taKey}PM`]
-    const rnParsed = parseInt(String(rn ?? ''), 10)
+
+    // AM/PM 분리 — KMA 응답의 wf*Am/PM, rnSt*Am/PM 양쪽 보존
+    const wfAm = land?.[`wf${taKey}Am`]
+    const wfPm = land?.[`wf${taKey}PM`] ?? land?.[`wf${taKey}Pm`]
+    const rnAm = land?.[`rnSt${taKey}Am`]
+    const rnPm = land?.[`rnSt${taKey}PM`] ?? land?.[`rnSt${taKey}Pm`]
+    const amPopParsed = parseInt(String(rnAm ?? ''), 10)
+    const pmPopParsed = parseInt(String(rnPm ?? ''), 10)
+    const amPop = Number.isFinite(amPopParsed) ? amPopParsed : undefined
+    const pmPop = Number.isFinite(pmPopParsed) ? pmPopParsed : undefined
+    const amSkyCode = wfAm ? (skyFromLabel(wfAm) as SkyCode) : undefined
+    const pmSkyCode = wfPm ? (skyFromLabel(wfPm) as SkyCode) : undefined
+    const amPtyCode = wfAm ? (ptyFromLabel(wfAm) as PtyCode) : undefined
+    const pmPtyCode = wfPm ? (ptyFromLabel(wfPm) as PtyCode) : undefined
+
+    // 호환성 — 기존 단일 필드는 둘 중 강수확률이 큰 쪽(또는 가용한 쪽)을 대표값으로
+    const popRepresentative = amPop !== undefined && pmPop !== undefined
+      ? Math.max(amPop, pmPop)
+      : (amPop ?? pmPop ?? 20)
+    const skyRepresentative: SkyCode = (amSkyCode === '4' || pmSkyCode === '4')
+      ? '4'
+      : (amSkyCode === '3' || pmSkyCode === '3')
+        ? '3'
+        : (amSkyCode ?? pmSkyCode ?? '3')
+    const ptyRepresentative: PtyCode = (amPtyCode && amPtyCode !== '0')
+      ? amPtyCode
+      : (pmPtyCode && pmPtyCode !== '0')
+        ? pmPtyCode
+        : '0'
 
     forecasts.push({
       date: dateStr,
       minTemp,
       maxTemp,
-      skyCode: (wf ? skyFromLabel(wf) : '3') as SkyCode,
-      ptyCode: '0' as PtyCode,
-      pop: Number.isFinite(rnParsed) ? rnParsed : 20,
+      skyCode: skyRepresentative,
+      ptyCode: ptyRepresentative,
+      pop: popRepresentative,
+      amPop,
+      pmPop,
+      amSkyCode,
+      pmSkyCode,
+      amPtyCode,
+      pmPtyCode,
     })
   }
 
@@ -198,4 +230,13 @@ function skyFromLabel(label: string): SkyCode {
   if (label.includes('맑음')) return '1'
   if (label.includes('구름많음') || label.includes('구름 많음')) return '3'
   return '4'
+}
+
+/** KMA mid-forecast 「wf*Am/PM」 라벨 → ptyCode */
+function ptyFromLabel(label: string): PtyCode {
+  if (label.includes('비/눈') || label.includes('비눈')) return '2'
+  if (label.includes('눈')) return '3'
+  if (label.includes('소나기')) return '4'
+  if (label.includes('비')) return '1'
+  return '0'
 }

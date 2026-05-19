@@ -27,6 +27,8 @@ import { HighlightsGrid } from '@/components/weather/HighlightsGrid'
 import { HighlightCard } from '@/components/weather/HighlightCard'
 import { TimePeriodPicker } from '@/components/weather/TimePeriodPicker'
 import { OutfitPanel } from '@/components/outfit/OutfitPanel'
+import { WeeklyForecastHero } from '@/components/weather/WeeklyForecastHero'
+import { WeeklyForecastListMobile } from '@/components/weather/WeeklyForecastListMobile'
 import { SpotPanel } from '@/components/spot/SpotPanel'
 import { UltraSrtFcstCard } from '@/components/weather/UltraSrtFcstCard'
 import { PrecipAlertModal } from '@/components/weather/PrecipAlertModal'
@@ -58,7 +60,7 @@ import {
   type TimePeriod,
 } from '@/lib/utils/timePeriods'
 import { buildHourlySlotYmds, resolveHourlyForYmdBand } from '@/lib/utils/resolveHourlyForPeriod'
-import { mergeWeeklyDailyStartingTomorrow } from '@/lib/weather/weeklyFromTomorrow'
+import { mergeWeeklyDailyStartingTomorrow, mergeWeeklyDailyFromToday } from '@/lib/weather/weeklyFromTomorrow'
 import type {
   DustData,
   PollenData,
@@ -408,6 +410,19 @@ export default function HomePage() {
   const [alerts, setAlerts] = useState<WeatherAlert[]>([])
   const [openMeteoCompare, setOpenMeteoCompare] = useState<OpenMeteoDailyCompare | null>(null)
   const [mobileLayoutTab, setMobileLayoutTab] = useState<string>('weather')
+  // 선택된 모바일 탭을 localStorage에 저장 — 재실행 시 마지막 탭으로 복원
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const t = localStorage.getItem('wf:mobile:tab')
+      if (t && ['weather', 'outfit', 'other', 'weekly'].includes(t)) setMobileLayoutTab(t)
+    } catch { /* ignore */ }
+  }, [])
+  const handleMobileTabChange = useCallback((t: string) => {
+    setMobileLayoutTab(t)
+    if (typeof window === 'undefined') return
+    try { localStorage.setItem('wf:mobile:tab', t) } catch { /* ignore */ }
+  }, [])
 
   // ── 강수 알림 팝업 ────────────────────────────────────────────────────────────
   const [precipAlertData, setPrecipAlertData] = useState<{ groups: PrecipGroup[]; isAllDay: boolean } | null>(null)
@@ -811,6 +826,11 @@ export default function HomePage() {
     () => mergeWeeklyDailyStartingTomorrow(weekly, weatherData?.hourly ?? [], todayYmdKst),
     [weekly, weatherData?.hourly, todayYmdKst],
   )
+  // 모바일 주간예보 탭용 — 오늘 포함 최대 8일
+  const weeklyDailyFromToday = useMemo(
+    () => mergeWeeklyDailyFromToday(weekly, weatherData?.hourly ?? [], todayYmdKst),
+    [weekly, weatherData?.hourly, todayYmdKst],
+  )
   const weeklyProps = {
     daily: weeklyDisplayDaily,
     hourly: weatherData?.hourly ?? [],
@@ -1196,6 +1216,28 @@ export default function HomePage() {
     </>
   )
 
+  // ── Mobile Tab 4 (주간예보) ──────────────────────────────────────────────
+  const weeklyLocationLabel = currentPlaceName ?? currentDongName ?? location.name?.trim() ?? '내 위치'
+  const tab4Header = (
+    <div className="px-4 py-3 flex items-center justify-between">
+      <p className="text-sm font-bold" style={{ color: 'var(--text)' }}>{weeklyLocationLabel}</p>
+      <span className="text-[11px]" style={{ color: 'var(--muted)' }}>주간예보</span>
+    </div>
+  )
+  const tab4Content = (
+    <>
+      <WeeklyForecastHero locationName={weeklyLocationLabel} />
+      {weeklyLoading && weeklyDailyFromToday.length === 0 ? (
+        <div className="h-64 animate-pulse rounded-2xl" style={{ background: 'var(--colors-surface-soft)' }} />
+      ) : (
+        <WeeklyForecastListMobile daily={weeklyDailyFromToday} locationName={weeklyLocationLabel} />
+      )}
+      <p className="text-[10px] text-center pt-1" style={{ color: 'var(--muted)' }}>
+        기상청 단기예보(오늘~+2일) + 중기예보(+3~+7일) · 오전 07~12시 / 오후 13~18시 기준 강수확률
+      </p>
+    </>
+  )
+
   // ── Desktop top ───────────────────────────────────────────────────────────
   const desktopTop = (
     <div className="space-y-4 w-full min-w-0 max-w-full">
@@ -1260,7 +1302,7 @@ export default function HomePage() {
       <div className="lg:hidden">
         <MobileLayout
           selectedTab={mobileLayoutTab}
-          onTabChange={setMobileLayoutTab}
+          onTabChange={handleMobileTabChange}
           tabs={[
             {
               key: 'weather',
@@ -1275,6 +1317,13 @@ export default function HomePage() {
               label: '외출옷 추천',
               header: tab2Header,
               content: tab2Content,
+            },
+            {
+              key: 'weekly',
+              icon: '📅',
+              label: '주간예보',
+              header: tab4Header,
+              content: tab4Content,
             },
             {
               key: 'other',

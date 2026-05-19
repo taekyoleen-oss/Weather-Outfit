@@ -20,7 +20,8 @@ export async function GET(req: NextRequest) {
   try {
     const regId = getMidRegionCode(nx, ny)
     const today = kstTodayYmd()
-    const key = `midfcst3:${regId}:${today}`
+    // cache key v4: amPop/pmPop 등 AM/PM 분리 필드 추가로 데이터 shape 변경 (2026-05) — v3 캐시 무효화 위해 버전 bump
+    const key = `midfcst4:${regId}:${today}`
     const data = await kvSWR(key, TTL.midForecast, () => fetchWeeklyForecast(nx, ny))
     const res = NextResponse.json(data)
     res.headers.set('Cache-Control', 'public, max-age=600, stale-while-revalidate=3600')

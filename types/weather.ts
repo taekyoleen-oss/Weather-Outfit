@@ -59,6 +59,14 @@ export interface DailyForecast {
   ptyCode: PtyCode
   pop: number
   hourly?: HourlyForecast[]
+  /** 오전(07~12시) 강수확률 % — 모바일 주간예보 탭용. KMA mid-forecast rnSt*Am 또는 단기예보 hourly AM 집계 */
+  amPop?: number
+  /** 오후(13~18시) 강수확률 % — KMA mid-forecast rnSt*Pm 또는 단기예보 hourly PM 집계 */
+  pmPop?: number
+  amSkyCode?: SkyCode
+  pmSkyCode?: SkyCode
+  amPtyCode?: PtyCode
+  pmPtyCode?: PtyCode
 }
 
 export interface DustData {
