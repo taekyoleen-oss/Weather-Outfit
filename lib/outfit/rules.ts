@@ -258,7 +258,7 @@ export function getBaseItems(
     if (gender === 'male') {
       items.push({ id: 'mid-cardigan', name: '맨투맨', icon: '🧥', category: 'mid', required: true, condition: '점퍼 안에 레이어드 — 함께 착용' })
     } else {
-      items.push({ id: 'mid-cardigan-f', name: '가디건', icon: '🧥', category: 'mid', required: true, condition: '점퍼 안에 레이어드 — 함께 착용' })
+      items.push({ id: 'mid-cardigan-f', name: '맨투맨', icon: '🧥', category: 'mid', required: true, condition: '점퍼 안에 레이어드 — 함께 착용' })
     }
   } else if (zone === 'cold' || zone === 'freezing') {
     if (gender === 'male') {

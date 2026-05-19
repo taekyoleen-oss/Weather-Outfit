@@ -6,14 +6,15 @@ const CHAR_BASE = '/outfit/characters'
  * 체감 구간 → 베이스 슬롯.
  * `public/outfit/characters/{female|male}-{slot}-v1.png` — 슬롯을 합치려면 여기서 동일 문자열로 매핑.
  *
- * warm(23~27℃): 가이드 라.2 「얇은 긴팔 셔츠」 항목 → 28℃+ 반팔과 시각적으로 구분되도록
- * 별도 슬롯 `warm-shirt`(긴팔 셔츠 캐릭터)를 사용합니다.
+ * - warm(23~27℃) → `warm-shirt`: 얇은 긴팔 셔츠 (28℃+ 반팔과 구분)
+ * - cool(12~17℃) → `cool-layered`: 맨투맨/가디건 + 얇은 점퍼 레이어드
+ *   (캐논 male-cool-v1을 보존하기 위해 별도 슬롯 사용)
  */
 const SLOT_BY_ZONE: Record<TempZone, string> = {
   hot: 'hot',
   warm: 'warm-shirt',
   mild: 'mild',
-  cool: 'cool',
+  cool: 'cool-layered',
   cold: 'cold',
   freezing: 'freezing',
 }

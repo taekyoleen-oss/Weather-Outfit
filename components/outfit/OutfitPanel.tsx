@@ -71,15 +71,15 @@ interface Props {
 type SensitivityLevel = -2 | 0 | 2
 
 const SENSITIVITY_OPTIONS: { value: SensitivityLevel; label: string; emoji: string; desc: string }[] = [
-  { value: -2, label: '더위 강함', emoji: '🥶', desc: '더위를 덜 타는 편이에요' },
+  { value: -2, label: '현재-2도', emoji: '🥶', desc: '더위를 덜 타는 편이에요' },
   { value: 0,  label: '체감 보통', emoji: '😊', desc: '평균 체감' },
-  { value: 2,  label: '추위 강함', emoji: '🥵', desc: '추위를 덜 타는 편이에요' },
+  { value: 2,  label: '현재+2도', emoji: '🥵', desc: '추위를 덜 타는 편이에요' },
 ]
 
 const SENSITIVITY_LABEL_MAP: Record<SensitivityLevel, string> = {
-  [-2]: '더위 강함',
+  [-2]: '현재-2도',
   [0]: '체감 보통',
-  [2]: '추위 강함',
+  [2]: '현재+2도',
 }
 
 const ACTIVITY_DEFAULT_DURATION_HOURS: Record<ActivityType, number> = {

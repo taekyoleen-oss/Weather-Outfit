@@ -82,13 +82,13 @@ const CANON_FEMALE = 'female-warm-v1.png'
 const SLOTS = {
   // 베이스 온도 슬롯 (남자)
   'male-freezing-v1': { gender: 'male', outfit: 'Long navy puffer coat (knee-length), thick grey scarf, dark thermal pants, dark winter boots, both hands in pockets.' },
-  'male-cold-v1':     { gender: 'male', outfit: 'Navy or charcoal wool pea coat over a cream knit sweater, dark wool pants, brown leather lace-up boots.' },
-  'male-mild-v1':     { gender: 'male', outfit: 'Beige knit cardigan open over a white tee, light beige slacks, white minimalist sneakers.' },
+  'male-cold-v1':     { gender: 'male', outfit: 'Hip-length quilted light puffer jacket (matte navy, horizontal stitched channels, full center zip closed up to mid-chest, hem ending right at the hip — clearly NOT a long coat, NOT a wool overcoat) over a cream crewneck knit sweater visible at the collar, charcoal wool pants, brown leather lace-up boots, both hands lightly tucked in jacket pockets.' },
+  'male-mild-v1':     { gender: 'male', outfit: 'Plain ivory crewneck SWEATSHIRT (loose cotton pullover, rounded ribbed neckline, ribbed cuffs at the wrists, no buttons, no zip — a classic 맨투맨 / crew-neck sweatshirt), light beige cotton chinos, white minimalist sneakers, both hands relaxed at the sides.' },
   'male-warm-v1':     { gender: 'male', outfit: 'Plain white short-sleeve T-shirt, slim light-blue jeans, white sneakers.' },
   'male-hot-v1':      { gender: 'male', outfit: 'Light pastel-blue short-sleeve T-shirt, beige knee-length shorts, white slip-on sneakers.' },
   // 베이스 온도 슬롯 (여자) — warm-v1 은 캐논, 생성 대상에서 제외
   'female-freezing-v1': { gender: 'female', outfit: 'Long ivory or pastel-blue puffer coat, soft cream scarf, slim thermal pants, white snow boots.' },
-  'female-cold-v1':     { gender: 'female', outfit: 'Beige or camel mid-length wool coat over a cream knit, grey wide-leg trousers, brown ankle boots.' },
+  'female-cold-v1':     { gender: 'female', outfit: 'Hip-length quilted light puffer jacket (matte warm beige or soft camel, horizontal stitched channels, full center zip closed up to mid-chest, hem ending right at the hip — clearly NOT a long coat, NOT a trench, NOT a wool overcoat) over a cream knit crewneck visible at the collar, grey wide-leg trousers, brown ankle boots, both hands lightly tucked in jacket pockets.' },
   'female-cool-v1':     { gender: 'female', outfit: 'Sage green cardigan open over a white tee, light blue ankle pants, off-white sneakers.' },
   'female-mild-v1':     { gender: 'female', outfit: 'Pink ribbed cardigan open over a cream knit top, blue ankle jeans, ivory sneakers.' },
   'female-hot-v1':      { gender: 'female', outfit: 'Soft coral short-sleeve T-shirt, mint-green knee-length shorts, white sneakers.' },
@@ -110,6 +110,9 @@ const SLOTS = {
   // 23~27℃ 「얇은 긴팔 셔츠」 슬롯 — 28℃+ 반팔과 시각적으로 명확히 구분되도록 긴팔 셔츠
   'male-warm-shirt-v1':   { gender: 'male',   outfit: 'Plain ivory thin LONG-SLEEVE button-up cotton shirt with both cuffs fully buttoned at the wrists (sleeves NOT rolled up), slim light-blue jeans, white sneakers. Sleeves must clearly cover the entire arm down to the wrists.' },
   'female-warm-shirt-v1': { gender: 'female', outfit: 'Plain ivory thin LONG-SLEEVE button-up cotton blouse with both cuffs fully buttoned at the wrists (sleeves NOT rolled up), soft pink ankle pants, white sneakers. Sleeves must clearly cover the entire arm down to the wrists.' },
+  // 12~17℃ 「맨투맨/가디건 + 얇은 점퍼」 레이어드 슬롯 — 캐논(male-cool-v1) 보존을 위해 별도 슬롯
+  'male-cool-layered-v1':   { gender: 'male',   outfit: 'Heather grey crewneck SWEATSHIRT (loose cotton pullover, rounded ribbed neckline, ribbed cuffs — a classic 맨투맨) layered UNDER an OPEN hip-length light denim jacket (clearly visible both jacket panels are open showing the grey sweatshirt down the center), light beige slacks, white minimalist sneakers, both hands relaxed at the sides.' },
+  'female-cool-layered-v1': { gender: 'female', outfit: 'Soft cream crewneck SWEATSHIRT (loose cotton pullover, rounded ribbed neckline — a classic 맨투맨) layered UNDER an OPEN hip-length light denim jacket (both jacket panels open showing the cream sweatshirt down the center), light blue ankle pants, off-white sneakers, both hands relaxed at the sides.' },
 }
 
 const ai = new GoogleGenAI({ apiKey: API_KEY })
