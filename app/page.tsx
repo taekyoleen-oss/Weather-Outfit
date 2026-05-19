@@ -796,6 +796,10 @@ export default function HomePage() {
   const outfitPeriodEndHour = periodPresetEnd
     ? OUTFIT_PERIODS[getOutfitPeriodIndex(periodPresetEnd.repHour)]?.end
     : undefined
+  // 범위 선택의 끝 칩 일자 — picker에 넘겨 복원 시 시작~끝 연속 칩을 모두 하이라이트하기 위함
+  const effectiveEndScheduleYmd = periodPresetEnd
+    ? addCalendarDaysFromKstYmd(todayYmdKst, periodPresetEnd.dayOffset)
+    : null
 
   const currentDongName = extractDongName(location.name, location.address)
   const normalizedLocationName = location.name?.trim()
@@ -855,6 +859,8 @@ export default function HomePage() {
       hourly={weatherData?.hourly ?? []}
       selectedRepHour={periodPreset.repHour}
       selectedScheduleYmd={effectiveScheduleYmd}
+      selectedEndRepHour={periodPresetEnd?.repHour ?? null}
+      selectedEndScheduleYmd={effectiveEndScheduleYmd}
       sunsetTime={sunriseSunset?.sunset}
       onSelectPreset={handleSelectPreset}
       onRangeSelect={handleRangeSelect}

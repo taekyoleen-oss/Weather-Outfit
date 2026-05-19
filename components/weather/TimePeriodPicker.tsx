@@ -96,6 +96,10 @@ interface Props {
   selectedRepHour: number
   /** 복장·날씨 기준일(KST yyyymmdd). 칩 선택 표시는 달력 일자와 대표 시각으로 맞춘다 */
   selectedScheduleYmd: string
+  /** 연속 범위 선택의 끝 칩 repHour. null/undefined면 단일 선택 */
+  selectedEndRepHour?: number | null
+  /** 연속 범위 선택의 끝 칩 기준일(KST yyyymmdd). null/undefined면 단일 선택 */
+  selectedEndScheduleYmd?: string | null
   sunsetTime?: string
   onSelectPreset: (repHour: number, dayOffset: number) => void
   /** 연속 시간대 범위 선택 시 끝 칩 정보 (단일 선택이면 start === end) */
@@ -110,12 +114,28 @@ interface Props {
 /** 선택된 칩을 (OUTFIT_PERIODS 인덱스, 일자 오프셋) 쌍으로 표현 */
 type SelectedChip = { periodIdx: number; dayOffset: number }
 
+/** 시작 칩·끝 칩으로부터 연속 칩 배열을 생성 (chipOrder 기준 시작~끝 모든 인덱스 포함) */
+function buildChipRange(start: SelectedChip, end: SelectedChip, periodCount: number): SelectedChip[] {
+  const order = (c: SelectedChip) => c.dayOffset * periodCount + c.periodIdx
+  const sOrd = order(start)
+  const eOrd = order(end)
+  const lo = Math.min(sOrd, eOrd)
+  const hi = Math.max(sOrd, eOrd)
+  const chips: SelectedChip[] = []
+  for (let o = lo; o <= hi; o++) {
+    chips.push({ dayOffset: Math.floor(o / periodCount), periodIdx: o % periodCount })
+  }
+  return chips
+}
+
 export function TimePeriodPicker({
   currentHour,
   currentConditions,
   hourly,
   selectedRepHour,
   selectedScheduleYmd,
+  selectedEndRepHour,
+  selectedEndScheduleYmd,
   sunsetTime,
   onSelectPreset,
   onRangeSelect,
@@ -140,11 +160,21 @@ export function TimePeriodPicker({
   const isFullDayMode = targetDayOffset > 0
 
   // ── 선택 상태: (periodIdx, dayOffset) 쌍 배열로 관리 ─────────────────────
-  // currentIdx 변화에 독립적이므로 시간이 지나도 올바른 칩이 유지됨
+  // currentIdx 변화에 독립적이므로 시간이 지나도 올바른 칩이 유지됨.
+  // selectedEndRepHour·selectedEndScheduleYmd가 주어지면 시작~끝 연속 칩으로 초기화 (범위 복원).
   const [selectedChips, setSelectedChips] = useState<SelectedChip[]>(() => {
-    const selPeriodIdx = getOutfitPeriodIndex(selectedRepHour)
-    const selDayOffset = Math.max(0, diffDaysYmd(kstTodayYmd(), selectedScheduleYmd))
-    return [{ periodIdx: selPeriodIdx, dayOffset: selDayOffset }]
+    const startChip: SelectedChip = {
+      periodIdx: getOutfitPeriodIndex(selectedRepHour),
+      dayOffset: Math.max(0, diffDaysYmd(kstTodayYmd(), selectedScheduleYmd)),
+    }
+    if (selectedEndRepHour != null && selectedEndScheduleYmd != null) {
+      const endChip: SelectedChip = {
+        periodIdx: getOutfitPeriodIndex(selectedEndRepHour),
+        dayOffset: Math.max(0, diffDaysYmd(kstTodayYmd(), selectedEndScheduleYmd)),
+      }
+      return buildChipRange(startChip, endChip, periodCount)
+    }
+    return [startChip]
   })
 
   // 내부 클릭으로 유발된 props 변경은 상태를 리셋하지 않도록 플래그 사용
@@ -155,12 +185,22 @@ export function TimePeriodPicker({
       internalUpdateRef.current = false
       return
     }
-    // 외부(위치 변경 등) 변화 → 단일 칩으로 리셋
-    const selPeriodIdx = getOutfitPeriodIndex(selectedRepHour)
-    const selDayOffset = Math.max(0, diffDaysYmd(todayYmd, selectedScheduleYmd))
-    setSelectedChips([{ periodIdx: selPeriodIdx, dayOffset: selDayOffset }])
+    // 외부(위치 변경 등) 변화 → props로부터 칩 배열 재구성
+    const startChip: SelectedChip = {
+      periodIdx: getOutfitPeriodIndex(selectedRepHour),
+      dayOffset: Math.max(0, diffDaysYmd(todayYmd, selectedScheduleYmd)),
+    }
+    if (selectedEndRepHour != null && selectedEndScheduleYmd != null) {
+      const endChip: SelectedChip = {
+        periodIdx: getOutfitPeriodIndex(selectedEndRepHour),
+        dayOffset: Math.max(0, diffDaysYmd(todayYmd, selectedEndScheduleYmd)),
+      }
+      setSelectedChips(buildChipRange(startChip, endChip, periodCount))
+    } else {
+      setSelectedChips([startChip])
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedRepHour, selectedScheduleYmd])
+  }, [selectedRepHour, selectedScheduleYmd, selectedEndRepHour, selectedEndScheduleYmd])
 
   function chipOrder(c: SelectedChip) {
     return c.dayOffset * periodCount + c.periodIdx
