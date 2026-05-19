@@ -29,6 +29,8 @@ import { TimePeriodPicker } from '@/components/weather/TimePeriodPicker'
 import { OutfitPanel } from '@/components/outfit/OutfitPanel'
 import { WeeklyForecastHero } from '@/components/weather/WeeklyForecastHero'
 import { WeeklyForecastListMobile } from '@/components/weather/WeeklyForecastListMobile'
+import { WeeklyCurrentSnapshot } from '@/components/weather/WeeklyCurrentSnapshot'
+import { WeeklySummaryStrip } from '@/components/weather/WeeklySummaryStrip'
 import { SpotPanel } from '@/components/spot/SpotPanel'
 import { UltraSrtFcstCard } from '@/components/weather/UltraSrtFcstCard'
 import { PrecipAlertModal } from '@/components/weather/PrecipAlertModal'
@@ -1227,10 +1229,12 @@ export default function HomePage() {
   const tab4Content = (
     <>
       <WeeklyForecastHero locationName={weeklyLocationLabel} />
+      <WeeklyCurrentSnapshot weather={displayWeather} dust={dust} compare={openMeteoCompare} locationName={weeklyLocationLabel} />
+      <WeeklySummaryStrip daily={weeklyDailyFromToday} />
       {weeklyLoading && weeklyDailyFromToday.length === 0 ? (
         <div className="h-64 animate-pulse rounded-2xl" style={{ background: 'var(--colors-surface-soft)' }} />
       ) : (
-        <WeeklyForecastListMobile daily={weeklyDailyFromToday} locationName={weeklyLocationLabel} />
+        <WeeklyForecastListMobile daily={weeklyDailyFromToday} locationName={weeklyLocationLabel} sunriseSunset={sunriseSunset} />
       )}
       <p className="text-[10px] text-center pt-1" style={{ color: 'var(--muted)' }}>
         기상청 단기예보(오늘~+2일) + 중기예보(+3~+7일) · 오전 07~12시 / 오후 13~18시 기준 강수확률
