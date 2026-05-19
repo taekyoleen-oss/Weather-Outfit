@@ -43,6 +43,7 @@ import {
   kstTodayYmd,
   diffCalendarDaysYmd,
   addCalendarDaysFromKstYmd,
+  currentHourKst,
 } from '@/lib/utils/timeOfDay'
 import { useNowMinute } from '@/lib/hooks/useNowMinute'
 import { feelsLike, weatherLabel, weatherEmojiFromLabel, pickIllustKey, illustFile, uvLabel, uvColor, o3GradeLabel, o3GradeColor } from '@/lib/utils/formatWeather'
@@ -69,6 +70,81 @@ import type {
 } from '@/types/weather'
 import type { LocationInfo } from '@/types/location'
 import type { OpenMeteoDailyCompare } from '@/lib/weather/openMeteoCompare'
+
+// ── 외출옷 시간대·날짜 선택 영구 저장 (localStorage) ──────────────────────────
+// 사용자가 선택한 시간대/날짜가 「미래」이면 앱 재실행 후 복원, 「과거」면 무시하고 현재로 리셋.
+const OUTFIT_SCHED_STORAGE_KEY = 'wf:outfit:schedule'
+
+interface OutfitScheduleSnapshot {
+  periodPreset: { repHour: number; dayOffset: number }
+  periodPresetEnd: { repHour: number; dayOffset: number } | null
+  scheduleYmd: string
+  wxActivityHours: { start: number; end: number } | null
+}
+
+function loadOutfitSched(): OutfitScheduleSnapshot | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const v = localStorage.getItem(OUTFIT_SCHED_STORAGE_KEY)
+    return v ? (JSON.parse(v) as OutfitScheduleSnapshot) : null
+  } catch { return null }
+}
+
+function saveOutfitSched(s: OutfitScheduleSnapshot): void {
+  if (typeof window === 'undefined') return
+  try { localStorage.setItem(OUTFIT_SCHED_STORAGE_KEY, JSON.stringify(s)) } catch { /* ignore */ }
+}
+
+/** 선택된 시간대 중 가장 늦은 종료 모먼트(KST)가 현재 시각보다 미래인지 판정. 동일 시각 포함. */
+function isOutfitSchedFuture(s: OutfitScheduleSnapshot, nowYmd: string, nowHour: number): boolean {
+  const endChip = s.periodPresetEnd ?? s.periodPreset
+  const endPeriod = OUTFIT_PERIODS[getOutfitPeriodIndex(endChip.repHour)]
+  if (!endPeriod) return false
+  const endYmd = addCalendarDaysFromKstYmd(s.scheduleYmd, endChip.dayOffset)
+  const dayDiff = diffCalendarDaysYmd(nowYmd, endYmd)
+  if (dayDiff < 0) return false
+  if (dayDiff > 0) return true
+  // 같은 날: wxActivityHours.end가 있으면 그 값, 없으면 칩 구간 종료시
+  const endHour = s.wxActivityHours?.end ?? endPeriod.end
+  return endHour >= nowHour
+}
+
+/**
+ * 저장된 snapshot의 scheduleYmd가 「저장 당시의 오늘」을 가리킬 수 있으므로
+ * 실제 선택 절대일자를 기준으로 새 scheduleYmd·dayOffset을 재계산.
+ * - 원본 scheduleYmd가 미래(today_now보다 큼) → 풀데이 모드로 저장된 것이므로 그대로 유지
+ * - 원본 scheduleYmd가 오늘 이하 → 롤링 모드. scheduleYmd=today_now로 정규화하고 offset 재계산
+ */
+function normalizeRestoredSnap(snap: OutfitScheduleSnapshot, nowYmd: string): OutfitScheduleSnapshot {
+  if (diffCalendarDaysYmd(nowYmd, snap.scheduleYmd) > 0) return snap
+
+  const startActualYmd = addCalendarDaysFromKstYmd(snap.scheduleYmd, snap.periodPreset.dayOffset)
+  const newStartOffset = Math.max(0, diffCalendarDaysYmd(nowYmd, startActualYmd))
+  let newPresetEnd: OutfitScheduleSnapshot['periodPresetEnd'] = null
+  if (snap.periodPresetEnd) {
+    const endActualYmd = addCalendarDaysFromKstYmd(snap.scheduleYmd, snap.periodPresetEnd.dayOffset)
+    newPresetEnd = {
+      repHour: snap.periodPresetEnd.repHour,
+      dayOffset: Math.max(0, diffCalendarDaysYmd(nowYmd, endActualYmd)),
+    }
+  }
+  return {
+    periodPreset: { repHour: snap.periodPreset.repHour, dayOffset: newStartOffset },
+    periodPresetEnd: newPresetEnd,
+    scheduleYmd: nowYmd,
+    wxActivityHours: snap.wxActivityHours,
+  }
+}
+
+/** 첫 마운트 시 한 번만 호출 — 미래 selection이면 정규화된 snapshot, 아니면 null */
+function getInitialRestoredSnap(): OutfitScheduleSnapshot | null {
+  const snap = loadOutfitSched()
+  if (!snap) return null
+  const nowYmd = kstTodayYmd()
+  const nowHour = currentHourKst()
+  if (!isOutfitSchedFuture(snap, nowYmd, nowHour)) return null
+  return normalizeRestoredSnap(snap, nowYmd)
+}
 
 // ── Spot data shape (subset used by page) ────────────────────────────────────
 interface SpotData {
@@ -345,6 +421,11 @@ export default function HomePage() {
   // ── Time / period state (for outfit panel) ────────────────────────────────
   // OUTFIT_PERIODS(7개) 기준의 현재 구간을 사용해 「지금」 칩과 초기 선택을 일치시킴.
   // TIME_PERIODS(4개) repHour를 쓰면 10~12·16~18시처럼 OUTFIT 칩에 없는 시간대가 선택돼 이미 지난 구간이 잡힐 수 있음.
+  //
+  // 서버 렌더는 항상 현재 시각 기준 기본값으로 초기화 → hydration mismatch 회피.
+  // 사용자 마지막 선택의 localStorage 복원은 하단 useEffect(첫 마운트)에서 수행:
+  //   · 종료 모먼트가 「미래」이면 해당 값으로 setState → 첫 location/weather reset은 ref로 스킵
+  //   · 「과거」면 무시하고 현재 시간대 유지
   const [periodPreset, setPeriodPreset] = useState(() => ({
     repHour: OUTFIT_PERIODS[getOutfitPeriodIndex(hour)]!.repHour,
     dayOffset: 0,
@@ -353,6 +434,9 @@ export default function HomePage() {
   const [periodPresetEnd, setPeriodPresetEnd] = useState<{ repHour: number; dayOffset: number } | null>(null)
   const [scheduleYmd, setScheduleYmd] = useState(() => kstTodayYmd())
   const [wxActivityHours, setWxActivityHours] = useState<{ start: number; end: number } | null>(null)
+
+  // 복원 시도가 완료되었는지 — false면 save effect는 발화하지 않음 (복원의 setState가 적용된 다음 렌더부터 저장 시작)
+  const [didRestoreAttempt, setDidRestoreAttempt] = useState<boolean>(false)
 
   const todayYmdKst = kstTodayYmd()
   const presetChipPeriod = useMemo(
@@ -427,22 +511,44 @@ export default function HomePage() {
     requestGps({ reason: 'auto', silent: true })
   }, [requestGps])
 
-  // ── Reset outfit period on location change ────────────────────────────────
+  // ── 첫 마운트 후 localStorage 복원 (hydration 안전을 위해 useEffect에서 처리) ──
+  // 사용자 마지막 선택의 종료 모먼트가 「미래」이면 그 값으로 setState.
+  // didRestoreAttempt가 true로 바뀐 다음 렌더부터 save effect가 발화하므로,
+  // batched setState로 인한 「복원 직후 default 덮어쓰기」 race를 회피.
   useEffect(() => {
+    const snap = getInitialRestoredSnap()
+    if (snap) {
+      setPeriodPreset(snap.periodPreset)
+      setPeriodPresetEnd(snap.periodPresetEnd)
+      setScheduleYmd(snap.scheduleYmd)
+      setWxActivityHours(snap.wxActivityHours)
+    }
+    setDidRestoreAttempt(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // ── Reset outfit period on location *user* change ──────────────────────────
+  // 사용자가 명시적으로 위치를 바꾼 경우(다른 nx/ny)에만 reset. 초기 GPS 자동 해석·동일 위치 재페치는 스킵.
+  // (이전 구현은 모든 location 변화·weatherData 페치마다 reset해서 영구 저장된 선택을 덮어썼음)
+  const lastSeenLocationKeyRef = useRef<string | null>(null)
+  useEffect(() => {
+    const key = `${location.nx}|${location.ny}`
+    const prev = lastSeenLocationKeyRef.current
+    lastSeenLocationKeyRef.current = key
+    if (prev === null) return // 첫 관측: 복원·정상 초기화에 맡김
+    if (prev === key) return  // 동일 위치(GPS 재해석 등): reset 불필요
     setPeriodPreset({ repHour: OUTFIT_PERIODS[getOutfitPeriodIndex(hour)]!.repHour, dayOffset: 0 })
     setPeriodPresetEnd(null)
     setScheduleYmd(kstTodayYmd())
     setWxActivityHours(null)
   }, [location]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── 외출옷 시간대·날짜 선택을 localStorage에 영구 저장 ─────────────────────────
+  // 복원 시도가 완료된 후 (didRestoreAttempt=true)부터 저장 — 첫 commit의 default 덮어쓰기를 막음.
   useEffect(() => {
-    if (weatherData) {
-      setPeriodPreset({ repHour: OUTFIT_PERIODS[getOutfitPeriodIndex(hour)]!.repHour, dayOffset: 0 })
-      setPeriodPresetEnd(null)
-      setScheduleYmd(kstTodayYmd())
-      setWxActivityHours(null)
-    }
-  }, [weatherData]) // eslint-disable-line react-hooks/exhaustive-deps
+    if (!didRestoreAttempt) return
+    saveOutfitSched({ periodPreset, periodPresetEnd, scheduleYmd, wxActivityHours })
+  }, [didRestoreAttempt, periodPreset, periodPresetEnd, scheduleYmd, wxActivityHours])
 
   // ── Auto-shift to '지금' when the selected outfit period has passed ────────
   // 시간이 흘러 선택된 오늘 구간이 모두 경과(혹은 칩 목록에 없음)하면 자동으로 현재 OUTFIT_PERIODS 구간으로 보정.
