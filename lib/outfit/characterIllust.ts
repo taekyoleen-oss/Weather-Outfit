@@ -25,9 +25,18 @@ const SLOT_BY_ZONE: Record<TempZone, string> = {
  *
  * 1차 권장 PNG: `rain-light`, `rain-heavy`, `snow` (남·여 총 6장)
  * 2차 권장 PNG: `sunny-uv`, `windy` (남·여 총 4장)
+ *
+ * 온도-zone 변형(2026-05): rain-light는 온도에 따라 의상이 크게 달라지므로
+ * `rain-light-{mild|cool|cold}` 변형을 별도 등록. resolver가 zone-suffix를 먼저 시도하고
+ * 없으면 base 슬롯으로 폴백한다. (rain-heavy·snow는 보온/방수 위주라 변형 불필요)
  */
 const AVAILABLE_SITUATION_SLOTS = new Set<string>([
   'rain-light',
+  'rain-light-hot',
+  'rain-light-warm',
+  'rain-light-mild',
+  'rain-light-cool',
+  'rain-light-cold',
   'rain-heavy',
   'snow',
   'sunny-uv',
@@ -45,6 +54,9 @@ export interface CharacterSlotContext {
 /**
  * 날씨·체감 조건 → 캐릭터 슬롯.
  * 우선순위: 강설 > 강수(강/약) > 강한 햇빛(여름·봄가을 더위) > 강풍 > 온도 폴백.
+ *
+ * Zone-aware 매칭: 후보 슬롯에 대해 `{slot}-{zone}` 변형이 등록되어 있으면 우선 사용,
+ * 없으면 base 슬롯으로 폴백. 예) mild + 약한 비 → 'rain-light-mild' → 없으면 'rain-light'.
  * 미등록 슬롯은 온도 슬롯으로 자동 폴백.
  */
 export function pickCharacterSlot(ctx: CharacterSlotContext): string {
@@ -57,6 +69,8 @@ export function pickCharacterSlot(ctx: CharacterSlotContext): string {
   if (showSunshine && (tempZone === 'hot' || tempZone === 'warm')) candidates.push('sunny-uv')
   if (windAlert) candidates.push('windy')
   for (const slot of candidates) {
+    const zoneVariant = `${slot}-${tempZone}`
+    if (AVAILABLE_SITUATION_SLOTS.has(zoneVariant)) return zoneVariant
     if (AVAILABLE_SITUATION_SLOTS.has(slot)) return slot
   }
   return SLOT_BY_ZONE[tempZone]
