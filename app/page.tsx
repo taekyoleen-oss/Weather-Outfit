@@ -527,21 +527,10 @@ export default function HomePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ── Reset outfit period on location *user* change ──────────────────────────
-  // 사용자가 명시적으로 위치를 바꾼 경우(다른 nx/ny)에만 reset. 초기 GPS 자동 해석·동일 위치 재페치는 스킵.
-  // (이전 구현은 모든 location 변화·weatherData 페치마다 reset해서 영구 저장된 선택을 덮어썼음)
-  const lastSeenLocationKeyRef = useRef<string | null>(null)
-  useEffect(() => {
-    const key = `${location.nx}|${location.ny}`
-    const prev = lastSeenLocationKeyRef.current
-    lastSeenLocationKeyRef.current = key
-    if (prev === null) return // 첫 관측: 복원·정상 초기화에 맡김
-    if (prev === key) return  // 동일 위치(GPS 재해석 등): reset 불필요
-    setPeriodPreset({ repHour: OUTFIT_PERIODS[getOutfitPeriodIndex(hour)]!.repHour, dayOffset: 0 })
-    setPeriodPresetEnd(null)
-    setScheduleYmd(kstTodayYmd())
-    setWxActivityHours(null)
-  }, [location]) // eslint-disable-line react-hooks/exhaustive-deps
+  // 외출옷 시간대·날짜 선택은 위치/날씨 페치에 의존하지 않음 (location 자동 reset 제거).
+  // 초기 location 해석 시퀀스(DEFAULT → 저장값 → GPS)에서 nx/ny가 한 번이라도 바뀌면 reset이 발화해
+  // 복원된 미래 선택을 덮어쓰는 문제를 차단. 위치를 바꾸어도 시간대·날짜 선택은 그대로 유지하고
+  // 추천 엔진은 새 위치의 날씨로 자연스럽게 갱신된다.
 
   // ── 외출옷 시간대·날짜 선택을 localStorage에 영구 저장 ─────────────────────────
   // 복원 시도가 완료된 후 (didRestoreAttempt=true)부터 저장 — 첫 commit의 default 덮어쓰기를 막음.
@@ -865,7 +854,7 @@ export default function HomePage() {
       }
       hourly={weatherData?.hourly ?? []}
       selectedRepHour={periodPreset.repHour}
-      selectedScheduleYmd={scheduleYmd}
+      selectedScheduleYmd={effectiveScheduleYmd}
       sunsetTime={sunriseSunset?.sunset}
       onSelectPreset={handleSelectPreset}
       onRangeSelect={handleRangeSelect}
