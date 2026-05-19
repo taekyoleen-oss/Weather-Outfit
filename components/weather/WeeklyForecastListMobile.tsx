@@ -85,8 +85,8 @@ function RangeBar({ dayMin, dayMax, weekMin, weekMax }: { dayMin: number; dayMax
   const widthPct = Math.max(8, endPct - startPct)
   return (
     <div
-      className="relative h-1.5 rounded-full overflow-hidden"
-      style={{ width: 84, background: 'rgba(120,113,108,0.18)' }}
+      className="relative h-1.5 flex-1 min-w-[36px] rounded-full overflow-hidden"
+      style={{ background: 'rgba(120,113,108,0.18)' }}
       aria-label={`최저 ${Math.round(dayMin)}도 최고 ${Math.round(dayMax)}도`}
     >
       <div
@@ -210,12 +210,10 @@ export function WeeklyForecastListMobile({ daily, locationName, sunriseSunset }:
               </div>
 
               {/* 우: 최저/최고 + 범위 바 */}
-              <div className="flex flex-col items-end gap-0.5">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-bold tabular-nums" style={{ color: '#1d4ed8' }}>{Math.round(d.minTemp)}°</span>
-                  <RangeBar dayMin={d.minTemp} dayMax={d.maxTemp} weekMin={weekMin} weekMax={weekMax} />
-                  <span className="text-xs font-bold tabular-nums" style={{ color: '#dc2626' }}>{Math.round(d.maxTemp)}°</span>
-                </div>
+              <div className="flex items-center gap-1 w-full min-w-0">
+                <span className="text-xs font-bold tabular-nums shrink-0" style={{ color: '#1d4ed8' }}>{Math.round(d.minTemp)}°</span>
+                <RangeBar dayMin={d.minTemp} dayMax={d.maxTemp} weekMin={weekMin} weekMax={weekMax} />
+                <span className="text-xs font-bold tabular-nums shrink-0" style={{ color: '#dc2626' }}>{Math.round(d.maxTemp)}°</span>
               </div>
             </li>
           )
