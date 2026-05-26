@@ -195,7 +195,8 @@ export function getBaseItems(
   zone: TempZone,
   gender: GenderType,
   activity: ActivityType,
-  feelsLike?: number
+  feelsLike?: number,
+  uvIndex: number = 0,
 ): OutfitItem[] {
   const items: OutfitItem[] = []
 
@@ -211,14 +212,17 @@ export function getBaseItems(
   // TOP layer — 가이드 라.2: 28℃+ 반팔·얇은 긴팔 / 23~27℃ 얇은 반팔·긴팔·셔츠
   if (zone === 'hot') {
     if (gender === 'male') {
-      items.push({ id: 'top-tshirt', name: '얇은 티셔츠', icon: '👕', category: 'top', required: true })
+      items.push({ id: 'top-tshirt', name: '얇은 (반팔)셔츠', icon: '👕', category: 'top', required: true })
     } else {
-      items.push({ id: 'top-blouse', name: '얇은 티셔츠', icon: '👚', category: 'top', required: true })
+      items.push({ id: 'top-blouse', name: '얇은 (반팔)셔츠', icon: '👚', category: 'top', required: true })
     }
     // 골프·해변·스키는 활동 전용 모자·선글라스가 별도로 있음
-    if (activity !== 'golf' && activity !== 'beach' && activity !== 'ski') {
-      items.push({ id: 'acc-hot-hat', name: '모자', icon: '🧢', category: 'acc', required: true })
-      items.push({ id: 'acc-hot-sunglasses', name: '선글라스', icon: '🕶️', category: 'acc', required: true })
+    // UV 3 이상일 때만 추가 (기상청 생활기상지수 — 보통 이상)
+    if (activity !== 'golf' && activity !== 'beach' && activity !== 'ski' && uvIndex >= 3) {
+      const uvHigh = uvIndex >= 6
+      const uvCond = `UV ${uvIndex} — 자외선 ${uvHigh ? '높음' : '보통'}`
+      items.push({ id: 'acc-hot-hat', name: '모자', icon: '🧢', category: 'acc', required: uvHigh, condition: uvCond })
+      items.push({ id: 'acc-hot-sunglasses', name: '선글라스', icon: '🕶️', category: 'acc', required: uvHigh, condition: uvCond })
     }
   } else if (zone === 'warm') {
     if (gender === 'male') {
@@ -373,7 +377,12 @@ function tag(activity: ActivityType): string | undefined {
 }
 
 // Activity-specific additional items
-export function getActivityItems(activity: ActivityType, zone: TempZone, gender: GenderType): OutfitItem[] {
+export function getActivityItems(
+  activity: ActivityType,
+  zone: TempZone,
+  gender: GenderType,
+  uvIndex: number = 0,
+): OutfitItem[] {
   const items: OutfitItem[] = []
   const activityTag = tag(activity)
 
@@ -430,14 +439,16 @@ export function getActivityItems(activity: ActivityType, zone: TempZone, gender:
     items.push({ id: 'acc-bag-f', name: '에코백 / 숄더백', icon: '👜', category: 'acc', required: false, condition: '스타일 포인트' })
   }
 
-  // 따뜻한 구간: 가이드 라.2는 23~27℃에 모자 필수는 아님 — UV 높을 때만 권장 (28℃+는 getBaseItems)
-  if (zone === 'warm') {
+  // 따뜻한 구간: 가이드 라.2는 23~27℃에 모자 필수는 아님 — UV 3 이상일 때만 권장 (28℃+는 getBaseItems)
+  if (zone === 'warm' && uvIndex >= 3) {
+    const uvHigh = uvIndex >= 6
+    const uvCond = `UV ${uvIndex} — 자외선 ${uvHigh ? '높음' : '보통'}`
     if (gender === 'female') {
-      items.push({ id: 'acc-hat-sun-f', name: '모자', icon: '👒', category: 'acc', required: false, condition: 'UV 3 이상 권장' })
+      items.push({ id: 'acc-hat-sun-f', name: '모자', icon: '👒', category: 'acc', required: uvHigh, condition: uvCond })
     } else {
-      items.push({ id: 'acc-hat-sun', name: '모자', icon: '👒', category: 'acc', required: false, condition: 'UV 3 이상 권장' })
+      items.push({ id: 'acc-hat-sun', name: '모자', icon: '👒', category: 'acc', required: uvHigh, condition: uvCond })
     }
-    items.push({ id: 'acc-sunglasses-warm', name: '선글라스', icon: '🕶️', category: 'acc', required: false, condition: '자외선 높을 때' })
+    items.push({ id: 'acc-sunglasses-warm', name: '선글라스', icon: '🕶️', category: 'acc', required: uvHigh, condition: uvCond })
   }
 
   return items

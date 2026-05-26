@@ -129,8 +129,8 @@ export function recommendOutfit(input: OutfitInput): OutfitResult {
   const zone = getTempZone(flZone)
 
   // Collect all items
-  const baseItems = getBaseItems(zone, input.gender, input.activity, flZone)
-  const activityItems = getActivityItems(input.activity, zone, input.gender)
+  const baseItems = getBaseItems(zone, input.gender, input.activity, flZone, input.uvIndex)
+  const activityItems = getActivityItems(input.activity, zone, input.gender, input.uvIndex)
   const microclimateItems = getMicroclimateItems(input.activity, baseZone, input.gender)
 
   // Deduplicate by id
