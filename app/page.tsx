@@ -682,11 +682,16 @@ export default function HomePage() {
     setWxActivityHours(null)
   }
 
+  // TimePeriodPicker 강제 동기화 트리거 — 날짜·오늘 버튼 변경 시 칩의 시각 선택을 강제 리셋
+  const [tpForceSync, setTpForceSync] = useState(0)
+
   // 날짜 입력·오늘 버튼: scheduleYmd도 함께 변경해 풀데이 모드 전환
   function handleSelectPresetWithDateUpdate(repHour: number, dayOffset: number) {
     setPeriodPreset({ repHour, dayOffset })
+    setPeriodPresetEnd(null)  // 범위 선택 초기화
     setScheduleYmd(addCalendarDaysFromKstYmd(kstTodayYmd(), dayOffset))
     setWxActivityHours(null)
+    setTpForceSync((n) => n + 1)  // 칩 시각 상태 강제 리셋(부모 state가 같아도)
   }
 
   function handleRangeSelect(
@@ -886,6 +891,7 @@ export default function HomePage() {
       sunsetTime={sunriseSunset?.sunset}
       onSelectPreset={handleSelectPreset}
       onRangeSelect={handleRangeSelect}
+      forceSyncSignal={tpForceSync}
     />
   )
 
@@ -968,12 +974,12 @@ export default function HomePage() {
         </p>
         <input
           type="date"
-          className="text-xs rounded-lg px-2 py-1.5 outline-none flex-shrink-0"
+          className="text-[11px] rounded-lg px-1.5 py-1.5 outline-none flex-shrink-0"
           style={{
             background: 'var(--surface)',
             border: '1px solid var(--border)',
             color: 'var(--text)',
-            maxWidth: 130,
+            maxWidth: 140,
           }}
           value={scheduleYmd.length === 8
             ? `${scheduleYmd.slice(0, 4)}-${scheduleYmd.slice(4, 6)}-${scheduleYmd.slice(6, 8)}`
@@ -1000,17 +1006,14 @@ export default function HomePage() {
         <button
           type="button"
           onClick={() => handleSelectPresetWithDateUpdate(OUTFIT_PERIODS[getOutfitPeriodIndex(hour)]!.repHour, 0)}
-          disabled={scheduleYmd === todayYmdKst}
           className="flex-shrink-0 text-xs px-2 py-1.5 rounded-lg transition-opacity"
           style={{
             background: scheduleYmd === todayYmdKst ? 'var(--primary-tint-10)' : 'var(--surface)',
             border: `1px solid ${scheduleYmd === todayYmdKst ? 'var(--primary)' : 'var(--border)'}`,
             color: scheduleYmd === todayYmdKst ? 'var(--primary)' : 'var(--muted)',
             fontWeight: scheduleYmd === todayYmdKst ? 600 : 400,
-            opacity: scheduleYmd === todayYmdKst ? 0.7 : 1,
-            cursor: scheduleYmd === todayYmdKst ? 'default' : 'pointer',
           }}
-          aria-label="오늘 날짜로 이동"
+          aria-label="오늘 날짜·현재 시간대로 리셋"
         >
           오늘
         </button>

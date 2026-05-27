@@ -109,6 +109,9 @@ interface Props {
     endRepHour: number,
     endDayOffset: number,
   ) => void
+  /** 외부에서 시각 선택 상태를 강제로 동기화해야 할 때 증가시키는 키
+   *  (parent props가 변하지 않아도 내부 selectedChips를 props 기준으로 리셋한다). */
+  forceSyncSignal?: number
 }
 
 /** 선택된 칩을 (OUTFIT_PERIODS 인덱스, 일자 오프셋) 쌍으로 표현 */
@@ -139,6 +142,7 @@ export function TimePeriodPicker({
   sunsetTime,
   onSelectPreset,
   onRangeSelect,
+  forceSyncSignal,
 }: Props) {
   const todayYmd = kstTodayYmd()
   const slotYmds: string[] = []
@@ -201,6 +205,26 @@ export function TimePeriodPicker({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRepHour, selectedScheduleYmd, selectedEndRepHour, selectedEndScheduleYmd])
+
+  // 강제 동기화: 부모가 forceSyncSignal을 증가시키면 props가 바뀌지 않았어도
+  // selectedChips를 현재 props 기준으로 즉시 리셋한다 (예: "오늘" 버튼 / 날짜 변경).
+  useEffect(() => {
+    if (forceSyncSignal === undefined) return
+    const startChip: SelectedChip = {
+      periodIdx: getOutfitPeriodIndex(selectedRepHour),
+      dayOffset: Math.max(0, diffDaysYmd(todayYmd, selectedScheduleYmd)),
+    }
+    if (selectedEndRepHour != null && selectedEndScheduleYmd != null) {
+      const endChip: SelectedChip = {
+        periodIdx: getOutfitPeriodIndex(selectedEndRepHour),
+        dayOffset: Math.max(0, diffDaysYmd(todayYmd, selectedEndScheduleYmd)),
+      }
+      setSelectedChips(buildChipRange(startChip, endChip, periodCount))
+    } else {
+      setSelectedChips([startChip])
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- props 값은 그 시점의 최신 값으로 읽어 리셋
+  }, [forceSyncSignal])
 
   function chipOrder(c: SelectedChip) {
     return c.dayOffset * periodCount + c.periodIdx
