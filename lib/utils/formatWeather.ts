@@ -170,6 +170,32 @@ export function formatOpenMeteoCompareLine(
   return parts.join(' ')
 }
 
+/** 오늘 최저/최고만: { min, max } 또는 null */
+export function pickTodayMinMax(
+  c: OpenMeteoDailyCompare | null
+): { min: number; max: number } | null {
+  if (!c) return null
+  const { todayMin, todayMax } = c
+  if (todayMin == null || todayMax == null || Number.isNaN(todayMin) || Number.isNaN(todayMax)) {
+    return null
+  }
+  return { min: todayMin, max: todayMax }
+}
+
+/** 어제 동시간대 대비 비교 문구만: "어제보다 N도 낮음" 또는 null */
+export function formatYesterdayCompareOnly(
+  currentTemp: number,
+  c: OpenMeteoDailyCompare | null
+): string | null {
+  if (!c) return null
+  const { yesterdaySameHourTemp } = c
+  if (yesterdaySameHourTemp == null || !Number.isFinite(yesterdaySameHourTemp)) return null
+  const diff = Math.round((currentTemp - yesterdaySameHourTemp) * 10) / 10
+  if (diff > 0.05) return `어제보다 ${formatDegDiffForCompare(Math.abs(diff))}도 높음`
+  if (diff < -0.05) return `어제보다 ${formatDegDiffForCompare(Math.abs(diff))}도 낮음`
+  return '어제와 비슷함'
+}
+
 export function feelsLike(temp: number, windSpeed: number, humidity: number): number {
   if (temp <= 10) {
     // Wind Chill

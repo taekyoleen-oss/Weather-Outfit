@@ -997,16 +997,23 @@ export default function HomePage() {
             }
           }}
         />
-        {scheduleYmd !== todayYmdKst && (
-          <button
-            type="button"
-            onClick={() => handleSelectPresetWithDateUpdate(OUTFIT_PERIODS[getOutfitPeriodIndex(hour)]!.repHour, 0)}
-            className="flex-shrink-0 text-xs px-2 py-1.5 rounded-lg"
-            style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)' }}
-          >
-            오늘
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => handleSelectPresetWithDateUpdate(OUTFIT_PERIODS[getOutfitPeriodIndex(hour)]!.repHour, 0)}
+          disabled={scheduleYmd === todayYmdKst}
+          className="flex-shrink-0 text-xs px-2 py-1.5 rounded-lg transition-opacity"
+          style={{
+            background: scheduleYmd === todayYmdKst ? 'var(--primary-tint-10)' : 'var(--surface)',
+            border: `1px solid ${scheduleYmd === todayYmdKst ? 'var(--primary)' : 'var(--border)'}`,
+            color: scheduleYmd === todayYmdKst ? 'var(--primary)' : 'var(--muted)',
+            fontWeight: scheduleYmd === todayYmdKst ? 600 : 400,
+            opacity: scheduleYmd === todayYmdKst ? 0.7 : 1,
+            cursor: scheduleYmd === todayYmdKst ? 'default' : 'pointer',
+          }}
+          aria-label="오늘 날짜로 이동"
+        >
+          오늘
+        </button>
       </div>
       {timePeriodPicker}
       <div className="flex gap-1.5 overflow-x-auto scroll-strip">

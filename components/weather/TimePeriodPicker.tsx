@@ -216,6 +216,14 @@ export function TimePeriodPicker({
 
   function handleChipClick(periodIdx: number, dayOffset: number) {
     const clickedChip: SelectedChip = { periodIdx, dayOffset }
+
+    // 오늘 날짜에서 「내일」 배지 칩을 클릭한 경우: 시각적 단일 선택만 하고
+    // 실제 스케줄(부모 상태)은 변경하지 않는다. 내일로 이동하려면 날짜를 직접 변경.
+    if (!isFullDayMode && dayOffset > 0) {
+      setSelectedChips([clickedChip])
+      return
+    }
+
     const clickedOrder = chipOrder(clickedChip)
     const sorted = [...selectedChips].sort((a, b) => chipOrder(a) - chipOrder(b))
     const minOrder = chipOrder(sorted[0]!)
@@ -234,6 +242,12 @@ export function TimePeriodPicker({
       }
     } else if (clickedOrder === minOrder - 1 || clickedOrder === maxOrder + 1) {
       // 인접한 칩: 범위 확장
+      // 단, 오늘 모드에서 인접 확장으로 내일 칩까지 포함되면 무시(내일로 자동 이동 방지)
+      const wouldIncludeTomorrow = !isFullDayMode && [...sorted, clickedChip].some((c) => c.dayOffset > 0)
+      if (wouldIncludeTomorrow) {
+        setSelectedChips([clickedChip])
+        return
+      }
       newSel = [...sorted, clickedChip].sort((a, b) => chipOrder(a) - chipOrder(b))
     } else {
       // 비연속 칩: 새로 단일 선택
