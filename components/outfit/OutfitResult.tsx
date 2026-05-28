@@ -117,7 +117,7 @@ export function OutfitResult({
             ))}
           </div>
         )}
-        <div className="flex items-start justify-between gap-2 mt-1">
+        <div className="flex items-center justify-between gap-2 mt-1">
           <div className="flex flex-col gap-0.5">
             <span
               className="text-[11px] font-medium leading-tight"
@@ -138,15 +138,28 @@ export function OutfitResult({
               ))}
             </div>
           </div>
-          {periodWeather && (
-            <p className="text-[9px] font-semibold tabular-nums text-right leading-snug" style={{ color: 'var(--muted)' }}>
-              {periodWeather.source === 'period_hourly' && periodWeather.periodName
-                ? `${periodWeather.periodName} · `
-                : '해당일 · '}
-              {periodWeather.conditionLabel} · 최고 {formatTemp1(periodWeather.maxTemp)}° / 최저 {formatTemp1(periodWeather.minTemp)}°
-            </p>
-          )}
         </div>
+        {periodWeather && (
+          <div
+            className="mt-2 rounded-xl px-3 py-2 flex flex-wrap items-baseline gap-x-2 gap-y-0.5"
+            style={{
+              background: 'rgba(91,141,238,0.08)',
+              border: '1px solid rgba(91,141,238,0.18)',
+            }}
+          >
+            <span className="text-xs font-bold" style={{ color: 'var(--humidity)' }}>
+              {periodWeather.source === 'period_hourly' && periodWeather.periodName
+                ? periodWeather.periodName
+                : '해당일'}
+            </span>
+            <span className="text-xs" style={{ color: 'var(--text)' }}>
+              {periodWeather.conditionLabel}
+            </span>
+            <span className="text-xs font-semibold tabular-nums" style={{ color: 'var(--text)' }}>
+              최고 {formatTemp1(periodWeather.maxTemp)}° · 최저 {formatTemp1(periodWeather.minTemp)}°
+            </span>
+          </div>
+        )}
       </div>
 
       {/* 오존 피크 시간대 경고 */}

@@ -439,8 +439,10 @@ export function OutfitPanel({
     setStartHour(f)
     if (outfitPeriodEndHour !== undefined) {
       setEndHour(outfitPeriodEndHour)
-      // 범위 선택: selectedOutfitPeriodIndices를 시작~끝 구간으로 확장
-      const startPeriodIdx = getOutfitPeriodIndex(f)
+      // 범위 선택: 사용자가 명시적으로 두 칩을 선택했으므로 원래 칩 시작 인덱스를 사용한다.
+      // activityStartFloor(=f)로 startPeriodIdx를 계산하면 「지금」 시간대 끝(예: 6시 → f=7)에서
+      // 첫 칩(예: 새벽)이 통째로 잘려나가 범위가 [1,1]로 붕괴되는 버그가 있었다.
+      const startPeriodIdx = getOutfitPeriodIndex(outfitPeriodStartHour)
       const endPeriodIdx = OUTFIT_PERIODS.findIndex((p) => p.end === outfitPeriodEndHour)
       if (endPeriodIdx >= startPeriodIdx) {
         setSelectedOutfitPeriodIndices(
