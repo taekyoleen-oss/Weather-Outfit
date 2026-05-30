@@ -180,6 +180,8 @@ interface SpotData {
   /** 단기예보 기준 오늘 일 최저·최고 (KMA TMN/TMX) */
   tmnToday: number | null
   tmxToday: number | null
+  /** 오늘 자외선 최댓값 (Open-Meteo) */
+  uvMaxToday?: number | null
   /** 생활기상지수 — 실제 자외선(getUVIdxV4) 등 */
   indices?: {
     uv: { value: number; grade?: string } | null
@@ -820,6 +822,15 @@ export default function HomePage() {
     return base.uvIndex > 0 ? base.uvIndex : undefined
   }, [spotData, openMeteoCompare, weatherData, displayWeather])
 
+  // 오늘 자외선 최댓값 — 아침에도 그날 위험도를 함께 안내. 서버(spotData) 우선, 클라이언트 폴백.
+  const uvMaxForCard = useMemo(() => {
+    const s = spotData?.uvMaxToday
+    if (typeof s === 'number' && Number.isFinite(s)) return s
+    const c = openMeteoCompare?.todayUvMax
+    if (typeof c === 'number' && Number.isFinite(c)) return Math.round(c)
+    return undefined
+  }, [spotData, openMeteoCompare])
+
   // 오늘 일 최저/최고: 기상청 TMN/TMX(네이버와 동일 소스)를 1순위로, 빠진 값만 Open-Meteo로 보완.
   // 단기예보 피드는 오후엔 오늘 TMN(06시), 저녁엔 TMX(15시) 슬롯이 빠지므로 항목별 폴백이 필요.
   // 두 독립 소스를 함께 쓰므로 모바일에서 한쪽 요청이 실패해도 최저/최고가 사라지지 않는다.
@@ -887,6 +898,15 @@ export default function HomePage() {
   const highlightsGrid = (
     <HighlightsGrid weather={displayWeather} dust={dust} pollen={pollen} loading={weatherLoading} compact />
   )
+  // 자외선 카드 보조문구: 현재 등급 + (아침 등 현재가 최고보다 낮을 때) 오늘 최고 UV 병기
+  const uvCardSub = (() => {
+    const cur = uvLabel(uvForCard ?? 0)
+    if (uvMaxForCard != null && (uvForCard == null || uvMaxForCard > uvForCard)) {
+      return `${cur} · 오늘 최고 UV${uvMaxForCard} ${uvLabel(uvMaxForCard)}`
+    }
+    return cur
+  })()
+
   // 일사·오존(자외선·오존) — 모바일 탭3·데스크톱 대기정보 위에서 공용 사용
   const solarOzoneGrid = (
     <div>
@@ -899,7 +919,7 @@ export default function HomePage() {
           icon="☀️"
           label="자외선지수"
           value={uvForCard != null ? `UV ${uvForCard}` : '--'}
-          sub={uvLabel(uvForCard ?? 0)}
+          sub={uvCardSub}
           accent={uvColor(uvForCard ?? 0)}
         />
         <HighlightCard

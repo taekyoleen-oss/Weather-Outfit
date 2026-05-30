@@ -133,6 +133,8 @@ interface SpotResponse {
   mountainHourly: MountainHourlyInfo[]
   wildfireHourly: WildfireHourlyInfo[]
   alerts: { type: string; level: string; message: string; isLightningRelated: boolean }[]
+  /** 오늘 자외선 최댓값 (Open-Meteo) — 아침에도 그날 위험도 안내용 */
+  uvMaxToday: number | null
   indices: {
     uv: LivingIdxOut | null
     senTa: LivingIdxOut | null
@@ -458,6 +460,10 @@ export async function GET(req: NextRequest) {
             ? { value: omUv }
             : null
       const uvVal = uvSource ? Math.round(uvSource.value) : Math.round(vilage?.current.uvIndex ?? 0)
+      const uvMaxToday =
+        omCompare && typeof omCompare.todayUvMax === 'number' && Number.isFinite(omCompare.todayUvMax)
+          ? Math.round(omCompare.todayUvMax)
+          : null
 
       const popNow = vilage ? popAtOrBeforeHour(vilage.hourly, todayYmd, kstHour) : 0
       // 단기예보(getVilageFcst)에는 가시거리(VIS) 항목이 없어 current.visibility는 기본값(1.0km)으로 고정된다.
@@ -647,6 +653,7 @@ export async function GET(req: NextRequest) {
         mountainHourly,
         wildfireHourly,
         alerts,
+        uvMaxToday,
         indices: {
           uv: uvSource,
           senTa: living.senTa ? { value: living.senTa.value, grade: living.senTa.grade } : null,
