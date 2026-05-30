@@ -29,8 +29,10 @@ export async function fetchSunriseSunset(lat: number, lon: number): Promise<Sunr
   if (!res.ok) throw new Error(`Sunrise API error: ${res.status}`)
 
   const text = await res.text()
-  const sunrise = text.match(/<sunrise>(\d+)<\/sunrise>/)?.[1] ?? '0600'
-  const sunset = text.match(/<sunset>(\d+)<\/sunset>/)?.[1] ?? '1830'
+  // KMA RiseSetInfoService는 값에 공백 패딩을 붙여 보낸다(예: <sunrise>0513  </sunrise>).
+  // \s* 로 앞뒤 공백을 허용하지 않으면 매칭 실패 → 항상 폴백(0600/1830)이 쓰이던 버그.
+  const sunrise = text.match(/<sunrise>\s*(\d+)\s*<\/sunrise>/)?.[1] ?? '0600'
+  const sunset = text.match(/<sunset>\s*(\d+)\s*<\/sunset>/)?.[1] ?? '1830'
 
   return { sunrise, sunset, date: locdate }
 }

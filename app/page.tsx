@@ -171,12 +171,22 @@ interface SpotData {
   lightningNow: { level: 'none' | 'watch' | 'warning'; message: string; source: string }
   mountainHourly: Array<{
     fcstYmd: string; fcstHour: number; tempC: number; windMs: number; pop: number;
-    visibilityKm: number | null; level: 'good' | 'caution' | 'danger'
+    visibilityKm: number | null; level: 'good' | 'caution' | 'danger'; reasons?: string[]
   }>
   wildfireHourly: Array<{
     fcstYmd: string; fcstHour: number; score: number; level: 'low' | 'moderate' | 'high' | 'very_high'
   }>
   alerts: Array<{ type: string; level: string; message: string; isLightningRelated: boolean }>
+  /** 단기예보 기준 오늘 일 최저·최고 (KMA TMN/TMX) */
+  tmnToday: number | null
+  tmxToday: number | null
+  /** 생활기상지수 — 실제 자외선(getUVIdxV4) 등 */
+  indices?: {
+    uv: { value: number; grade?: string } | null
+    senTa: { value: number; grade?: string } | null
+    wct: { value: number; grade?: string } | null
+    airDiffusion: { value: number; grade?: string } | null
+  }
 }
 
 // ── Weather data shape ────────────────────────────────────────────────────────
@@ -589,6 +599,10 @@ export default function HomePage() {
                 ? d.yesterdaySameHourTemp : null,
             todayMin: d.todayMin,
             todayMax: d.todayMax,
+            currentUvIndex:
+              typeof d.currentUvIndex === 'number' && !Number.isNaN(d.currentUvIndex) ? d.currentUvIndex : null,
+            todayUvMax:
+              typeof d.todayUvMax === 'number' && !Number.isNaN(d.todayUvMax) ? d.todayUvMax : null,
           })
         }
       })
@@ -792,11 +806,33 @@ export default function HomePage() {
   }, [weatherData, hour])
 
   const uvForCard = useMemo(() => {
+    // 1순위: 기상청 생활기상지수(getUVIdxV4)의 실제 자외선 값(가용 시).
+    // 단기예보(getVilageFcst)에는 UVI 항목이 없어 current.uvIndex는 항상 0 → 항상 '낮음'으로 표시되던 버그.
+    const livingUv = spotData?.indices?.uv?.value
+    if (typeof livingUv === 'number' && Number.isFinite(livingUv)) return Math.round(livingUv)
+    // 2순위: Open-Meteo 현재 시각 자외선(키 불필요) — 생활기상지수 미가용 환경의 실질 소스.
+    const omUv = openMeteoCompare?.currentUvIndex
+    if (typeof omUv === 'number' && Number.isFinite(omUv)) return Math.round(omUv)
     const base = weatherData?.current
     if (!base || !displayWeather) return undefined
     if (displayWeather.uvIndex > 0) return displayWeather.uvIndex
-    return base.uvIndex
-  }, [weatherData, displayWeather])
+    // 실측 자외선이 없으면 0(가짜 '낮음') 대신 미표시
+    return base.uvIndex > 0 ? base.uvIndex : undefined
+  }, [spotData, openMeteoCompare, weatherData, displayWeather])
+
+  // 오늘 일 최저/최고: 기상청 TMN/TMX(네이버와 동일 소스)를 1순위로, 빠진 값만 Open-Meteo로 보완.
+  // 단기예보 피드는 오후엔 오늘 TMN(06시), 저녁엔 TMX(15시) 슬롯이 빠지므로 항목별 폴백이 필요.
+  // 두 독립 소스를 함께 쓰므로 모바일에서 한쪽 요청이 실패해도 최저/최고가 사라지지 않는다.
+  const todayMinMax = useMemo<{ min: number; max: number } | null>(() => {
+    const kmaMin = typeof spotData?.tmnToday === 'number' && Number.isFinite(spotData.tmnToday) ? spotData.tmnToday : null
+    const kmaMax = typeof spotData?.tmxToday === 'number' && Number.isFinite(spotData.tmxToday) ? spotData.tmxToday : null
+    const omMin = typeof openMeteoCompare?.todayMin === 'number' && !Number.isNaN(openMeteoCompare.todayMin) ? openMeteoCompare.todayMin : null
+    const omMax = typeof openMeteoCompare?.todayMax === 'number' && !Number.isNaN(openMeteoCompare.todayMax) ? openMeteoCompare.todayMax : null
+    const min = kmaMin ?? omMin
+    const max = kmaMax ?? omMax
+    if (min == null || max == null) return null
+    return { min, max }
+  }, [spotData, openMeteoCompare])
 
   const heroIconSrc = useMemo((): string | undefined => {
     const sunsetHHMM = sunsetHmFromText(sunriseSunset?.sunset)
@@ -865,6 +901,7 @@ export default function HomePage() {
       dust={dust}
       alerts={alerts}
       openMeteoCompare={openMeteoCompare}
+      todayMinMax={todayMinMax}
       morningSummary={morningSummary}
       futureDaily={weeklyDisplayDaily.slice(0, 2)}
       todayWeatherChange={todayWeatherChange}
@@ -1175,14 +1212,17 @@ export default function HomePage() {
       {/* Mountain weather */}
       {spotData?.mountainHourly && spotData.mountainHourly.length > 0 && (
         <div className="glass-card p-3">
-          <h3 className="text-base font-semibold mb-2.5" style={{ color: 'var(--muted)' }}>
+          <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--muted)' }}>
             산악 기상
           </h3>
+          <p className="text-[11px] mb-2.5 leading-snug" style={{ color: 'var(--muted)' }}>
+            바람·강수확률 기준 (강풍 9m/s↑ 또는 강수확률 70%↑ → 위험)
+          </p>
           <div className="flex gap-1.5 overflow-x-auto scroll-strip pb-1">
             {spotData.mountainHourly.slice(0, 12).map((m, i) => (
               <div
                 key={`${m.fcstYmd}-${m.fcstHour}-${i}`}
-                className="flex-shrink-0 flex flex-col gap-0.5 rounded-xl px-2 py-2 min-w-[64px] text-center"
+                className="flex-shrink-0 flex flex-col gap-0.5 rounded-xl px-2 py-2 min-w-[72px] text-center"
                 style={{ background: 'rgba(255,255,255,0.5)', border: '1px solid var(--border)' }}
               >
                 <span style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600 }}>
@@ -1191,9 +1231,14 @@ export default function HomePage() {
                 <span style={{ fontSize: 12, fontWeight: 700, color: mountainLevelColor(m.level) }}>
                   {mountainLevelText(m.level)}
                 </span>
+                {m.reasons && m.reasons.length > 0 && (
+                  <span style={{ fontSize: 9, fontWeight: 600, color: mountainLevelColor(m.level), lineHeight: 1.2 }}>
+                    {m.reasons[0]}
+                  </span>
+                )}
                 <span style={{ fontSize: 11, color: 'var(--text)' }}>{m.tempC.toFixed(0)}°</span>
                 <span style={{ fontSize: 10, color: 'var(--muted)' }}>{m.windMs.toFixed(0)}m/s</span>
-                {m.pop > 0 && <span style={{ fontSize: 10, color: 'var(--humidity)' }}>{m.pop}%</span>}
+                {m.pop > 0 && <span style={{ fontSize: 10, color: 'var(--humidity)' }}>☂{m.pop}%</span>}
               </div>
             ))}
           </div>

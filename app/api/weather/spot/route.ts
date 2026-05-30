@@ -82,6 +82,8 @@ interface MountainHourlyInfo {
   pop: number
   visibilityKm: number | null
   level: 'good' | 'caution' | 'danger'
+  /** 주의·위험 사유 (예: '강풍 9m/s', '강수확률 70%') */
+  reasons: string[]
 }
 
 interface WildfireHourlyInfo {
@@ -321,10 +323,31 @@ function wildfireLevel(score: number): WildfireHourlyInfo['level'] {
   return 'low'
 }
 
-function mountainLevel(input: { windMs: number; pop: number; visibilityKm: number | null }): MountainHourlyInfo['level'] {
-  if (input.windMs >= 9 || input.pop >= 70 || (input.visibilityKm != null && input.visibilityKm < 2)) return 'danger'
-  if (input.windMs >= 6 || input.pop >= 40 || (input.visibilityKm != null && input.visibilityKm < 5)) return 'caution'
-  return 'good'
+/**
+ * 산악 위험 등급 + 사유. 바람·강수확률 기준(가시거리는 실데이터가 있을 때만).
+ * 주의: 단기예보(getVilageFcst)에는 가시거리(VIS) 항목이 없어 visibilityKm는 보통 null이다.
+ */
+function mountainAssess(input: { windMs: number; pop: number; visibilityKm: number | null }): {
+  level: MountainHourlyInfo['level']
+  reasons: string[]
+} {
+  const { windMs, pop, visibilityKm } = input
+  const w = Math.round(windMs)
+  const p = Math.round(pop)
+
+  const dangerReasons: string[] = []
+  if (windMs >= 9) dangerReasons.push(`강풍 ${w}m/s`)
+  if (pop >= 70) dangerReasons.push(`강수확률 ${p}%`)
+  if (visibilityKm != null && visibilityKm < 2) dangerReasons.push(`저시정 ${visibilityKm.toFixed(1)}km`)
+  if (dangerReasons.length) return { level: 'danger', reasons: dangerReasons }
+
+  const cautionReasons: string[] = []
+  if (windMs >= 6) cautionReasons.push(`바람 ${w}m/s`)
+  if (pop >= 40) cautionReasons.push(`강수확률 ${p}%`)
+  if (visibilityKm != null && visibilityKm < 5) cautionReasons.push(`시정 ${visibilityKm.toFixed(1)}km`)
+  if (cautionReasons.length) return { level: 'caution', reasons: cautionReasons }
+
+  return { level: 'good', reasons: [] }
 }
 
 function wildfireScore(input: { tempC: number; humidity: number; windMs: number; precipMm: number; ptyCode: PtyCode }): number {
@@ -426,10 +449,9 @@ export async function GET(req: NextRequest) {
           : Math.round(vilage?.current.uvIndex ?? 0)
 
       const popNow = vilage ? popAtOrBeforeHour(vilage.hourly, todayYmd, kstHour) : 0
-      const visKm =
-        vilage != null && vilage.current.visibility > 0
-          ? vilage.current.visibility / 1000
-          : null
+      // 단기예보(getVilageFcst)에는 가시거리(VIS) 항목이 없어 current.visibility는 기본값(1.0km)으로 고정된다.
+      // 이 가짜 값이 산악 위험도(visibilityKm<2)를 매시간 '위험'으로 만들던 버그 → 실데이터 없으면 null(미사용).
+      const visKm: number | null = null
 
       const feelsNow =
         observed != null
@@ -526,7 +548,7 @@ export async function GET(req: NextRequest) {
       )
 
       const mountainHourly: MountainHourlyInfo[] = hourly.slice(0, 6).map((h) => {
-        const lvl = mountainLevel({
+        const { level, reasons } = mountainAssess({
           windMs: h.windSpeed,
           pop: h.pop,
           visibilityKm: visKm,
@@ -538,7 +560,8 @@ export async function GET(req: NextRequest) {
           windMs: h.windSpeed,
           pop: h.pop,
           visibilityKm: visKm,
-          level: lvl,
+          level,
+          reasons,
         }
       })
 

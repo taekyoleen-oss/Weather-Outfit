@@ -41,6 +41,8 @@ interface Props {
   alerts?: WeatherAlert[]
   /** 어제 동시간대·오늘 일 최저·최고 (Open-Meteo) */
   openMeteoCompare?: OpenMeteoDailyCompare | null
+  /** 오늘 일 최저·최고 — KMA 우선, Open-Meteo 폴백으로 상위에서 합성한 값(있으면 이걸 우선 사용) */
+  todayMinMax?: { min: number; max: number } | null
   /** 오전(6–11시) 날씨 요약 — 오후에만 전달 */
   morningSummary?: MorningSummary | null
   /** 내일/모레 요약(작은 텍스트): 날씨 + 최고/최저 */
@@ -180,6 +182,7 @@ export function WeatherCard({
   dust,
   alerts,
   openMeteoCompare,
+  todayMinMax: todayMinMaxProp,
   morningSummary,
   futureDaily,
   todayWeatherChange,
@@ -211,7 +214,7 @@ export function WeatherCard({
   }
 
   const feels = feelsLike(weather.temperature, weather.windSpeed, weather.humidity)
-  const todayMinMax = pickTodayMinMax(openMeteoCompare ?? null)
+  const todayMinMax = todayMinMaxProp ?? pickTodayMinMax(openMeteoCompare ?? null)
   const yesterdayCompareLine = formatYesterdayCompareOnly(weather.temperature, openMeteoCompare ?? null)
   const currentLabel = weatherLabel(weather.skyCode, weather.ptyCode)
   const currentEmoji =
