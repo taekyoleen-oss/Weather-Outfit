@@ -887,6 +887,32 @@ export default function HomePage() {
   const highlightsGrid = (
     <HighlightsGrid weather={displayWeather} dust={dust} pollen={pollen} loading={weatherLoading} compact />
   )
+  // 일사·오존(자외선·오존) — 모바일 탭3·데스크톱 대기정보 위에서 공용 사용
+  const solarOzoneGrid = (
+    <div>
+      <h2 className="text-sm font-semibold mb-1.5" style={{ color: 'var(--muted)' }}>
+        일사·오존
+      </h2>
+      <div className="grid grid-cols-2 gap-1.5">
+        <HighlightCard
+          compact
+          icon="☀️"
+          label="자외선지수"
+          value={uvForCard != null ? `UV ${uvForCard}` : '--'}
+          sub={uvLabel(uvForCard ?? 0)}
+          accent={uvColor(uvForCard ?? 0)}
+        />
+        <HighlightCard
+          compact
+          icon="⚗️"
+          label="오존"
+          value={o3GradeLabel(dust?.o3Grade)}
+          sub={dust?.o3Value != null ? `${dust.o3Value.toFixed(3)} ppm` : ''}
+          accent={o3GradeColor(dust?.o3Grade)}
+        />
+      </div>
+    </div>
+  )
   const weatherCard = (
     <WeatherCard
       weather={displayWeather}
@@ -1146,30 +1172,7 @@ export default function HomePage() {
 
   const tab3Content = (
     <>
-      {/* 자외선 / 오존 — 대기정보와 동일 스타일 */}
-      <div>
-        <h2 className="text-sm font-semibold mb-1.5" style={{ color: 'var(--muted)' }}>
-          일사·오존
-        </h2>
-        <div className="grid grid-cols-2 gap-1.5">
-          <HighlightCard
-            compact
-            icon="☀️"
-            label="자외선지수"
-            value={uvForCard != null ? `UV ${uvForCard}` : '--'}
-            sub={uvLabel(uvForCard ?? 0)}
-            accent={uvColor(uvForCard ?? 0)}
-          />
-          <HighlightCard
-            compact
-            icon="⚗️"
-            label="오존"
-            value={o3GradeLabel(dust?.o3Grade)}
-            sub={dust?.o3Value != null ? `${dust.o3Value.toFixed(3)} ppm` : ''}
-            accent={o3GradeColor(dust?.o3Grade)}
-          />
-        </div>
-      </div>
+      {solarOzoneGrid}
 
       {highlightsGrid}
 
@@ -1402,6 +1405,7 @@ export default function HomePage() {
           left={
             <>
               {weatherCard}
+              {solarOzoneGrid}
               {highlightsGrid}
               {hourlyStripDesktop}
               <ChartErrorBoundary>

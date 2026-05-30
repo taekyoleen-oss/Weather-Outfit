@@ -12,6 +12,7 @@ import {
   extractTmnTmxForDay,
 } from '@/lib/weather/kma'
 import { fetchLivingWeatherBundle } from '@/lib/weather/kma-living'
+import { fetchOpenMeteoDailyCompare } from '@/lib/weather/openMeteoCompare'
 import { fetchWeatherAlerts } from '@/lib/weather/kma-alert'
 import { resolveAreaNoByCoords } from '@/lib/location/areaCode'
 import { gridToLatLon } from '@/lib/location/geoConvert'
@@ -401,7 +402,7 @@ export async function GET(req: NextRequest) {
         resolveAreaNoByCoords({ lat, lon, nx, ny }).catch(() => '1100000000'),
       ])
 
-      const [living, rawAlerts] = await Promise.all([
+      const [living, rawAlerts, omCompare] = await Promise.all([
         fetchLivingWeatherBundle(areaNo).catch(() => ({
           uv: null,
           senTa: null,
@@ -409,6 +410,8 @@ export async function GET(req: NextRequest) {
           airDiffusion: null,
         })),
         fetchWeatherAlerts(areaNoToWarnStnId(areaNo)).catch(() => [] as WeatherAlert[]),
+        // 기상청 생활기상지수(UV)가 막혀 있어도 자외선 숫자를 확보하기 위한 폴백(키 불필요)
+        fetchOpenMeteoDailyCompare(lat, lon).catch(() => null),
       ])
 
       const alerts = rawAlerts.map((a) => ({
@@ -443,10 +446,18 @@ export async function GET(req: NextRequest) {
       const map = vilage?.map ?? {}
       const { tmn: tmnToday, tmx: tmxToday } = extractTmnTmxForDay(map, todayYmd)
 
-      const uvVal =
+      // 자외선: 1) 기상청 생활기상지수 → 2) Open-Meteo 현재 시각 UV(폴백) → 3) 0
+      const omUv =
+        omCompare && typeof omCompare.currentUvIndex === 'number' && Number.isFinite(omCompare.currentUvIndex)
+          ? omCompare.currentUvIndex
+          : null
+      const uvSource: { value: number; grade?: string } | null =
         living.uv && Number.isFinite(living.uv.value)
-          ? Math.round(living.uv.value)
-          : Math.round(vilage?.current.uvIndex ?? 0)
+          ? { value: living.uv.value, grade: living.uv.grade }
+          : omUv != null
+            ? { value: omUv }
+            : null
+      const uvVal = uvSource ? Math.round(uvSource.value) : Math.round(vilage?.current.uvIndex ?? 0)
 
       const popNow = vilage ? popAtOrBeforeHour(vilage.hourly, todayYmd, kstHour) : 0
       // 단기예보(getVilageFcst)에는 가시거리(VIS) 항목이 없어 current.visibility는 기본값(1.0km)으로 고정된다.
@@ -637,7 +648,7 @@ export async function GET(req: NextRequest) {
         wildfireHourly,
         alerts,
         indices: {
-          uv: living.uv ? { value: living.uv.value, grade: living.uv.grade } : null,
+          uv: uvSource,
           senTa: living.senTa ? { value: living.senTa.value, grade: living.senTa.grade } : null,
           wct: living.wct ? { value: living.wct.value, grade: living.wct.grade } : null,
           airDiffusion: living.airDiffusion
