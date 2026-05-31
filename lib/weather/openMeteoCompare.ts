@@ -67,7 +67,10 @@ function pickTodayHourValue(
   hourKst: number,
   todayYmd: string
 ): number | null {
-  const needle = `${todayYmd.slice(0, 4)}-${todayYmd.slice(4, 6)}-${todayYmd.slice(6, 8)}T${String(hourKst).padStart(2, '0')}:`
+  // todayYmd는 kstTodayYmd()가 만든 `yyyy-mm-dd`(대시 포함) 형식이므로 그대로 사용한다.
+  // 과거에 `yyyymmdd`로 가정해 slice로 대시를 끼워넣던 코드는 항상 매칭에 실패해
+  // currentUvIndex가 늘 null이 되던 버그가 있었다.
+  const needle = `${todayYmd}T${String(hourKst).padStart(2, '0')}:`
   for (let i = 0; i < times.length; i++) {
     if (times[i].startsWith(needle)) {
       const v = values[i]

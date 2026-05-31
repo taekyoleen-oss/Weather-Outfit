@@ -8,6 +8,7 @@ import { GpsButton } from '@/components/weather/GpsButton'
 import { RecentChips, saveRecentLocation } from '@/components/weather/RecentChips'
 import { WeatherCard } from '@/components/weather/WeatherCard'
 import { HourlyWeatherStrip } from '@/components/weather/HourlyWeatherStrip'
+import { TodayCautionSummary } from '@/components/weather/TodayCautionSummary'
 import { ChartErrorBoundary } from '@/components/ui/ChartErrorBoundary'
 import dynamic from 'next/dynamic'
 const TempGraph48h = dynamic(
@@ -900,8 +901,13 @@ export default function HomePage() {
   )
   // 자외선 카드 보조문구: 현재 등급 + (아침 등 현재가 최고보다 낮을 때) 오늘 최고 UV 병기
   const uvCardSub = (() => {
-    const cur = uvLabel(uvForCard ?? 0)
-    if (uvMaxForCard != null && (uvForCard == null || uvMaxForCard > uvForCard)) {
+    // 현재 UV 실측이 없으면 가짜 '낮음' 대신 오늘 최고만 안내(둘 다 없으면 '정보 없음')
+    if (uvForCard == null) {
+      if (uvMaxForCard != null) return `오늘 최고 UV${uvMaxForCard} ${uvLabel(uvMaxForCard)}`
+      return '정보 없음'
+    }
+    const cur = uvLabel(uvForCard)
+    if (uvMaxForCard != null && uvMaxForCard > uvForCard) {
       return `${cur} · 오늘 최고 UV${uvMaxForCard} ${uvLabel(uvMaxForCard)}`
     }
     return cur
@@ -1138,6 +1144,12 @@ export default function HomePage() {
   const tab1Content = (
     <>
       {weatherCard}
+      <TodayCautionSummary
+        uvIndex={uvForCard}
+        uvMax={uvMaxForCard}
+        dust={dust}
+        pollen={pollen}
+      />
       <HourlyWeatherStrip
         hourly={tab1HourlyDisplay}
         currentHour={hour}
