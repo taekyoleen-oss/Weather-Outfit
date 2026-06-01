@@ -7,8 +7,11 @@ interface TabConfig {
   key: string
   icon: string
   label: string
+  /** 상단 고정 헤더. falsy면 고정 헤더 영역을 렌더하지 않는다(탭이 스크롤 영역에서 직접 헤더를 제어할 때). */
   header: ReactNode
   content: ReactNode
+  /** 스크롤 영역(main)에 적용할 클래스. 기본 패딩/간격을 끄고 탭이 직접 레이아웃을 제어하고 싶을 때 사용. */
+  contentClassName?: string
 }
 
 interface Props {
@@ -36,24 +39,26 @@ export function MobileLayout({ tabs, defaultTab, selectedTab, onTabChange }: Pro
   if (!current) return null
 
   return (
-    <div className="flex flex-col" style={{ minHeight: '100dvh', background: 'var(--colors-cream-soft)' }}>
-      {/* 상단 헤더 — 항상 최상단 */}
-      <div
-        className="flex-shrink-0 z-40"
-        style={{
-          background: 'var(--colors-canvas)',
-          borderBottom: '1px solid var(--colors-hairline-soft)',
-          boxShadow: 'rgba(0, 0, 0, 0.03) 0px 1px 2px 0px',
-        }}
-      >
-        {current.header}
-      </div>
+    <div className="flex flex-col" style={{ height: '100dvh', background: 'var(--colors-cream-soft)' }}>
+      {/* 상단 헤더 — 항상 최상단 (header가 falsy면 렌더 생략) */}
+      {current.header && (
+        <div
+          className="flex-shrink-0 z-40"
+          style={{
+            background: 'var(--colors-canvas)',
+            borderBottom: '1px solid var(--colors-hairline-soft)',
+            boxShadow: 'rgba(0, 0, 0, 0.03) 0px 1px 2px 0px',
+          }}
+        >
+          {current.header}
+        </div>
+      )}
 
       {/* 스크롤 가능한 콘텐츠 — 고정 탭 바 높이만큼 하단 패딩 확보 */}
       {tabs.map(tab => (
         <main
           key={tab.key}
-          className="flex-1 overflow-y-auto px-3 pt-4 space-y-6 max-w-[1280px] mx-auto w-full"
+          className={`flex-1 overflow-y-auto max-w-[1280px] mx-auto w-full ${tab.contentClassName ?? 'px-3 pt-4 space-y-6'}`}
           style={{
             display: tab.key === activeTab ? undefined : 'none',
             paddingBottom: 'calc(56px + env(safe-area-inset-bottom) + 16px)',

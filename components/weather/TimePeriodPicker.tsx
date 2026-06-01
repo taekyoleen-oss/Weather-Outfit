@@ -94,12 +94,17 @@ interface Props {
   currentConditions?: { temperature: number; skyCode: SkyCode; ptyCode: PtyCode } | null
   hourly: HourlyForecast[]
   selectedRepHour: number
-  /** 복장·날씨 기준일(KST yyyymmdd). 칩 선택 표시는 달력 일자와 대표 시각으로 맞춘다 */
+  /** 선택된 시작 칩의 일자 오프셋(0=오늘, 1=내일 …). 통합 띠에서 오늘↔내일 칩을 자유 선택하기 위해
+   *  선택 일자는 anchor(selectedScheduleYmd)와 분리해 직접 받는다 */
+  selectedDayOffset: number
+  /** 칩 레이아웃 기준일(=사용자가 날짜 입력으로 고른 anchor 날짜, KST yyyymmdd).
+   *  오늘이면 「지금~」 롤링 띠, 미래 날짜면 그 날 하루 7개 시간대(풀데이) 모드로 표시한다.
+   *  선택 하이라이트 일자(selectedDayOffset)와는 독립적이다. */
   selectedScheduleYmd: string
   /** 연속 범위 선택의 끝 칩 repHour. null/undefined면 단일 선택 */
   selectedEndRepHour?: number | null
-  /** 연속 범위 선택의 끝 칩 기준일(KST yyyymmdd). null/undefined면 단일 선택 */
-  selectedEndScheduleYmd?: string | null
+  /** 연속 범위 선택의 끝 칩 일자 오프셋. null/undefined면 단일 선택 */
+  selectedEndDayOffset?: number | null
   sunsetTime?: string
   onSelectPreset: (repHour: number, dayOffset: number) => void
   /** 연속 시간대 범위 선택 시 끝 칩 정보 (단일 선택이면 start === end) */
@@ -136,9 +141,10 @@ export function TimePeriodPicker({
   currentConditions,
   hourly,
   selectedRepHour,
+  selectedDayOffset,
   selectedScheduleYmd,
   selectedEndRepHour,
-  selectedEndScheduleYmd,
+  selectedEndDayOffset,
   sunsetTime,
   onSelectPreset,
   onRangeSelect,
@@ -165,16 +171,16 @@ export function TimePeriodPicker({
 
   // ── 선택 상태: (periodIdx, dayOffset) 쌍 배열로 관리 ─────────────────────
   // currentIdx 변화에 독립적이므로 시간이 지나도 올바른 칩이 유지됨.
-  // selectedEndRepHour·selectedEndScheduleYmd가 주어지면 시작~끝 연속 칩으로 초기화 (범위 복원).
+  // selectedEndRepHour·selectedEndDayOffset가 주어지면 시작~끝 연속 칩으로 초기화 (범위 복원).
   const [selectedChips, setSelectedChips] = useState<SelectedChip[]>(() => {
     const startChip: SelectedChip = {
       periodIdx: getOutfitPeriodIndex(selectedRepHour),
-      dayOffset: Math.max(0, diffDaysYmd(kstTodayYmd(), selectedScheduleYmd)),
+      dayOffset: Math.max(0, selectedDayOffset),
     }
-    if (selectedEndRepHour != null && selectedEndScheduleYmd != null) {
+    if (selectedEndRepHour != null && selectedEndDayOffset != null) {
       const endChip: SelectedChip = {
         periodIdx: getOutfitPeriodIndex(selectedEndRepHour),
-        dayOffset: Math.max(0, diffDaysYmd(kstTodayYmd(), selectedEndScheduleYmd)),
+        dayOffset: Math.max(0, selectedEndDayOffset),
       }
       return buildChipRange(startChip, endChip, periodCount)
     }
@@ -192,19 +198,19 @@ export function TimePeriodPicker({
     // 외부(위치 변경 등) 변화 → props로부터 칩 배열 재구성
     const startChip: SelectedChip = {
       periodIdx: getOutfitPeriodIndex(selectedRepHour),
-      dayOffset: Math.max(0, diffDaysYmd(todayYmd, selectedScheduleYmd)),
+      dayOffset: Math.max(0, selectedDayOffset),
     }
-    if (selectedEndRepHour != null && selectedEndScheduleYmd != null) {
+    if (selectedEndRepHour != null && selectedEndDayOffset != null) {
       const endChip: SelectedChip = {
         periodIdx: getOutfitPeriodIndex(selectedEndRepHour),
-        dayOffset: Math.max(0, diffDaysYmd(todayYmd, selectedEndScheduleYmd)),
+        dayOffset: Math.max(0, selectedEndDayOffset),
       }
       setSelectedChips(buildChipRange(startChip, endChip, periodCount))
     } else {
       setSelectedChips([startChip])
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedRepHour, selectedScheduleYmd, selectedEndRepHour, selectedEndScheduleYmd])
+  }, [selectedRepHour, selectedDayOffset, selectedScheduleYmd, selectedEndRepHour, selectedEndDayOffset])
 
   // 강제 동기화: 부모가 forceSyncSignal을 증가시키면 props가 바뀌지 않았어도
   // selectedChips를 현재 props 기준으로 즉시 리셋한다 (예: "오늘" 버튼 / 날짜 변경).
@@ -212,12 +218,12 @@ export function TimePeriodPicker({
     if (forceSyncSignal === undefined) return
     const startChip: SelectedChip = {
       periodIdx: getOutfitPeriodIndex(selectedRepHour),
-      dayOffset: Math.max(0, diffDaysYmd(todayYmd, selectedScheduleYmd)),
+      dayOffset: Math.max(0, selectedDayOffset),
     }
-    if (selectedEndRepHour != null && selectedEndScheduleYmd != null) {
+    if (selectedEndRepHour != null && selectedEndDayOffset != null) {
       const endChip: SelectedChip = {
         periodIdx: getOutfitPeriodIndex(selectedEndRepHour),
-        dayOffset: Math.max(0, diffDaysYmd(todayYmd, selectedEndScheduleYmd)),
+        dayOffset: Math.max(0, selectedEndDayOffset),
       }
       setSelectedChips(buildChipRange(startChip, endChip, periodCount))
     } else {
@@ -241,13 +247,6 @@ export function TimePeriodPicker({
   function handleChipClick(periodIdx: number, dayOffset: number) {
     const clickedChip: SelectedChip = { periodIdx, dayOffset }
 
-    // 오늘 날짜에서 「내일」 배지 칩을 클릭한 경우: 시각적 단일 선택만 하고
-    // 실제 스케줄(부모 상태)은 변경하지 않는다. 내일로 이동하려면 날짜를 직접 변경.
-    if (!isFullDayMode && dayOffset > 0) {
-      setSelectedChips([clickedChip])
-      return
-    }
-
     const clickedOrder = chipOrder(clickedChip)
     const sorted = [...selectedChips].sort((a, b) => chipOrder(a) - chipOrder(b))
     const minOrder = chipOrder(sorted[0]!)
@@ -265,13 +264,7 @@ export function TimePeriodPicker({
         newSel = [clickedChip]            // 중간 칩: 해당 칩만 남김
       }
     } else if (clickedOrder === minOrder - 1 || clickedOrder === maxOrder + 1) {
-      // 인접한 칩: 범위 확장
-      // 단, 오늘 모드에서 인접 확장으로 내일 칩까지 포함되면 무시(내일로 자동 이동 방지)
-      const wouldIncludeTomorrow = !isFullDayMode && [...sorted, clickedChip].some((c) => c.dayOffset > 0)
-      if (wouldIncludeTomorrow) {
-        setSelectedChips([clickedChip])
-        return
-      }
+      // 인접한 칩: 범위 확장 (통합 띠에서는 오늘↔내일 경계도 연속으로 이어 붙는다)
       newSel = [...sorted, clickedChip].sort((a, b) => chipOrder(a) - chipOrder(b))
     } else {
       // 비연속 칩: 새로 단일 선택

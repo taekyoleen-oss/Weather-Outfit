@@ -869,10 +869,29 @@ export default function HomePage() {
   const outfitPeriodEndHour = periodPresetEnd
     ? OUTFIT_PERIODS[getOutfitPeriodIndex(periodPresetEnd.repHour)]?.end
     : undefined
-  // 범위 선택의 끝 칩 일자 — picker에 넘겨 복원 시 시작~끝 연속 칩을 모두 하이라이트하기 위함
-  const effectiveEndScheduleYmd = periodPresetEnd
-    ? addCalendarDaysFromKstYmd(todayYmdKst, periodPresetEnd.dayOffset)
-    : null
+
+  // ── 선택 시간대의 날짜 라벨 (오늘/내일/모레/날짜) + 시간 범위 — 외출옷 날씨 요약 상단에 표시 ──
+  const selectedDayLabel = useMemo(() => {
+    const off = Math.max(0, diffCalendarDaysYmd(todayYmdKst, effectiveScheduleYmd))
+    if (off === 0) return '오늘'
+    if (off === 1) return '내일'
+    if (off === 2) return '모레'
+    return `${parseInt(effectiveScheduleYmd.slice(4, 6), 10)}월 ${parseInt(effectiveScheduleYmd.slice(6, 8), 10)}일`
+  }, [todayYmdKst, effectiveScheduleYmd])
+
+  const selectedDateText = useMemo(
+    () => `${parseInt(effectiveScheduleYmd.slice(4, 6), 10)}/${parseInt(effectiveScheduleYmd.slice(6, 8), 10)}`,
+    [effectiveScheduleYmd],
+  )
+
+  // 선택 슬롯 시간 범위(예: 19~21시 / 13~18시). 범위 선택이면 시작~끝을 합친다.
+  const selectedTimeRangeText = useMemo(() => {
+    const startP = OUTFIT_PERIODS[getOutfitPeriodIndex(periodPreset.repHour)]!
+    const endP = periodPresetEnd
+      ? OUTFIT_PERIODS[getOutfitPeriodIndex(periodPresetEnd.repHour)]!
+      : startP
+    return `${startP.start}~${endP.end}시`
+  }, [periodPreset.repHour, periodPresetEnd])
 
   const currentDongName = extractDongName(location.name, location.address)
   const normalizedLocationName = location.name?.trim()
@@ -977,9 +996,10 @@ export default function HomePage() {
       }
       hourly={weatherData?.hourly ?? []}
       selectedRepHour={periodPreset.repHour}
-      selectedScheduleYmd={effectiveScheduleYmd}
+      selectedDayOffset={periodPreset.dayOffset}
+      selectedScheduleYmd={scheduleYmd}
       selectedEndRepHour={periodPresetEnd?.repHour ?? null}
-      selectedEndScheduleYmd={effectiveEndScheduleYmd}
+      selectedEndDayOffset={periodPresetEnd?.dayOffset ?? null}
       sunsetTime={sunriseSunset?.sunset}
       onSelectPreset={handleSelectPreset}
       onRangeSelect={handleRangeSelect}
@@ -1057,9 +1077,10 @@ export default function HomePage() {
     </div>
   )
 
-  // ── Mobile Tab 2 header (외출옷) ──────────────────────────────────────────
-  const tab2Header = (
-    <div className="px-3 pt-2 pb-1 space-y-2">
+  // ── Mobile 외출옷 탭: 날짜 바 / 시간대 선택(sticky) / 동행 바 를 분리 ──
+  // 위치 검색·날짜 바는 스크롤되어 사라지고, 시간대 선택만 상단에 sticky 고정한다.
+  const outfitDateBar = (
+    <div className="px-3 pt-2 pb-1">
       <div className="flex items-center gap-2">
         <p className="text-xs flex-1 min-w-0 truncate" style={{ color: 'var(--muted)' }}>
           📍 {location.name} 날씨 기준
@@ -1110,7 +1131,11 @@ export default function HomePage() {
           오늘
         </button>
       </div>
-      {timePeriodPicker}
+    </div>
+  )
+
+  const outfitCompanionBar = (
+    <div className="px-3 pt-2 pb-1">
       <div className="flex gap-1.5 overflow-x-auto scroll-strip">
         {COMPANION_PROFILES.map(p => (
           <button
@@ -1147,6 +1172,17 @@ export default function HomePage() {
   // 자외선·미세먼지는 복장·소지품 판단에 직접 영향하므로 더보기에 숨기지 않고 여기서 상시 확인.
   const outfitWeatherSummary = (
     <div className="glass-card p-3 space-y-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <span
+          className="text-xs font-bold px-2 py-0.5 rounded-full"
+          style={{ background: 'var(--primary-tint-10)', color: 'var(--primary)' }}
+        >
+          {selectedDayLabel} 날씨
+        </span>
+        <span className="text-[11px] font-medium tabular-nums" style={{ color: 'var(--muted)' }}>
+          {selectedDateText} · {selectedTimeRangeText}
+        </span>
+      </div>
       <div className="flex items-center gap-3">
         <span className="text-2xl leading-none flex-shrink-0" aria-hidden>
           {displayWeather
@@ -1506,13 +1542,28 @@ export default function HomePage() {
               key: 'outfit',
               icon: '👔',
               label: '외출옷 추천',
-              header: (
+              // 고정 헤더 없음 — 위치 검색·날짜 바는 스크롤 영역 안에서 위로 사라지고,
+              // 시간대 선택만 sticky로 상단에 고정된다.
+              header: null,
+              contentClassName: '',
+              content: (
                 <>
                   {tab1Header}
-                  {tab2Header}
+                  {outfitDateBar}
+                  <div
+                    className="sticky top-0 z-30"
+                    style={{
+                      background: 'var(--colors-canvas)',
+                      borderBottom: '1px solid var(--colors-hairline-soft)',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                    }}
+                  >
+                    <div className="px-3 py-2">{timePeriodPicker}</div>
+                  </div>
+                  {outfitCompanionBar}
+                  <div className="px-3 pt-3 space-y-6">{outfitTabContent}</div>
                 </>
               ),
-              content: outfitTabContent,
             },
             {
               key: 'weather',
