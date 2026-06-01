@@ -51,7 +51,7 @@ import {
   currentHourKst,
 } from '@/lib/utils/timeOfDay'
 import { useNowMinute } from '@/lib/hooks/useNowMinute'
-import { feelsLike, weatherLabel, weatherEmojiFromLabel, pickIllustKey, illustFile, uvLabel, uvColor, o3GradeLabel, o3GradeColor } from '@/lib/utils/formatWeather'
+import { feelsLike, weatherLabel, weatherEmojiFromLabel, pickIllustKey, illustFile, uvLabel, uvColor, o3GradeLabel, o3GradeColor, dustGradeLabel, dustGradeColor } from '@/lib/utils/formatWeather'
 import { KMA_WEATHER_WARN_PAGE } from '@/lib/weather/kma-alert'
 import {
   TIME_PERIODS,
@@ -424,13 +424,16 @@ export default function HomePage() {
   const [sunriseSunset, setSunriseSunset] = useState<SunriseSunset | null>(null)
   const [alerts, setAlerts] = useState<WeatherAlert[]>([])
   const [openMeteoCompare, setOpenMeteoCompare] = useState<OpenMeteoDailyCompare | null>(null)
-  const [mobileLayoutTab, setMobileLayoutTab] = useState<string>('weather')
+  // 외출옷 중심 2탭 구조: 외출옷(기본) · 날씨. 첫 진입은 핵심 기능인 외출옷 탭으로 시작.
+  const [mobileLayoutTab, setMobileLayoutTab] = useState<string>('outfit')
+  // 전문 기상정보(산악·산불·낙뢰·오존) 더보기 토글 — 복장 무관 정보는 날씨 탭 하단 접힘 영역으로
+  const [mobileProOpen, setMobileProOpen] = useState(false)
   // 선택된 모바일 탭을 localStorage에 저장 — 재실행 시 마지막 탭으로 복원
   useEffect(() => {
     if (typeof window === 'undefined') return
     try {
       const t = localStorage.getItem('wf:mobile:tab')
-      if (t && ['weather', 'outfit', 'other', 'weekly'].includes(t)) setMobileLayoutTab(t)
+      if (t && ['outfit', 'weather'].includes(t)) setMobileLayoutTab(t)
     } catch { /* ignore */ }
   }, [])
   const handleMobileTabChange = useCallback((t: string) => {
@@ -1140,52 +1143,72 @@ export default function HomePage() {
     </div>
   )
 
-  // ── Mobile Tab 1 content ──────────────────────────────────────────────────
-  const tab1Content = (
+  // ── 외출옷 탭: 복장 참고용 핵심 날씨 요약 (항상 노출 — 조건·체감 + 자외선·미세먼지) ──
+  // 자외선·미세먼지는 복장·소지품 판단에 직접 영향하므로 더보기에 숨기지 않고 여기서 상시 확인.
+  const outfitWeatherSummary = (
+    <div className="glass-card p-3 space-y-2.5">
+      <div className="flex items-center gap-3">
+        <span className="text-2xl leading-none flex-shrink-0" aria-hidden>
+          {displayWeather
+            ? weatherEmojiFromLabel(weatherLabel(displayWeather.skyCode, displayWeather.ptyCode))
+            : '🌡'}
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold" style={{ color: 'var(--text)' }}>
+            {displayWeather
+              ? `${weatherLabel(displayWeather.skyCode, displayWeather.ptyCode)} · 체감 ${Math.round(displayWeather.feelsLike)}°`
+              : '날씨 정보를 불러오는 중…'}
+          </p>
+          {displayWeather && (
+            <p className="text-xs" style={{ color: 'var(--muted)' }}>
+              기온 {Math.round(displayWeather.temperature)}°
+              {displayWeather.ptyCode !== '0' ? ` · 강수 ${displayWeather.precipitation}mm` : ''}
+              {` · 습도 ${displayWeather.humidity}%`}
+            </p>
+          )}
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-1.5">
+        <HighlightCard
+          compact
+          icon="☀️"
+          label="자외선"
+          value={uvForCard != null ? `UV ${uvForCard}` : '--'}
+          sub={uvCardSub}
+          accent={uvColor(uvForCard ?? 0)}
+        />
+        <HighlightCard
+          compact
+          icon="🏭"
+          label="미세먼지 PM10"
+          value={dust ? dustGradeLabel(dust.pm10Grade) : '--'}
+          sub={dust ? `${dust.pm10Value} ㎍/㎥` : ''}
+          accent={dust ? dustGradeColor(dust.pm10Grade) : 'var(--muted)'}
+        />
+      </div>
+    </div>
+  )
+
+  // ── 외출옷 탭 본문: 핵심 날씨 요약 → 복장 추천 → 체크리스트 ──
+  const outfitTabContent = (
     <>
-      {weatherCard}
+      {weatherLoading && !weatherData && (
+        <div className="h-8 animate-pulse rounded-lg" style={{ background: 'var(--colors-surface-soft)' }} />
+      )}
+      {outfitWeatherSummary}
       <TodayCautionSummary
         uvIndex={uvForCard}
         uvMax={uvMaxForCard}
         dust={dust}
         pollen={pollen}
       />
-      <HourlyWeatherStrip
-        hourly={tab1HourlyDisplay}
-        currentHour={hour}
-        sunsetTime={sunriseSunset?.sunset}
-        suitabilityByHour={suitabilityByHour}
-      />
-      {spotData && (
-        <UltraSrtFcstCard
-          strip10m={spotData.strip10m.filter(s => s.minuteOffset <= 120)}
-          lightningNow={spotData.lightningNow}
-        />
-      )}
-      <ChartErrorBoundary>
-        <TempGraph48h
-          hourly={weatherData?.hourly ?? []}
-          loading={weatherLoading && !weatherData}
-          sunriseSunset={sunriseSunset}
-          daily={weeklyDisplayDaily}
-        />
-      </ChartErrorBoundary>
-    </>
-  )
-
-  // ── Mobile Tab 2 content (외출옷) ─────────────────────────────────────────
-  const tab2Content = (
-    <>
-      {weatherLoading && !weatherData && (
-        <div className="h-8 animate-pulse rounded-lg" style={{ background: 'var(--colors-surface-soft)' }} />
-      )}
+      {outfitPanelMobile}
       <OutfitChecklist
         weather={displayWeather}
         dust={dust}
         hourly={weatherData?.hourly ?? []}
         profile={companionProfile}
       />
-      {outfitPanelMobile}
     </>
   )
 
@@ -1202,122 +1225,166 @@ export default function HomePage() {
     })
   }, [alerts, spotData?.alerts])
 
-  const tab3Content = (
-    <>
-      {solarOzoneGrid}
-
-      {highlightsGrid}
-
-      {/* 기상특보 */}
-      <div
-        className="glass-card p-3"
-        style={combinedAlerts.length > 0 ? { border: '1px solid rgba(220,38,38,0.25)', background: 'rgba(239,68,68,0.03)' } : undefined}
-      >
-        <h3
-          className="text-base font-semibold mb-2.5"
-          style={{ color: combinedAlerts.length > 0 ? 'var(--danger)' : 'var(--muted)' }}
-        >
-          ⚠️ 기상특보
-        </h3>
-        {combinedAlerts.length === 0 ? (
-          <p className="text-sm" style={{ color: 'var(--muted)' }}>현재 발효 중인 특보가 없습니다.</p>
-        ) : (
-          <div className="space-y-2">
-            {combinedAlerts.map((a, i) => (
-              <div
-                key={i}
-                className="flex gap-2 px-3 py-2 rounded-xl"
-                style={{ background: 'rgba(220,38,38,0.06)', border: '1px solid rgba(220,38,38,0.2)' }}
-              >
-                <span className="text-sm flex-shrink-0">⚠️</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold" style={{ color: '#b91c1c' }}>
-                    {a.type} · {a.level}
-                  </p>
-                  <p className="text-xs mt-0.5 leading-snug" style={{ color: 'var(--muted)' }}>
-                    {a.message}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Mountain weather */}
-      {spotData?.mountainHourly && spotData.mountainHourly.length > 0 && (
-        <div className="glass-card p-3">
-          <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--muted)' }}>
-            산악 기상
-          </h3>
-          <p className="text-[11px] mb-2.5 leading-snug" style={{ color: 'var(--muted)' }}>
-            바람·강수확률 기준 (강풍 9m/s↑ 또는 강수확률 70%↑ → 위험)
-          </p>
-          <div className="flex gap-1.5 overflow-x-auto scroll-strip pb-1">
-            {spotData.mountainHourly.slice(0, 12).map((m, i) => (
-              <div
-                key={`${m.fcstYmd}-${m.fcstHour}-${i}`}
-                className="flex-shrink-0 flex flex-col gap-0.5 rounded-xl px-2 py-2 min-w-[72px] text-center"
-                style={{ background: 'rgba(255,255,255,0.5)', border: '1px solid var(--border)' }}
-              >
-                <span style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600 }}>
-                  {String(m.fcstHour).padStart(2, '0')}시
-                </span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: mountainLevelColor(m.level) }}>
-                  {mountainLevelText(m.level)}
-                </span>
-                {m.reasons && m.reasons.length > 0 && (
-                  <span style={{ fontSize: 9, fontWeight: 600, color: mountainLevelColor(m.level), lineHeight: 1.2 }}>
-                    {m.reasons[0]}
-                  </span>
-                )}
-                <span style={{ fontSize: 11, color: 'var(--text)' }}>{m.tempC.toFixed(0)}°</span>
-                <span style={{ fontSize: 10, color: 'var(--muted)' }}>{m.windMs.toFixed(0)}m/s</span>
-                {m.pop > 0 && <span style={{ fontSize: 10, color: 'var(--humidity)' }}>☂{m.pop}%</span>}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Wildfire risk */}
-      {spotData?.wildfireHourly && spotData.wildfireHourly.length > 0 && (
-        <div className="glass-card p-3">
-          <h3 className="text-base font-semibold mb-2.5" style={{ color: 'var(--muted)' }}>
-            산불 위험도
-          </h3>
-          <div className="flex gap-1.5 overflow-x-auto scroll-strip pb-1">
-            {spotData.wildfireHourly.slice(0, 12).map((w, i) => (
-              <div
-                key={`${w.fcstYmd}-${w.fcstHour}-${i}`}
-                className="flex-shrink-0 flex flex-col gap-0.5 rounded-xl px-2 py-2 min-w-[64px] text-center"
-                style={{ background: 'rgba(255,255,255,0.5)', border: '1px solid var(--border)' }}
-              >
-                <span style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600 }}>
-                  {String(w.fcstHour).padStart(2, '0')}시
-                </span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: wildfireLevelColor(w.level) }}>
-                  {wildfireLevelText(w.level)}
-                </span>
-                <span style={{ fontSize: 10, color: 'var(--muted)' }}>점수 {w.score}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </>
-  )
-
-  // ── Mobile Tab 4 (주간예보) ──────────────────────────────────────────────
-  const weeklyLocationLabel = currentPlaceName ?? currentDongName ?? location.name?.trim() ?? '내 위치'
-  const tab4Header = (
-    <div className="px-4 py-3 flex items-center justify-between">
-      <p className="text-sm font-bold" style={{ color: 'var(--text)' }}>{weeklyLocationLabel}</p>
-      <span className="text-[11px]" style={{ color: 'var(--muted)' }}>주간예보</span>
+  // 자외선 단독 카드 (날씨 탭 대기 섹션) — 복장 관련이므로 본문에 노출
+  const uvCardMobile = (
+    <div>
+      <h2 className="text-sm font-semibold mb-1.5" style={{ color: 'var(--muted)' }}>자외선</h2>
+      <HighlightCard
+        compact
+        icon="☀️"
+        label="자외선지수"
+        value={uvForCard != null ? `UV ${uvForCard}` : '--'}
+        sub={uvCardSub}
+        accent={uvColor(uvForCard ?? 0)}
+      />
     </div>
   )
-  const tab4Content = (
+
+  // 오존 단독 카드 — 복장 무관, 더보기(전문 기상정보)로 이동
+  const ozoneCardMobile = (
+    <div>
+      <h2 className="text-sm font-semibold mb-1.5" style={{ color: 'var(--muted)' }}>오존</h2>
+      <HighlightCard
+        compact
+        icon="⚗️"
+        label="오존"
+        value={o3GradeLabel(dust?.o3Grade)}
+        sub={dust?.o3Value != null ? `${dust.o3Value.toFixed(3)} ppm` : ''}
+        accent={o3GradeColor(dust?.o3Grade)}
+      />
+    </div>
+  )
+
+  // 기상특보 (날씨 탭 본문 — 안전 직결 정보)
+  const alertsBlock = (
+    <div
+      className="glass-card p-3"
+      style={combinedAlerts.length > 0 ? { border: '1px solid rgba(220,38,38,0.25)', background: 'rgba(239,68,68,0.03)' } : undefined}
+    >
+      <h3
+        className="text-base font-semibold mb-2.5"
+        style={{ color: combinedAlerts.length > 0 ? 'var(--danger)' : 'var(--muted)' }}
+      >
+        ⚠️ 기상특보
+      </h3>
+      {combinedAlerts.length === 0 ? (
+        <p className="text-sm" style={{ color: 'var(--muted)' }}>현재 발효 중인 특보가 없습니다.</p>
+      ) : (
+        <div className="space-y-2">
+          {combinedAlerts.map((a, i) => (
+            <div
+              key={i}
+              className="flex gap-2 px-3 py-2 rounded-xl"
+              style={{ background: 'rgba(220,38,38,0.06)', border: '1px solid rgba(220,38,38,0.2)' }}
+            >
+              <span className="text-sm flex-shrink-0">⚠️</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold" style={{ color: '#b91c1c' }}>
+                  {a.type} · {a.level}
+                </p>
+                <p className="text-xs mt-0.5 leading-snug" style={{ color: 'var(--muted)' }}>
+                  {a.message}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+
+  // 산악 기상 — 복장 무관 전문 정보, 더보기로 이동
+  const mountainBlock = spotData?.mountainHourly && spotData.mountainHourly.length > 0 ? (
+    <div className="glass-card p-3">
+      <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--muted)' }}>
+        산악 기상
+      </h3>
+      <p className="text-[11px] mb-2.5 leading-snug" style={{ color: 'var(--muted)' }}>
+        바람·강수확률 기준 (강풍 9m/s↑ 또는 강수확률 70%↑ → 위험)
+      </p>
+      <div className="flex gap-1.5 overflow-x-auto scroll-strip pb-1">
+        {spotData.mountainHourly.slice(0, 12).map((m, i) => (
+          <div
+            key={`${m.fcstYmd}-${m.fcstHour}-${i}`}
+            className="flex-shrink-0 flex flex-col gap-0.5 rounded-xl px-2 py-2 min-w-[72px] text-center"
+            style={{ background: 'rgba(255,255,255,0.5)', border: '1px solid var(--border)' }}
+          >
+            <span style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600 }}>
+              {String(m.fcstHour).padStart(2, '0')}시
+            </span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: mountainLevelColor(m.level) }}>
+              {mountainLevelText(m.level)}
+            </span>
+            {m.reasons && m.reasons.length > 0 && (
+              <span style={{ fontSize: 9, fontWeight: 600, color: mountainLevelColor(m.level), lineHeight: 1.2 }}>
+                {m.reasons[0]}
+              </span>
+            )}
+            <span style={{ fontSize: 11, color: 'var(--text)' }}>{m.tempC.toFixed(0)}°</span>
+            <span style={{ fontSize: 10, color: 'var(--muted)' }}>{m.windMs.toFixed(0)}m/s</span>
+            {m.pop > 0 && <span style={{ fontSize: 10, color: 'var(--humidity)' }}>☂{m.pop}%</span>}
+          </div>
+        ))}
+      </div>
+    </div>
+  ) : null
+
+  // 산불 위험도 — 복장 무관 전문 정보, 더보기로 이동
+  const wildfireBlock = spotData?.wildfireHourly && spotData.wildfireHourly.length > 0 ? (
+    <div className="glass-card p-3">
+      <h3 className="text-base font-semibold mb-2.5" style={{ color: 'var(--muted)' }}>
+        산불 위험도
+      </h3>
+      <div className="flex gap-1.5 overflow-x-auto scroll-strip pb-1">
+        {spotData.wildfireHourly.slice(0, 12).map((w, i) => (
+          <div
+            key={`${w.fcstYmd}-${w.fcstHour}-${i}`}
+            className="flex-shrink-0 flex flex-col gap-0.5 rounded-xl px-2 py-2 min-w-[64px] text-center"
+            style={{ background: 'rgba(255,255,255,0.5)', border: '1px solid var(--border)' }}
+          >
+            <span style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600 }}>
+              {String(w.fcstHour).padStart(2, '0')}시
+            </span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: wildfireLevelColor(w.level) }}>
+              {wildfireLevelText(w.level)}
+            </span>
+            <span style={{ fontSize: 10, color: 'var(--muted)' }}>점수 {w.score}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  ) : null
+
+  // ── 날씨 탭 (현재·단기·주간 모두 유지 + 전문정보 더보기) ────────────────────
+  const weeklyLocationLabel = currentPlaceName ?? currentDongName ?? location.name?.trim() ?? '내 위치'
+  const weatherTabContent = (
     <>
+      {/* ① 현재 날씨 */}
+      {weatherCard}
+      <TodayCautionSummary
+        uvIndex={uvForCard}
+        uvMax={uvMaxForCard}
+        dust={dust}
+        pollen={pollen}
+      />
+
+      {/* ② 단기(시간별) 날씨 */}
+      <HourlyWeatherStrip
+        hourly={tab1HourlyDisplay}
+        currentHour={hour}
+        sunsetTime={sunriseSunset?.sunset}
+        suitabilityByHour={suitabilityByHour}
+      />
+      <ChartErrorBoundary>
+        <TempGraph48h
+          hourly={weatherData?.hourly ?? []}
+          loading={weatherLoading && !weatherData}
+          sunriseSunset={sunriseSunset}
+          daily={weeklyDisplayDaily}
+        />
+      </ChartErrorBoundary>
+
+      {/* ③ 주간 날씨 */}
       <WeeklyForecastHero locationName={weeklyLocationLabel} />
       <WeeklyCurrentSnapshot weather={displayWeather} dust={dust} compare={openMeteoCompare} locationName={weeklyLocationLabel} />
       <WeeklySummaryStrip daily={weeklyDailyFromToday} />
@@ -1329,6 +1396,43 @@ export default function HomePage() {
       <p className="text-[10px] text-center pt-1" style={{ color: 'var(--muted)' }}>
         기상청 단기예보(오늘~+2일) + 중기예보(+3~+7일) · 오전 07~12시 / 오후 13~18시 기준 강수확률
       </p>
+
+      {/* ④ 대기·생활 */}
+      {uvCardMobile}
+      {highlightsGrid}
+      {alertsBlock}
+
+      {/* ⑤ 전문 기상정보 더보기 (복장 무관 — 기본 닫힘) */}
+      <div
+        className="rounded-lg overflow-hidden w-full min-w-0"
+        style={{ border: '1px solid var(--border)', background: 'var(--surface)' }}
+      >
+        <button
+          type="button"
+          className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left transition-colors"
+          style={{ color: 'var(--text)' }}
+          aria-expanded={mobileProOpen}
+          onClick={() => setMobileProOpen(o => !o)}
+        >
+          <span className="text-sm font-bold">전문 기상정보 (산악·산불·낙뢰·오존)</span>
+          <span className="text-xs font-semibold shrink-0" style={{ color: 'var(--muted)' }}>
+            {mobileProOpen ? '접기' : '펼치기'}
+          </span>
+        </button>
+        {mobileProOpen && (
+          <div className="px-3 pb-3 pt-1 space-y-3 border-t" style={{ borderColor: 'var(--border)' }}>
+            {spotData && (
+              <UltraSrtFcstCard
+                strip10m={spotData.strip10m.filter(s => s.minuteOffset <= 120)}
+                lightningNow={spotData.lightningNow}
+              />
+            )}
+            {mountainBlock}
+            {wildfireBlock}
+            {ozoneCardMobile}
+          </div>
+        )}
+      </div>
     </>
   )
 
@@ -1399,32 +1503,23 @@ export default function HomePage() {
           onTabChange={handleMobileTabChange}
           tabs={[
             {
-              key: 'weather',
-              icon: '🌤',
-              label: '관심지역 날씨',
-              header: tab1Header,
-              content: tab1Content,
-            },
-            {
               key: 'outfit',
               icon: '👔',
               label: '외출옷 추천',
-              header: tab2Header,
-              content: tab2Content,
+              header: (
+                <>
+                  {tab1Header}
+                  {tab2Header}
+                </>
+              ),
+              content: outfitTabContent,
             },
             {
-              key: 'weekly',
-              icon: '📅',
-              label: '주간예보',
-              header: tab4Header,
-              content: tab4Content,
-            },
-            {
-              key: 'other',
-              icon: '📊',
-              label: '기타 날씨 정보',
+              key: 'weather',
+              icon: '🌤',
+              label: '날씨',
               header: tab3Header,
-              content: tab3Content,
+              content: weatherTabContent,
             },
           ]}
         />
